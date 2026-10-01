@@ -1,0 +1,11 @@
+import { loadEnvFile } from 'node:process';
+import { fileURLToPath } from 'node:url';
+loadEnvFile(fileURLToPath(new URL('../.env', import.meta.url)));
+process.env.NODE_ENV = 'development';
+process.env.HOST = '127.0.0.1';
+process.env.PORT = process.env.ERTAD_API_PORT ?? '13000';
+process.env.DATABASE_URL = `postgresql://ertad_app:${encodeURIComponent(process.env.APP_DB_PASSWORD ?? '')}@127.0.0.1:${process.env.ERTAD_POSTGRES_PORT ?? '15432'}/ertad`;
+process.env.REDIS_URL = `redis://:${encodeURIComponent(process.env.REDIS_PASSWORD ?? '')}@127.0.0.1:${process.env.ERTAD_REDIS_PORT ?? '16379'}/0`;
+process.env.STORAGE_HEALTH_URL = `http://127.0.0.1:${process.env.ERTAD_STORAGE_PORT ?? '19000'}/healthz`;
+process.env.WEB_ORIGIN = `http://localhost:${process.env.ERTAD_WEB_PORT ?? '15173'}`;
+await import('../backend/src/index.js');
