@@ -22,3 +22,15 @@ Accepted: V1 core, V1.5 network, V2 gamification. New profiles Private; no unaut
 Accepted: local prompts, agent instructions, skill copies and working audit reports are excluded from Git and Docker contexts. Hooks and CI scan eligible/tracked filenames to catch accidental forced additions. Checked-in code, tests, README, ADRs and operational architecture are independent of private working instructions. This guard is not a complete content/secret scanner; content review remains required.
 
 Runtime sources checked: [Node release lifecycle](https://nodejs.org/en/about/previous-releases), [Compose dependency health ordering](https://docs.docker.com/compose/how-tos/startup-order/). Lockfiles and pinned image digests define actual builds; sources do not substitute for runtime checks.
+
+## ADR-008 — Actual DTG application reuse with preserved local changes
+
+Accepted for migration planning, 2026-10-01: DTG's local working tree is the implementation source, including its uncommitted security improvements and tests. Preserve source revision and file hashes, transfer complete reviewed flows into ERTAD and retain isolated ERTAD infrastructure. The web target is at least 90% of applicable original journeys/structure, tracked with explicit exclusions rather than an unmeasured code-percentage claim. No DTG source modification, whole-schema import, secrets or production-data transfer is implied. P1 migrates presentation; P4 connects authenticated flows after the Identity and Authorization gates. See the [transfer map and delivery sequence](MIGRATION.md).
+
+## ADR-009 — Zero Trust is a migration acceptance requirement
+
+Accepted design requirement, 2026-10-01: preserve native integrity adapters together with their server validators and regression tests. Every protected request independently requires valid session/assurance and applicable permission/scope. Client verification flags, network location, device attestation and administrator rank cannot substitute for authorization. Generalize action binding without creating a participant-to-ballot correlation path. Provider outages and unsupported devices must not create authentication bypasses; offline UI distinguishes unconfirmed state. This is not a claim that every current DTG path already meets the target. See the [boundary and negative-test matrix](MIGRATION.md#zero-trust-contract).
+
+## ADR-010 — Identity continuity reference has an explicit activation gate
+
+Proposed, 2026-10-01: support new-device/recovery identity continuity with renewed document authenticity and PAD/face checks, stable verified-person matching and, if justified, a protected biometric reference. Reference format, provider/model, retention/deletion, key custody, matching and manual-review policy must be resolved before storage is enabled. No indefinite raw media retention, biometric-only account takeover path or automatic replacement on mismatch. Routine same-device login and re-proofing have separate contracts. See the [recovery design](MIGRATION.md#identity-continuity-biometric-reference-and-recovery).

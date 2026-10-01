@@ -36,8 +36,13 @@ GitHub remote is `https://github.com/42prom/ERTAD.git`; foundation branch is `in
 
 ## Next implementation gate
 
-1. Complete the read-only DTG review of document authenticity, liveness/face verification, sessions, device attestation, identity uniqueness and audit checkpoints. Record reproducible evidence and reuse decisions; do not copy security-sensitive modules before review.
-2. Define P2 enrollment/profile/recovery states and API contracts, including Private defaults, legal-identity separation, replay protection, cross-document person matching, recovery/session revocation and temporary-artifact purge. Resolve provider/trust-source dependencies explicitly; unsupported verification remains denied.
-3. Implement the first reviewed identity vertical slice with synthetic fixtures and its negative-path tests. Keep production startup disabled until the applicable security and operational gates are satisfied.
+The [DTG migration plan](architecture/MIGRATION.md) now defines web/mobile/backend transfer decisions, preservation of uncommitted security tests, an explicit Zero Trust acceptance matrix, identity continuity/recovery, phase dependencies and rollback. Planning inventory: 338 allowlisted local DTG source/test/build files hashed against commit `a839b212516b7bee3601dc10aaab5e79a5f4b522` plus working-tree changes. This is not a source backup, complete security audit or passing DTG test run. Application code has not been migrated by the planning change.
+
+Planning-change validation on 2026-10-01: `npm run check` PASS (3 API tests, 4 palette tests, typechecks/builds/token checks); `npm audit --audit-level=high` PASS (0 reported vulnerabilities); publication guard and `git diff --check` PASS; 14 local documentation links/anchors verified; all 338 inventoried DTG file hashes, source commit and working-tree status unchanged. These local results do not claim a new hosted CI run or DTG/device test execution.
+
+1. Recheck source changes and create the isolated, reviewed migration snapshot; run the selected upstream baseline with disposable ERTAD test targets. Preserve new security tests and their assertions.
+2. Transfer the actual DTG web shell/shared components and tests (P1a), then the runnable Flutter shell/native adapters (P1b). Keep product routes unavailable until their backend/security contracts are accepted. Target broad reuse of applicable web behavior; no achieved reuse percentage is claimed.
+3. Complete security-sensitive DTG review and P2 enrollment/profile/recovery contracts, including minimal strict audit events, Private defaults, legal-identity separation, action-bound integrity evidence, cross-document person matching, recovery/session revocation and artifact purge. Resolve provider/trust-source and retained-reference dependencies explicitly.
+4. Implement reviewed identity slices using synthetic fixtures, then P3 scoped governance/audit and P4 authenticated client flows. Keep production startup disabled until the applicable security and operational gates are satisfied.
 
 P3 introduces organization/permission/approval/audit foundations. Real Flutter migration and device testing remain pending. V1.5 network and V2 gamification remain outside V1.
