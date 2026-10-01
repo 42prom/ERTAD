@@ -1,6 +1,6 @@
 # Verified foundation status
 
-Verified locally on 2026-10-01. Scope: foundation only; no production deployment.
+Verified locally and in GitHub Actions on 2026-10-01. Scope: foundation only; no production deployment.
 
 ## Implemented
 
@@ -26,11 +26,18 @@ Verified locally on 2026-10-01. Scope: foundation only; no production deployment
 | `npm run test:browser` with installed Chrome | PASS: 2 scenarios; language/theme persistence, system-theme changes, filters, Escape/focus restore; no horizontal overflow at 360/390/768/1440 in both themes |
 | Optional Docker API/nginx/web | PASS: built and healthy; smoke/browser scenarios passed on alternate 13001/15174 while local apps stayed available; optional app containers stopped afterwards |
 | Visual inspection | Desktop gallery screenshot inspected; no Flutter device or full screen-reader validation claimed |
+| GitHub Actions Foundation | PASS: [run 36910401234](https://github.com/42prom/ERTAD/actions/runs/36910401234), code commit `28d05e04a11a1df1157a3e7ce31ea2ecf075b943`; clean install, publication guard, checks/build, dependency audit, Compose validation, full container stack, smoke, integration, restore drill and Chromium browser tests all succeeded |
 
 ## Remaining gates
 
 Full DTG security audit and production data disposition; real identity/enrollment/recovery; all domain operations and v5 privacy/authorization invariants; one-time admin bootstrap/MFA; legal/privacy review; externally signed audit checkpoints; biometric retention; production metrics/alerts/secret management; encrypted offsite PITR and object recovery; load tests; real Flutter app/device validation. Current readiness means the local foundation is usable, not that the platform is production-ready.
 
-GitHub remote is `https://github.com/42prom/ERTAD.git`; foundation branch is `infra/foundation`. Hosted CI execution and repository branch protection must be reported separately from local verification. The remote was empty at initial inspection, so there was no existing main branch or PR base.
+GitHub remote is `https://github.com/42prom/ERTAD.git`; foundation branch is `infra/foundation`. Hosted CI passed for the code commit linked above. Branch protection is **not enabled** (GitHub branch metadata checked 2026-10-01); local hooks do not provide server enforcement. The remote was empty at initial inspection, and no main branch or PR base has been established.
 
-Next work: finish the security-sensitive DTG source audit and P2 enrollment/profile/recovery contracts, then implement the first identity vertical slice with Private defaults. P3 introduces organization/permission/approval/audit foundations. V1.5 network and V2 gamification remain outside V1.
+## Next implementation gate
+
+1. Complete the read-only DTG review of document authenticity, liveness/face verification, sessions, device attestation, identity uniqueness and audit checkpoints. Record reproducible evidence and reuse decisions; do not copy security-sensitive modules before review.
+2. Define P2 enrollment/profile/recovery states and API contracts, including Private defaults, legal-identity separation, replay protection, cross-document person matching, recovery/session revocation and temporary-artifact purge. Resolve provider/trust-source dependencies explicitly; unsupported verification remains denied.
+3. Implement the first reviewed identity vertical slice with synthetic fixtures and its negative-path tests. Keep production startup disabled until the applicable security and operational gates are satisfied.
+
+P3 introduces organization/permission/approval/audit foundations. Real Flutter migration and device testing remain pending. V1.5 network and V2 gamification remain outside V1.
