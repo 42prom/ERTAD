@@ -2,6 +2,8 @@
 
 Status: initial architecture, 2026-10-01. This document describes decisions and future acceptance gates; it does not claim those domain features are implemented.
 
+The detailed [DTG migration plan](MIGRATION.md) defines actual source-module reuse, preservation of local changes/tests, Zero Trust acceptance, web/mobile transfer order and rollback. It refines the phase overview below: presentation migration starts in P1; authenticated shells complete in P4 after their security dependencies.
+
 ## Scope and runtime
 
 V1: identity/enrollment/recovery/private profiles; organizations, units, memberships, permission/scope, approvals/audit; work; basic text communication/moderation; decisions; Activity and Qualifications; operational hardening.

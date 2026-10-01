@@ -41,4 +41,4 @@ For browser tests, install Chromium once with `npx playwright install chromium`,
 
 Full container parity is optional: stop local API/Vite first, then `npm run stack:up`. Return to host development with `docker compose --profile apps stop admin backend` and `npm run dev`. Do not run both modes on the same ports.
 
-See [architecture and phases](docs/architecture/FOUNDATION.md), [decisions](docs/architecture/DECISIONS.md), [operations](docs/OPERATIONS.md), and [verified status](docs/STATUS.md). The Flutter directory currently contains generated palette constants and a migration boundary, not a runnable mobile app.
+See [architecture and phases](docs/architecture/FOUNDATION.md), [DTG migration plan](docs/architecture/MIGRATION.md), [decisions](docs/architecture/DECISIONS.md), [operations](docs/OPERATIONS.md), and [verified status](docs/STATUS.md). The Flutter directory currently contains generated palette constants and a migration boundary, not a runnable mobile app.
