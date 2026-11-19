@@ -31,3 +31,22 @@ jobs:
       - run: npm run test:browser
       - if: always()
         run: docker compose --profile apps down
+  mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the verified Flutter baseline
+        shell: bash
+        run: |
+          git clone --depth 1 --branch 3.44.0 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          test "$(git -C "$RUNNER_TEMP/flutter" rev-parse HEAD)" = "559ffa3f75e7402d65a8def9c28389a9b2e6fe42"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - run: flutter pub get --enforce-lockfile
+        working-directory: mobile
+      - run: dart format --output=none --set-exit-if-changed lib test integration_test
+        working-directory: mobile
+      - run: flutter analyze --no-pub
+        working-directory: mobile
+      - run: flutter test --no-pub
+        working-directory: mobile

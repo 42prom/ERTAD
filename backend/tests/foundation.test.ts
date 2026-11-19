@@ -5,16 +5,37 @@ import request from 'supertest';
 import pino from 'pino';
 import { createApp, type DependencyChecks } from '../src/app.js';
 import { readConfig } from '../src/config.js';
+import { SecurityTelemetry } from '../src/modules/security/telemetry.js';
+
+test('real API responses feed bounded telemetry, including the global limiter, without request data', async () => {
+  const app = createApp(checks, pino({ enabled: false }), env.WEB_ORIGIN);
+  const monitor = app.locals.securityTelemetry as SecurityTelemetry;
+  await request(app).get('/health/live').expect(200);
+  for (let i = 0; i < 120; i++) await request(app).get('/api/v1/private?token=synthetic-private').expect(401);
+  await request(app).get('/api/v1/private').set('X-Forwarded-For', '192.0.2.1').expect(429);
+  const result = monitor.snapshot(60, 'all');
+  assert.equal(result.totals.authentication_required, 120);
+  assert.equal(result.totals.rate_limited, 1);
+  assert(!JSON.stringify(result).includes('synthetic-private'));
+  assert(!JSON.stringify(result).includes('192.0.2.1'));
+});
 
 const checks: DependencyChecks = { postgres: async () => {}, redis: async () => {}, storage: async () => {} };
 const env = { NODE_ENV: 'test', DATABASE_URL: 'postgresql://localhost/ertad', REDIS_URL: 'redis://localhost', STORAGE_HEALTH_URL: 'http://localhost/health', WEB_ORIGIN: 'http://localhost:15173' };
 test('production, unknown modes, bypass and missing config fail closed', () => {
   for (const mode of ['production', 'staging', 'Production']) assert.throws(() => readConfig({ ...env, NODE_ENV: mode }));
   assert.throws(() => readConfig({ ...env, DEV_AUTH_BYPASS: 'true' }));
+  assert.throws(() => readConfig({ ...env, ERTAD_BOOTSTRAP_MODE: 'true' }));
   assert.throws(() => readConfig({ ...env, DATABASE_URL: '' }));
   assert.throws(() => readConfig({ ...env, PORT: '0' }));
   assert.throws(() => readConfig({ ...env, WEB_ORIGIN: '*' }));
-  assert.equal(readConfig(env).port, 3000);
+  assert.throws(() => readConfig({ ...env, ERTAD_LOCAL_ADMIN: 'true' }));
+  assert.throws(() => readConfig({ ...env, ERTAD_WEB_DEMO: 'true' }));
+  assert.throws(() => readConfig({ ...env, NODE_ENV: 'production', ERTAD_WEB_DEMO: 'true', ERTAD_LOCAL_ADMIN: 'true' }));
+  assert.throws(() => readConfig({ ...env, ERTAD_LOCAL_ADMIN: 'true', API_KEY_ENCRYPTION_SECRET: 'synthetic'.repeat(5), WEB_ORIGIN: 'https://example.invalid' }));
+  assert.throws(() => readConfig({ ...env, ERTAD_LOCAL_ADMIN: 'true', API_KEY_ENCRYPTION_SECRET: 'synthetic'.repeat(5), HOST: '0.0.0.0' }));
+  assert.equal(readConfig({ ...env, ERTAD_LOCAL_ADMIN: 'true', API_KEY_ENCRYPTION_SECRET: 'synthetic'.repeat(5) }).webOrigin, env.WEB_ORIGIN);
+  assert.equal(readConfig(env).port, 13000);
 });
 test('readiness fails for each dependency without exposing errors; liveness remains available', async () => {
   for (const name of Object.keys(checks)) {

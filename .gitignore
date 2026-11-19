@@ -12,10 +12,22 @@ build/
 *.log
 *.pem
 *.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+**/key.properties
+**/local.properties
+**/google-services.json
+**/GoogleService-Info.plist
 *.dump
 *.sql.gz
 .DS_Store
 Thumbs.db
+infra/cloudflared.yml
+__pycache__/
+*.py[cod]
+.venv/
 playwright-report/
 test-results/
 
@@ -39,5 +51,9 @@ flutter-scaffold-skill/
 prompts/
 .agents/
 .codex/
+.serena/
 .claude/
 .work/
+
+# TypeScript incremental compiler state
+*.tsbuildinfo

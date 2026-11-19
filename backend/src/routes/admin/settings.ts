@@ -1,0 +1,758 @@
+import { Router, Request, Response, NextFunction } from 'express';
+import { requireAdmin } from '../../middleware/auth';
+import { pool, transaction } from '../../db/client';
+import { decryptSensitiveValue, encryptSensitiveValue } from '../../services/secretEncryption';
+import {
+  isMaskedSecret,
+  validateAdminSettingsPatch,
+  validateFirebaseServiceAccount,
+} from '../../services/adminSettingsValidation';
+
+const router = Router();
+
+// All admin routes require authentication
+router.use(requireAdmin);
+
+function parseBool(value: any, defaultValue: boolean): boolean {
+  if (value === undefined || value === null) return defaultValue;
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') {
+    const s = value.trim().toLowerCase();
+    if (s === 'true' || s === '1' || s === 'yes') return true;
+    if (s === 'false' || s === '0' || s === 'no') return false;
+  }
+  return defaultValue;
+}
+
+/**
+ * Encrypt API key for storage
+ */
+function encryptApiKey(apiKey: string): string {
+  return encryptSensitiveValue(apiKey);
+}
+
+/**
+ * Decrypt API key from storage
+ */
+function decryptApiKey(encryptedKey: string): string {
+  return decryptSensitiveValue(encryptedKey);
+}
+
+/**
+ * Mask API key for frontend display
+ */
+function maskApiKey(apiKey: string): string {
+  if (!apiKey || apiKey.length < 8) return '';
+  return (
+    apiKey.substring(0, 4) + '•'.repeat(apiKey.length - 8) + apiKey.substring(apiKey.length - 4)
+  );
+}
+
+/**
+ * Load full verification configuration including NFC policies and document strictness.
+ * This is the source of truth for admin settings endpoints.
+ */
+/**
+ * Load full configuration (Verification and security).
+ * This is the source of truth for admin settings endpoints.
+ */
+export async function loadFullConfig(): Promise<any> {
+  const result = await pool.query(
+    `SELECT key, value FROM settings WHERE key LIKE 'verification_%' OR key LIKE 'security_%' OR key LIKE 'push_%'`
+  );
+  
+  const systemSettingsResult = await pool.query(
+    `SELECT key, value FROM system_settings WHERE key LIKE 'rate_limit_%'`
+  );
+
+  const config: any = {
+    // Verification Defaults
+    nfc: {
+      provider: 'mock',
+      requireNfc: true,
+      requireGeorgianCitizen: true,
+      requirePersonalNumber: true,
+      allowSkipDocument: true,
+    },
+    documentScanner: {
+      provider: 'manual',
+      apiKey: '',
+      requireDocumentPhotoScan: true,
+      strictness: 'strict',
+    },
+    liveness: {
+      provider: '3d_face_detector',
+      apiKey: '',
+      retryLimit: 3,
+      // Note: Liveness is pass/fail only - no minScore threshold
+    },
+    faceMatch: {
+      provider: 'custom_biometric_matcher',
+      apiKey: '',
+      minScore: 0.75,
+    },
+    // Security Defaults
+    security: {
+      blockVpnAndProxy: false,
+      vpnDetectionProvider: 'iphub',
+      vpnDetectionApiKey: '',
+      maxBiometricAttemptsPerIP: 10,
+      biometricIPLimitWindowMinutes: 60,
+    },
+    // Push Defaults
+    push: {
+      enabledGlobal: true,
+      enabledPolls: true,
+      enabledMessages: true,
+      serviceAccountJson: '',
+      serviceAccountPath: '',
+    },
+    // --- Rate Limit Defaults ---
+    rate_limit_enrollment: { ip: 10, device: 5, pn: 3, window: 60 },
+    rate_limit_login: { ip: 20, device: 10, pn: 5, window: 15 },
+    rate_limit_biometric: { ip: 10, account: 5, window: 60 },
+  };
+
+  result.rows.forEach((row: any) => {
+    const { key, value } = row;
+
+    if (key.startsWith('rate_limit_')) {
+      try {
+        config[key] = value; // value is already JSON from db?
+        // If system_settings stores value as JSONB/JSON, pg driver returns object.
+        // If text, we might need parsing. 
+        // Based on previous code, it seemed to be JSON.
+        // Let's assume the driver handles it or it's stored as JSON type.
+        // If it's stored as text in 'settings' table (key, value text), we MUST parse it.
+        if (typeof value === 'string') {
+             config[key] = JSON.parse(value);
+        }
+      } catch (e) {
+        console.error(`Failed to parse ${key}`, e);
+      }
+    }
+
+    // --- Verification Settings ---
+    if (key === 'verification_nfc_provider') {
+      config.nfc.provider = value;
+    } else if (key === 'verification_nfc_require_nfc') {
+      config.nfc.requireNfc = parseBool(value, true);
+    } else if (key === 'verification_nfc_require_georgian_citizen') {
+      config.nfc.requireGeorgianCitizen = parseBool(value, true);
+    } else if (key === 'verification_nfc_require_personal_number') {
+      config.nfc.requirePersonalNumber = parseBool(value, true);
+    } else if (key === 'verification_nfc_allow_skip_document') {
+      config.nfc.allowSkipDocument = parseBool(value, true);
+    } else if (key === 'verification_document_provider') {
+      config.documentScanner.provider = value;
+    } else if (key === 'verification_document_apikey') {
+      try {
+        config.documentScanner.apiKey = value ? maskApiKey(decryptApiKey(value)) : '';
+      } catch (e) {
+        console.error('[Settings] Failed to decrypt verification_document_apikey. The encryption secret may have changed.');
+        config.documentScanner.apiKey = '[Decryption Failed]';
+      }
+    } else if (key === 'verification_document_require_photo_scan') {
+      config.documentScanner.requireDocumentPhotoScan = parseBool(value, true);
+    } else if (key === 'verification_document_strictness') {
+      config.documentScanner.strictness = value === 'lenient' ? 'lenient' : 'strict';
+    } else if (key === 'verification_liveness_provider') {
+      config.liveness.provider = value;
+    } else if (key === 'verification_liveness_apikey') {
+      try {
+        config.liveness.apiKey = value ? maskApiKey(decryptApiKey(value)) : '';
+      } catch (e) {
+        console.error('[Settings] Failed to decrypt verification_liveness_apikey.');
+        config.liveness.apiKey = '[Decryption Failed]';
+      }
+    } else if (key === 'verification_liveness_retry_limit') {
+      config.liveness.retryLimit = parseInt(value, 10);
+    } else if (key === 'verification_facematch_provider') {
+      config.faceMatch.provider = value;
+    } else if (key === 'verification_facematch_apikey') {
+      try {
+        config.faceMatch.apiKey = value ? maskApiKey(decryptApiKey(value)) : '';
+      } catch (e) {
+        console.error('[Settings] Failed to decrypt verification_facematch_apikey.');
+        config.faceMatch.apiKey = '[Decryption Failed]';
+      }
+    } else if (key === 'verification_facematch_min_score') {
+      config.faceMatch.minScore = parseFloat(value);
+    }
+
+    // --- Security Settings ---
+    else if (key === 'security_block_vpn_and_proxy') {
+      config.security.blockVpnAndProxy = parseBool(value, false);
+    } else if (key === 'security_vpn_detection_provider') {
+      config.security.vpnDetectionProvider = value || 'iphub';
+    } else if (key === 'security_vpn_detection_apikey') {
+      try {
+        config.security.vpnDetectionApiKey = value ? maskApiKey(decryptApiKey(value)) : '';
+      } catch (e) {
+        console.error('[Settings] Failed to decrypt security_vpn_detection_apikey.');
+        config.security.vpnDetectionApiKey = '[Decryption Failed]';
+      }
+    } else if (key === 'security_max_biometric_attempts_per_ip') {
+      config.security.maxBiometricAttemptsPerIP = parseInt(value, 10) || 10;
+    } else if (key === 'security_biometric_ip_limit_window_minutes') {
+      config.security.biometricIPLimitWindowMinutes = parseInt(value, 10) || 60;
+    }
+    // --- Push Settings ---
+    else if (key === 'push_enabled_global') {
+      config.push.enabledGlobal = parseBool(value, true);
+    } else if (key === 'push_enabled_polls') {
+      config.push.enabledPolls = parseBool(value, true);
+    } else if (key === 'push_enabled_messages') {
+      config.push.enabledMessages = parseBool(value, true);
+    } else if (key === 'push_service_account_json') {
+      try {
+        config.push.serviceAccountJson = value ? maskApiKey(decryptApiKey(value)) : '';
+      } catch (e) {
+        console.error('[Settings] Failed to decrypt push_service_account_json.');
+        config.push.serviceAccountJson = '[Decryption Failed]';
+      }
+    }
+  });
+
+  systemSettingsResult.rows.forEach((row: any) => {
+     config[row.key] = row.value;
+  });
+
+  return config;
+}
+
+/**
+ * Get security settings (for use by other services)
+ * Returns the security configuration including biometric IP rate limits
+ */
+export async function getSecuritySettings() {
+  const result = await pool.query(
+    `SELECT key, value FROM settings WHERE key LIKE 'security_%'`
+  );
+
+  const security = {
+    blockVpnAndProxy: false,
+    vpnDetectionProvider: 'iphub',
+    vpnDetectionApiKey: '',
+    maxBiometricAttemptsPerIP: 10,
+    biometricIPLimitWindowMinutes: 60,
+  };
+
+  result.rows.forEach((row: any) => {
+    const { key, value } = row;
+
+    if (key === 'security_block_vpn_and_proxy') {
+      security.blockVpnAndProxy = parseBool(value, false);
+    } else if (key === 'security_vpn_detection_provider') {
+      security.vpnDetectionProvider = value || 'iphub';
+    } else if (key === 'security_vpn_detection_apikey') {
+      try {
+        security.vpnDetectionApiKey = value ? decryptApiKey(value) : '';
+      } catch {
+        security.vpnDetectionApiKey = '';
+      }
+    } else if (key === 'security_max_biometric_attempts_per_ip') {
+      security.maxBiometricAttemptsPerIP = parseInt(value, 10) || 10;
+    } else if (key === 'security_biometric_ip_limit_window_minutes') {
+      security.biometricIPLimitWindowMinutes = parseInt(value, 10) || 60;
+    }
+  });
+
+  return security;
+}
+
+/**
+ * GET /api/v1/admin/settings
+ * Admin-only settings (verification providers + policies)
+ */
+router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const config = await loadFullConfig();
+    return res.json(config);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+/**
+ * PATCH /api/v1/admin/settings
+ * Partial update of admin settings (verification providers + policies)
+ */
+router.patch('/', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const body = req.body || {};
+    await validateAdminSettingsPatch(body);
+    const current = await loadFullConfig();
+
+    const merged = {
+      ...current,
+      ...body,
+      nfc: { ...current.nfc, ...(body.nfc || {}) },
+      documentScanner: { ...current.documentScanner, ...(body.documentScanner || {}) },
+      liveness: { ...current.liveness, ...(body.liveness || {}) },
+      faceMatch: { ...current.faceMatch, ...(body.faceMatch || {}) },
+      security: { ...current.security, ...(body.security || {}) },
+      push: { ...current.push, ...(body.push || {}) },
+      // Rate limits are direct objects, just replace if present
+      rate_limit_enrollment: body.rate_limit_enrollment || current.rate_limit_enrollment,
+      rate_limit_login: body.rate_limit_login || current.rate_limit_login,
+      rate_limit_biometric: body.rate_limit_biometric || current.rate_limit_biometric,
+    };
+
+    const settings = [
+      // Verification Keys
+      { key: 'verification_nfc_provider', value: merged.nfc.provider },
+      { key: 'verification_nfc_require_nfc', value: String(merged.nfc.requireNfc) },
+      {
+        key: 'verification_nfc_require_georgian_citizen',
+        value: String(merged.nfc.requireGeorgianCitizen),
+      },
+      {
+        key: 'verification_nfc_require_personal_number',
+        value: String(merged.nfc.requirePersonalNumber),
+      },
+      {
+        key: 'verification_nfc_allow_skip_document',
+        value: String(merged.nfc.allowSkipDocument),
+      },
+
+      { key: 'verification_document_provider', value: merged.documentScanner.provider },
+      {
+        key: 'verification_document_require_photo_scan',
+        value: String(merged.documentScanner.requireDocumentPhotoScan),
+      },
+      { key: 'verification_document_strictness', value: merged.documentScanner.strictness },
+
+      { key: 'verification_liveness_provider', value: merged.liveness.provider },
+      { key: 'verification_liveness_retry_limit', value: String(merged.liveness.retryLimit) },
+
+      { key: 'verification_facematch_provider', value: merged.faceMatch.provider },
+      { key: 'verification_facematch_min_score', value: String(merged.faceMatch.minScore) },
+
+      // Security Keys
+      {
+        key: 'security_block_vpn_and_proxy',
+        value: String(merged.security.blockVpnAndProxy),
+      },
+      {
+        key: 'security_vpn_detection_provider',
+        value: merged.security.vpnDetectionProvider || 'iphub',
+      },
+      {
+        key: 'security_max_biometric_attempts_per_ip',
+        value: String(merged.security.maxBiometricAttemptsPerIP),
+      },
+      {
+        key: 'security_biometric_ip_limit_window_minutes',
+        value: String(merged.security.biometricIPLimitWindowMinutes),
+      },
+      // Push Keys
+      { key: 'push_enabled_global', value: String(merged.push.enabledGlobal) },
+      { key: 'push_enabled_polls', value: String(merged.push.enabledPolls) },
+      { key: 'push_enabled_messages', value: String(merged.push.enabledMessages) },
+    ];
+
+    if (
+      body.security &&
+      Object.prototype.hasOwnProperty.call(body.security, 'vpnDetectionApiKey') &&
+      !isMaskedSecret(body.security.vpnDetectionApiKey)
+    ) {
+      settings.push({
+        key: 'security_vpn_detection_apikey',
+        value: body.security.vpnDetectionApiKey
+          ? encryptApiKey(body.security.vpnDetectionApiKey)
+          : '',
+      });
+    }
+
+    if (
+      merged.documentScanner.apiKey &&
+      typeof merged.documentScanner.apiKey === 'string' &&
+      !isMaskedSecret(merged.documentScanner.apiKey)
+    ) {
+      settings.push({
+        key: 'verification_document_apikey',
+        value: encryptApiKey(merged.documentScanner.apiKey),
+      });
+    }
+    if (
+      merged.liveness.apiKey &&
+      typeof merged.liveness.apiKey === 'string' &&
+      !isMaskedSecret(merged.liveness.apiKey)
+    ) {
+      settings.push({
+        key: 'verification_liveness_apikey',
+        value: encryptApiKey(merged.liveness.apiKey),
+      });
+    }
+    if (
+      merged.faceMatch.apiKey &&
+      typeof merged.faceMatch.apiKey === 'string' &&
+      !isMaskedSecret(merged.faceMatch.apiKey)
+    ) {
+      settings.push({
+        key: 'verification_facematch_apikey',
+        value: encryptApiKey(merged.faceMatch.apiKey),
+      });
+    }
+
+    if (
+      merged.push.serviceAccountJson &&
+      typeof merged.push.serviceAccountJson === 'string' &&
+      !isMaskedSecret(merged.push.serviceAccountJson)
+    ) {
+      settings.push({
+        key: 'push_service_account_json',
+        value: encryptApiKey(merged.push.serviceAccountJson),
+      });
+    }
+
+    const rateLimitSettings = [
+      { key: 'rate_limit_enrollment', value: merged.rate_limit_enrollment },
+      { key: 'rate_limit_login', value: merged.rate_limit_login },
+      { key: 'rate_limit_biometric', value: merged.rate_limit_biometric },
+    ];
+
+    // These values form one security-policy snapshot: commit all changes or none.
+    await transaction(async client => {
+      for (const setting of settings) {
+        await client.query(
+          `INSERT INTO settings (key, value, updated_at)
+             VALUES ($1, $2, NOW())
+             ON CONFLICT (key)
+             DO UPDATE SET value = $2, updated_at = NOW()`,
+          [setting.key, setting.value]
+        );
+      }
+
+      for (const setting of rateLimitSettings) {
+        if (!setting.value) continue;
+        await client.query(
+          `INSERT INTO system_settings (key, value, updated_at)
+             VALUES ($1, $2, NOW())
+             ON CONFLICT (key)
+             DO UPDATE SET value = $2, updated_at = NOW()`,
+          [setting.key, setting.value]
+        );
+      }
+    });
+
+    // Trigger push service reinitialization to apply new credentials/toggles
+    const { pushService } = await import('../../services/pushNotifications');
+    await pushService.reinitialize();
+
+    // Clear rate limit cache so new settings take effect immediately
+    const { clearRateLimitCache } = await import('../../services/authRateLimit');
+    clearRateLimitCache();
+    console.log('[Admin] Rate limit settings cache cleared');
+
+    // === SHIELD SYNCHRONIZATION ===
+    // Publish security and geo settings to Redis so the Shield Gateway
+    // can enforce them at the optional edge (port 18080) without hitting the backend.
+    try {
+      const redisClient = (await import('../../db/redis')).default;
+      const securityPayload = {
+        block_vpn_and_proxy: String(merged.security.blockVpnAndProxy),
+        require_device_attestation: String(process.env.REQUIRE_DEVICE_ATTESTATION !== 'false'),
+        max_biometric_attempts_per_ip: String(merged.security.maxBiometricAttemptsPerIP),
+        biometric_window_minutes: String(merged.security.biometricIPLimitWindowMinutes),
+      };
+      await redisClient.set('security:settings', JSON.stringify(securityPayload));
+      console.log('[Admin] Security settings synced to Shield via Redis:', securityPayload);
+    } catch (e) {
+      console.warn('[Admin] Could not sync security settings to Shield Redis (non-fatal):', e);
+    }
+
+    const updated = await loadFullConfig();
+    return res.json(updated);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+/**
+ * GET /api/v1/admin/settings/verification-providers
+ * Get current verification provider configuration
+ */
+router.get('/verification-providers', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    // Query settings from database
+    const result = await pool.query(
+      `SELECT key, value FROM settings WHERE key LIKE 'verification_%'`
+    );
+
+    // Build config object
+    const config = {
+      documentScanner: {
+        provider: 'manual',
+        apiKey: '',
+      },
+      liveness: {
+        provider: 'mock',
+        apiKey: '',
+        retryLimit: 3,
+        // Note: Liveness is pass/fail only - no minScore
+      },
+      faceMatch: {
+        provider: 'mock',
+        apiKey: '',
+        minScore: 0.75,
+      },
+    };
+
+    // Parse settings from database
+    result.rows.forEach((row: any) => {
+      const { key, value } = row;
+
+      if (key === 'verification_nfc_provider') {
+        config.documentScanner.provider = value;
+      } else if (key === 'verification_document_apikey') {
+        // Return masked API key
+        config.documentScanner.apiKey = value ? maskApiKey(decryptApiKey(value)) : '';
+      } else if (key === 'verification_liveness_provider') {
+        config.liveness.provider = value;
+      } else if (key === 'verification_liveness_apikey') {
+        config.liveness.apiKey = value ? maskApiKey(decryptApiKey(value)) : '';
+      } else if (key === 'verification_liveness_retry_limit') {
+        config.liveness.retryLimit = parseInt(value, 10);
+      } else if (key === 'verification_facematch_provider') {
+        config.faceMatch.provider = value;
+      } else if (key === 'verification_facematch_apikey') {
+        config.faceMatch.apiKey = value ? maskApiKey(decryptApiKey(value)) : '';
+      } else if (key === 'verification_facematch_min_score') {
+        config.faceMatch.minScore = parseFloat(value);
+      }
+    });
+
+    res.json(config);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/admin/settings/verification-providers
+ * Update verification provider configuration
+ */
+router.post('/verification-providers', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { documentScanner, liveness, faceMatch } = req.body;
+    await validateAdminSettingsPatch({ documentScanner, liveness, faceMatch });
+
+    // Prepare settings to upsert
+    const settings = [
+      { key: 'verification_document_provider', value: documentScanner.provider },
+      { key: 'verification_liveness_provider', value: liveness.provider },
+      { key: 'verification_liveness_retry_limit', value: liveness.retryLimit.toString() },
+      { key: 'verification_facematch_provider', value: faceMatch.provider },
+      { key: 'verification_facematch_min_score', value: faceMatch.minScore.toString() },
+    ];
+
+    // Only update API keys if they're not masked (i.e., user actually changed them)
+    if (documentScanner.apiKey && !isMaskedSecret(documentScanner.apiKey)) {
+      settings.push({
+        key: 'verification_document_apikey',
+        value: encryptApiKey(documentScanner.apiKey),
+      });
+    }
+
+    if (liveness.apiKey && !isMaskedSecret(liveness.apiKey)) {
+      settings.push({
+        key: 'verification_liveness_apikey',
+        value: encryptApiKey(liveness.apiKey),
+      });
+    }
+
+    if (faceMatch.apiKey && !isMaskedSecret(faceMatch.apiKey)) {
+      settings.push({
+        key: 'verification_facematch_apikey',
+        value: encryptApiKey(faceMatch.apiKey),
+      });
+    }
+
+    await transaction(async client => {
+      for (const setting of settings) {
+        await client.query(
+          `INSERT INTO settings (key, value, updated_at)
+             VALUES ($1, $2, NOW())
+             ON CONFLICT (key)
+             DO UPDATE SET value = $2, updated_at = NOW()`,
+          [setting.key, setting.value]
+        );
+      }
+    });
+
+    // Return updated config (with masked API keys)
+    const updatedConfig = {
+      documentScanner: {
+        provider: documentScanner.provider,
+        apiKey:
+          documentScanner.apiKey && !isMaskedSecret(documentScanner.apiKey)
+            ? maskApiKey(documentScanner.apiKey)
+            : documentScanner.apiKey,
+      },
+      liveness: {
+        provider: liveness.provider,
+        apiKey:
+          liveness.apiKey && !isMaskedSecret(liveness.apiKey)
+            ? maskApiKey(liveness.apiKey)
+            : liveness.apiKey,
+        retryLimit: liveness.retryLimit,
+      },
+      faceMatch: {
+        provider: faceMatch.provider,
+        apiKey:
+          faceMatch.apiKey && !isMaskedSecret(faceMatch.apiKey)
+            ? maskApiKey(faceMatch.apiKey)
+            : faceMatch.apiKey,
+        minScore: faceMatch.minScore,
+      },
+    };
+
+    res.json(updatedConfig);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/admin/settings/verification-providers/test
+ * Test connection to verification provider
+ */
+router.post('/verification-providers/test', (_req: Request, res: Response) => {
+  res.status(409).json({ success: false, error: 'VERIFICATION_PROVIDER_NOT_ACTIVATED' });
+});
+
+/**
+ * POST /api/v1/admin/settings/notifications/test
+ * Test Firebase Cloud Messaging connection/initialization
+ */
+router.post('/notifications/test', async (req: Request, res: Response) => {
+  try {
+    const { serviceAccountJson, serviceAccountPath } = req.body || {};
+
+    // This is a dry-run test. In a real scenario, we might try to list the project metadata.
+    // For now, we validate the input.
+    if (serviceAccountPath) {
+      return res.status(400).json({
+        success: false,
+        error: 'Service Account Path is environment-only',
+      });
+    }
+    if (!serviceAccountJson) {
+      return res.status(400).json({
+        success: false,
+        error: 'Service Account JSON is required',
+      });
+    }
+    if (isMaskedSecret(serviceAccountJson)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Paste a fresh Service Account JSON value to validate it',
+      });
+    }
+    validateFirebaseServiceAccount(serviceAccountJson);
+
+    // Simulate connection check
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    return res.json({
+      success: true,
+      message: 'Firebase configuration format is valid. (Token validation will occur on save)',
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Invalid Firebase configuration',
+    });
+  }
+});
+
+/**
+ * POST /api/v1/admin/settings/vpn-detection/test
+ * Test VPN detection API connection
+ */
+router.post('/vpn-detection/test', async (req: Request, res: Response) => {
+  try {
+    const { provider, apiKey } = req.body;
+
+    if (!apiKey) {
+      return res.status(400).json({
+        success: false,
+        error: 'API key is required',
+      });
+    }
+
+    // Test with a known residential IP (Google DNS)
+    const testIp = '8.8.8.8';
+
+    if (provider === 'iphub') {
+      const response = await fetch(`https://v2.api.iphub.info/ip/${testIp}`, {
+        headers: { 'X-Key': apiKey },
+      });
+      const data: any = await response.json();
+
+      if (response.status === 200) {
+        return res.json({
+          success: true,
+          message: `Connected to IPHub! (IP ${testIp}: ${data.isp || 'Valid response'})`,
+        });
+      } else {
+        return res.json({
+          success: false,
+          error: `IPHub error: ${data.error || 'Invalid API key or rate limit exceeded'}`,
+        });
+      }
+    } else if (provider === 'ipqualityscore') {
+      const response = await fetch(
+        `https://ipqualityscore.com/api/json/ip/${apiKey}/${testIp}?strictness=0`
+      );
+      const data: any = await response.json();
+
+      if (data.success) {
+        return res.json({
+          success: true,
+          message: `Connected to IPQualityScore! (IP ${testIp}: ${data.ISP || 'Valid response'})`,
+        });
+      } else {
+        return res.json({
+          success: false,
+          error: `IPQualityScore error: ${data.message || 'Invalid API key'}`,
+        });
+      }
+    } else if (provider === 'proxycheck') {
+      const url = apiKey
+        ? `https://proxycheck.io/v2/${testIp}?key=${apiKey}&vpn=1`
+        : `https://proxycheck.io/v2/${testIp}?vpn=1`;
+
+      const response = await fetch(url);
+      const data: any = await response.json();
+
+      if (data.status === 'ok') {
+        return res.json({
+          success: true,
+          message: `Connected to ProxyCheck.io! (IP ${testIp}: ${data[testIp]?.provider || 'Valid response'})`,
+        });
+      } else {
+        return res.json({
+          success: false,
+          error: `ProxyCheck error: ${data.message || 'Invalid API key or rate limit'}`,
+        });
+      }
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: 'Unknown provider',
+      });
+    }
+  } catch (error: any) {
+    console.error('[VPN Test] Error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to test VPN detection service',
+    });
+  }
+});
+
+export default router;

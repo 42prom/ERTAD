@@ -9,7 +9,8 @@ try {
   await client.query('SELECT pg_advisory_lock(42420001)');
   await client.query('CREATE SCHEMA IF NOT EXISTS ertad');
   await client.query('CREATE TABLE IF NOT EXISTS ertad.schema_migrations (version text PRIMARY KEY, checksum text NOT NULL, applied_at timestamptz NOT NULL DEFAULT now())');
-  const dir = new URL('../db/migrations/', import.meta.url);
+  // Retained ERTAD migrations are reference history, never part of ERTAD's applied schema.
+  const dir = new URL('../db/foundation/', import.meta.url);
   for (const version of (await readdir(dir)).filter(file => /^\d{4}_[a-z0-9_]+\.sql$/.test(file)).sort()) {
     const sql = await readFile(new URL(version, dir), 'utf8');
     const checksum = createHash('sha256').update(sql).digest('hex');
