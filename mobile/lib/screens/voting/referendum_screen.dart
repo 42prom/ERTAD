@@ -8,6 +8,7 @@ import '../../core/widgets/ertad_ui.dart';
 import '../../models/poll.dart';
 import '../../services/localization_service.dart';
 import 'confirm_vote_screen.dart';
+import 'decision_results_card.dart';
 
 class ReferendumScreen extends StatefulWidget {
   final Poll poll;
@@ -120,6 +121,8 @@ class _ReferendumScreenState extends State<ReferendumScreen> {
               ],
             ),
             if (isReadOnly) ...[
+              const SizedBox(height: 12),
+              DecisionResultsCard(poll: widget.poll, isClosed: isClosed),
               const SizedBox(height: 12),
               ErtadStateBanner(
                 icon: Icons.verified_user_outlined,

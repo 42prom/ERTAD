@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../screens/enrollment/intro_screen.dart';
+import '../../services/storage_service.dart';
 import '../feedback/ertad_feedback.dart';
 import '../state/shell_providers.dart';
 import '../theme/ertad_theme.dart';
@@ -29,6 +30,40 @@ class OrgContextSheet extends ConsumerStatefulWidget {
 }
 
 class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
+  String? _localFullName;
+  String? _localBirthDate;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocalIdentity();
+  }
+
+  Future<void> _loadLocalIdentity() async {
+    try {
+      final storage = StorageService();
+      final first = (await storage.getFirstName() ?? '').trim();
+      final last = (await storage.getLastName() ?? '').trim();
+      final dob = await storage.getBirthDate();
+      if (!mounted) return;
+      final fullName = [first, last].where((s) => s.isNotEmpty).join(' ');
+      String? dobFormatted;
+      if (dob != null) {
+        final dd = dob.day.toString().padLeft(2, '0');
+        final mm = dob.month.toString().padLeft(2, '0');
+        dobFormatted = '$dd.$mm.${dob.year}';
+      }
+      if (fullName.isNotEmpty || dobFormatted != null) {
+        setState(() {
+          _localFullName = fullName.isNotEmpty ? fullName : null;
+          _localBirthDate = dobFormatted;
+        });
+      }
+    } catch (_) {
+      // Local on-device identity enrichment is best-effort only.
+    }
+  }
+
   Future<void> _editPhoneDialog({required bool hasPhone}) async {
     final controller = TextEditingController();
     final action = await showDialog<String>(
@@ -387,13 +422,85 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
 
                 const SizedBox(height: 12),
 
-                // 2. Compact Phone & Personal Referral Card (icon-driven, zero clutter)
+                // 2. Personal Details (on-device encrypted eID + server region/group)
+                ErtadSurfaceCard(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (_localFullName != null) ...[
+                        _ProfileInfoRow(
+                          icon: Icons.badge_outlined,
+                          label: shellTr(
+                            context,
+                            'profile_full_name',
+                            fallback: 'Full name',
+                          ),
+                          value: _localFullName!,
+                        ),
+                        Divider(height: 16, color: p.hairline),
+                      ],
+                      if (_localBirthDate != null) ...[
+                        _ProfileInfoRow(
+                          icon: Icons.cake_outlined,
+                          label: shellTr(
+                            context,
+                            'profile_birth_date',
+                            fallback: 'Date of birth',
+                          ),
+                          value: _localBirthDate!,
+                        ),
+                        Divider(height: 16, color: p.hairline),
+                      ],
+                      _ProfileInfoRow(
+                        icon: Icons.location_on_outlined,
+                        label: shellTr(
+                          context,
+                          'profile_region_group',
+                          fallback: 'Region / Group',
+                        ),
+                        value: session.activeOrg.unitName,
+                      ),
+                      if (_localFullName != null || _localBirthDate != null) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.lock_outline_rounded,
+                              size: 13,
+                              color: p.muted,
+                            ),
+                            const SizedBox(width: 5),
+                            Expanded(
+                              child: Text(
+                                shellTr(
+                                  context,
+                                  'profile_device_only_hint',
+                                  fallback: 'Stored on this device only',
+                                ),
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(color: p.muted),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // 3. Phone Number & Personal Referral Card (clear action button)
                 ErtadSurfaceCard(
                   padding: EdgeInsets.zero,
                   child: Column(
                     children: [
                       ListTile(
-                        minTileHeight: 54,
+                        minTileHeight: 60,
                         leading: Icon(Icons.phone_outlined, color: p.primary),
                         title: Text(
                           hasPhone && phoneHint.isNotEmpty
@@ -418,17 +525,34 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
                                 ),
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
-                        trailing: Icon(
-                          Icons.edit_outlined,
-                          size: 18,
-                          color: p.muted,
+                        trailing: FilledButton.tonal(
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            minimumSize: const Size(0, 34),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          onPressed: () {
+                            HapticFeedback.selectionClick();
+                            _editPhoneDialog(hasPhone: hasPhone);
+                          },
+                          child: Text(
+                            hasPhone
+                                ? shellTr(
+                                    context,
+                                    'profile_edit_phone',
+                                    fallback: 'Edit',
+                                  )
+                                : '+ ${shellTr(context, 'profile_add_phone', fallback: 'Add')}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
                         ),
-                        onTap: session.isLiveConnected
-                            ? () {
-                                HapticFeedback.selectionClick();
-                                _editPhoneDialog(hasPhone: hasPhone);
-                              }
-                            : null,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          _editPhoneDialog(hasPhone: hasPhone);
+                        },
                       ),
                       if (personalCode.isNotEmpty) ...[
                         Divider(height: 1, color: p.hairline),
@@ -632,6 +756,49 @@ class _StatusChip extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ProfileInfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _ProfileInfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.ertad;
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: p.primary),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: p.muted),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.end,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
     );
   }
 }

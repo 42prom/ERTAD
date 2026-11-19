@@ -94,19 +94,24 @@ class _TasksTabScreenState extends ConsumerState<TasksTabScreen> {
       ErtadCategoryItem(
         label: shellTr(
           context,
-          'tasks_tab_available',
-          fallback: 'Available',
+          'tasks_tab_new',
+          fallback: 'New',
         ),
       ),
       ErtadCategoryItem(
-        label: shellTr(context, 'tasks_tab_mine', fallback: 'Mine'),
+        label: shellTr(
+          context,
+          'tasks_tab_in_progress',
+          fallback: 'In progress',
+        ),
         badgeCount: session.myWorkItems.length,
       ),
       ErtadCategoryItem(
-        label: shellTr(context, 'tasks_tab_events', fallback: 'Events'),
-      ),
-      ErtadCategoryItem(
-        label: shellTr(context, 'tasks_tab_history', fallback: 'History'),
+        label: shellTr(
+          context,
+          'tasks_tab_completed',
+          fallback: 'Completed',
+        ),
       ),
       if (session.isGroupManager)
         ErtadCategoryItem(
@@ -127,17 +132,37 @@ class _TasksTabScreenState extends ConsumerState<TasksTabScreen> {
       return hay.contains(normalizedQuery);
     }
 
+    String eventRsvpStatus(Map<String, dynamic> ev) {
+      final myRsvp = ev['myRsvp'];
+      return myRsvp is Map
+          ? (myRsvp['status']?.toString() ?? '').toLowerCase()
+          : '';
+    }
+
     final List<Map<String, dynamic>> rawWorkList = switch (activeSegment) {
       0 => session.liveWorkItems,
       1 => session.myWorkItems,
-      3 => session.historyWorkItems,
-      4 => session.reviewWorkItems,
+      2 => session.historyWorkItems,
+      3 => session.reviewWorkItems,
       _ => const <Map<String, dynamic>>[],
     };
+    final List<Map<String, dynamic>> rawEventList = switch (activeSegment) {
+      0 => session.liveEvents
+          .where((ev) => eventRsvpStatus(ev).isEmpty)
+          .toList(growable: false),
+      1 => session.liveEvents
+          .where((ev) => const {'going', 'waitlist'}.contains(eventRsvpStatus(ev)))
+          .toList(growable: false),
+      2 => session.liveEvents
+          .where((ev) => eventRsvpStatus(ev) == 'checked_in')
+          .toList(growable: false),
+      _ => const <Map<String, dynamic>>[],
+    };
+
     final workList = rawWorkList.where(matchesSearch).toList(growable: false);
-    final filteredEvents = session.liveEvents
-        .where(matchesSearch)
-        .toList(growable: false);
+    final filteredEvents =
+        rawEventList.where(matchesSearch).toList(growable: false);
+    final totalVisible = workList.length + filteredEvents.length;
 
     return ErtadTabScrollView(
       controller: controller,
@@ -161,8 +186,7 @@ class _TasksTabScreenState extends ConsumerState<TasksTabScreen> {
           onSelected: (i) => setState(() => _segment = i),
         ),
         if (_query.isNotEmpty ||
-            rawWorkList.length > 4 ||
-            session.liveEvents.length > 4) ...[
+            (rawWorkList.length + rawEventList.length) > 4) ...[
           const SizedBox(height: 12),
           TextField(
             controller: _search,
@@ -202,112 +226,107 @@ class _TasksTabScreenState extends ConsumerState<TasksTabScreen> {
           ),
         ],
         const SizedBox(height: 14),
-        if (activeSegment == 2) ...[
-          if (filteredEvents.isNotEmpty)
-            ...filteredEvents.map((ev) {
-              final myRsvp = ev['myRsvp'];
-              final rsvpStatus = myRsvp is Map
-                  ? (myRsvp['status']?.toString() ?? '')
-                  : '';
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: ErtadSurfaceCard(
-                  onTap: () => _openEvent(ev),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const ErtadIconCircle(
-                        icon: Icons.event_available_rounded,
-                        tone: ErtadTone.success,
-                        size: 44,
-                        iconSize: 22,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              ev['title']?.toString() ??
-                                  shellTr(
-                                    context,
-                                    'src_event',
-                                    fallback: 'Event',
+        if (totalVisible == 0)
+          ErtadEmptyState(
+            icon: Icons.task_alt_outlined,
+            title: segmentItems[activeSegment].label,
+            body: shellTr(
+              context,
+              'tasks_empty',
+              fallback: 'No tasks or events in this section',
+            ),
+          )
+        else ...[
+          ...filteredEvents.map((ev) {
+            final rsvpStatus = eventRsvpStatus(ev);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: ErtadSurfaceCard(
+                onTap: () => _openEvent(ev),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const ErtadIconCircle(
+                      icon: Icons.event_available_rounded,
+                      tone: ErtadTone.success,
+                      size: 44,
+                      iconSize: 22,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            ev['title']?.toString() ??
+                                shellTr(
+                                  context,
+                                  'src_event',
+                                  fallback: 'Event',
+                                ),
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          if (ev['location'] != null) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.place_outlined,
+                                  size: 14,
+                                  color: p.muted,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    ev['location'].toString(),
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
                                   ),
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            if (ev['location'] != null) ...[
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.place_outlined,
-                                    size: 14,
-                                    color: p.muted,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Expanded(
-                                    child: Text(
-                                      ev['location'].toString(),
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.bodySmall,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                            const SizedBox(height: 8),
-                            ErtadStatusPill(
-                              label: switch (rsvpStatus.toLowerCase()) {
-                                'going' => shellTr(
-                                    context,
-                                    'event_going_label',
-                                    fallback: 'Going',
-                                  ),
-                                'waitlist' => shellTr(
-                                    context,
-                                    'event_status_waitlist',
-                                    fallback: 'Waitlisted',
-                                  ),
-                                'checked_in' => shellTr(
-                                    context,
-                                    'event_status_checked_in',
-                                    fallback: 'Checked in',
-                                  ),
-                                _ when rsvpStatus.isNotEmpty => rsvpStatus,
-                                _ => shellTr(
-                                    context,
-                                    'event_rsvp_label',
-                                    fallback: 'RSVP',
-                                  ),
-                              },
-                              icon: Icons.check_circle_outline_rounded,
-                              tone: rsvpStatus.toLowerCase() == 'going' ||
-                                      rsvpStatus.toLowerCase() == 'checked_in'
-                                  ? ErtadTone.success
-                                  : ErtadTone.primary,
+                                ),
+                              ],
                             ),
                           ],
-                        ),
+                          const SizedBox(height: 8),
+                          ErtadStatusPill(
+                            label: switch (rsvpStatus) {
+                              'going' => shellTr(
+                                  context,
+                                  'event_going_label',
+                                  fallback: 'Going',
+                                ),
+                              'waitlist' => shellTr(
+                                  context,
+                                  'event_status_waitlist',
+                                  fallback: 'Waitlisted',
+                                ),
+                              'checked_in' => shellTr(
+                                  context,
+                                  'event_status_checked_in',
+                                  fallback: 'Checked in',
+                                ),
+                              _ when rsvpStatus.isNotEmpty => rsvpStatus,
+                              _ => shellTr(
+                                  context,
+                                  'event_rsvp_label',
+                                  fallback: 'RSVP',
+                                ),
+                            },
+                            icon: Icons.check_circle_outline_rounded,
+                            tone: rsvpStatus == 'going' ||
+                                    rsvpStatus == 'checked_in'
+                                ? ErtadTone.success
+                                : ErtadTone.primary,
+                          ),
+                        ],
                       ),
-                      Icon(Icons.chevron_right_rounded, color: p.muted),
-                    ],
-                  ),
+                    ),
+                    Icon(Icons.chevron_right_rounded, color: p.muted),
+                  ],
                 ),
-              );
-            })
-          else
-            ErtadEmptyState(
-              icon: Icons.event_available_outlined,
-              title: segmentItems[2].label,
-              body: shellTr(
-                context,
-                'events_empty',
-                fallback: 'No upcoming events scheduled',
               ),
-            ),
-        ] else if (workList.isNotEmpty) ...[
+            );
+          }),
           ...workList.map((item) {
             final myStatus = item['myStatus']?.toString();
             final priority = item['priority']?.toString() ?? 'normal';
@@ -378,24 +397,7 @@ class _TasksTabScreenState extends ConsumerState<TasksTabScreen> {
               ),
             );
           }),
-        ] else
-          ErtadEmptyState(
-            icon: _segment == 3
-                ? Icons.history_rounded
-                : Icons.task_alt_rounded,
-            title: segmentItems[_segment].label,
-            body: _segment == 3
-                ? shellTr(
-                    context,
-                    'tasks_history_empty',
-                    fallback: 'Completed or archived tasks will appear here.',
-                  )
-                : shellTr(
-                    context,
-                    'tasks_empty',
-                    fallback: 'No tasks or events in this category yet.',
-                  ),
-          ),
+        ],
       ],
     );
   }

@@ -100,12 +100,64 @@ class AccountPrivacySheet extends ConsumerWidget {
                           ),
                         ],
                         selected: <PrivacyDisclosureLevel>{session.privacyLevel},
-                        onSelectionChanged: (sel) {
-                          if (sel.isEmpty) return;
+                        onSelectionChanged: (sel) async {
+                          if (sel.isEmpty || sel.first == session.privacyLevel) {
+                            return;
+                          }
+                          final target = sel.first;
                           HapticFeedback.selectionClick();
-                          ref
-                              .read(shellSessionProvider.notifier)
-                              .setPrivacyLevel(sel.first);
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            useRootNavigator: true,
+                            builder: (dCtx) => AlertDialog(
+                              title: Text(
+                                shellTr(
+                                  dCtx,
+                                  'privacy_confirm_title',
+                                  fallback: 'Change privacy mode',
+                                ),
+                              ),
+                              content: Text(
+                                target == PrivacyDisclosureLevel.sharedContextOptIn
+                                    ? shellTr(
+                                        dCtx,
+                                        'privacy_confirm_public',
+                                        fallback:
+                                            'Your name will be visible in groups and chats. Switch to public?',
+                                      )
+                                    : shellTr(
+                                        dCtx,
+                                        'privacy_confirm_private',
+                                        fallback:
+                                            'Only an anonymous code will be shown in groups and chats. Switch to anonymous?',
+                                      ),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(dCtx).pop(false),
+                                  child: Text(
+                                    shellTr(dCtx, 'cancel', fallback: 'Cancel'),
+                                  ),
+                                ),
+                                FilledButton(
+                                  onPressed: () => Navigator.of(dCtx).pop(true),
+                                  child: Text(
+                                    shellTr(
+                                      dCtx,
+                                      'confirm',
+                                      fallback: 'Confirm',
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirmed == true) {
+                            HapticFeedback.lightImpact();
+                            ref
+                                .read(shellSessionProvider.notifier)
+                                .setPrivacyLevel(target);
+                          }
                         },
                       ),
                       const SizedBox(height: 6),
@@ -153,145 +205,139 @@ class AccountPrivacySheet extends ConsumerWidget {
 
                       const SizedBox(height: 18),
 
-                      // 3. Appearance & Language (compact icon-driven controls)
-                      Text(
-                        shellTr(context, 'theme_mode', fallback: 'Theme'),
-                        style: Theme.of(context).textTheme.labelLarge
-                            ?.copyWith(color: p.muted),
-                      ),
-                      const SizedBox(height: 8),
-                      SegmentedButton<ThemeMode>(
-                        showSelectedIcon: false,
-                        segments: [
-                          ButtonSegment<ThemeMode>(
-                            value: ThemeMode.system,
-                            icon: const Icon(Icons.brightness_auto_outlined, size: 17),
-                            label: Text(
-                              shellTr(context, 'theme_system', fallback: 'Auto'),
+                      // 3. Appearance & Language (icons-only theme + flags-only language)
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: SegmentedButton<ThemeMode>(
+                              showSelectedIcon: false,
+                              segments: [
+                                ButtonSegment<ThemeMode>(
+                                  value: ThemeMode.light,
+                                  tooltip: shellTr(
+                                    context,
+                                    'theme_light',
+                                    fallback: 'Light',
+                                  ),
+                                  icon: const Icon(
+                                    Icons.light_mode_rounded,
+                                    size: 20,
+                                  ),
+                                ),
+                                ButtonSegment<ThemeMode>(
+                                  value: ThemeMode.system,
+                                  tooltip: shellTr(
+                                    context,
+                                    'theme_system',
+                                    fallback: 'System',
+                                  ),
+                                  icon: const Icon(
+                                    Icons.brightness_auto_rounded,
+                                    size: 20,
+                                  ),
+                                ),
+                                ButtonSegment<ThemeMode>(
+                                  value: ThemeMode.dark,
+                                  tooltip: shellTr(
+                                    context,
+                                    'theme_dark',
+                                    fallback: 'Dark',
+                                  ),
+                                  icon: const Icon(
+                                    Icons.dark_mode_rounded,
+                                    size: 20,
+                                  ),
+                                ),
+                              ],
+                              selected: <ThemeMode>{themeMode},
+                              onSelectionChanged: (modes) {
+                                if (modes.isNotEmpty) {
+                                  HapticFeedback.selectionClick();
+                                  ref
+                                      .read(themeModeProvider.notifier)
+                                      .setThemeMode(modes.first);
+                                }
+                              },
                             ),
                           ),
-                          ButtonSegment<ThemeMode>(
-                            value: ThemeMode.light,
-                            icon: const Icon(Icons.light_mode_outlined, size: 17),
-                            label: Text(
-                              shellTr(context, 'theme_light', fallback: 'Light'),
-                            ),
-                          ),
-                          ButtonSegment<ThemeMode>(
-                            value: ThemeMode.dark,
-                            icon: const Icon(Icons.dark_mode_outlined, size: 17),
-                            label: Text(
-                              shellTr(context, 'theme_dark', fallback: 'Dark'),
-                            ),
-                          ),
-                        ],
-                        selected: <ThemeMode>{themeMode},
-                        onSelectionChanged: (modes) {
-                          if (modes.isNotEmpty) {
-                            HapticFeedback.selectionClick();
-                            ref
-                                .read(themeModeProvider.notifier)
-                                .setThemeMode(modes.first);
-                          }
-                        },
-                      ),
-                      if (loc != null) ...[
-                        const SizedBox(height: 12),
-                        SegmentedButton<AppLanguage>(
-                          showSelectedIcon: false,
-                          segments: const [
-                            ButtonSegment<AppLanguage>(
-                              value: AppLanguage.georgian,
-                              label: Text('ქართული'),
-                            ),
-                            ButtonSegment<AppLanguage>(
-                              value: AppLanguage.english,
-                              label: Text('English'),
+                          if (loc != null) ...[
+                            const SizedBox(width: 10),
+                            Expanded(
+                              flex: 2,
+                              child: SegmentedButton<AppLanguage>(
+                                showSelectedIcon: false,
+                                segments: const [
+                                  ButtonSegment<AppLanguage>(
+                                    value: AppLanguage.georgian,
+                                    tooltip: 'ქართული',
+                                    label: Text(
+                                      '🇬🇪',
+                                      style: TextStyle(fontSize: 18),
+                                    ),
+                                  ),
+                                  ButtonSegment<AppLanguage>(
+                                    value: AppLanguage.english,
+                                    tooltip: 'English',
+                                    label: Text(
+                                      '🇬🇧',
+                                      style: TextStyle(fontSize: 18),
+                                    ),
+                                  ),
+                                ],
+                                selected: <AppLanguage>{currentLang},
+                                onSelectionChanged: (langs) {
+                                  if (langs.isNotEmpty) {
+                                    HapticFeedback.selectionClick();
+                                    loc.setLanguage(langs.first);
+                                  }
+                                },
+                              ),
                             ),
                           ],
-                          selected: <AppLanguage>{currentLang},
-                          onSelectionChanged: (langs) {
-                            if (langs.isNotEmpty) {
-                              HapticFeedback.selectionClick();
-                              loc.setLanguage(langs.first);
-                            }
-                          },
-                        ),
-                      ],
+                        ],
+                      ),
 
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 16),
 
-                      // 4. Account & Help (unified clean list)
+                      // 4. Help
                       ErtadSurfaceCard(
                         padding: EdgeInsets.zero,
-                        child: Column(
-                          children: [
-                            ListTile(
-                              minTileHeight: 52,
-                              leading: Icon(Icons.login_rounded, color: p.primary),
-                              title: Text(
-                                shellTr(
-                                  context,
-                                  'open_signin_screen',
-                                  fallback: 'Google Sign-In / Switch account',
-                                ),
-                              ),
-                              trailing: Icon(
-                                Icons.chevron_right_rounded,
-                                color: p.muted,
-                              ),
-                              onTap: () {
-                                HapticFeedback.selectionClick();
-                                final nav = Navigator.of(
-                                  context,
-                                  rootNavigator: true,
-                                );
-                                nav.pop();
-                                nav.push(
-                                  MaterialPageRoute<void>(
-                                    builder: (_) => const SignInScreen(),
-                                  ),
-                                );
-                              },
+                        child: ListTile(
+                          minTileHeight: 52,
+                          leading: Icon(
+                            Icons.help_outline_rounded,
+                            color: p.primary,
+                          ),
+                          title: Text(
+                            shellTr(
+                              context,
+                              'help_support',
+                              fallback: 'Help',
                             ),
-                            Divider(height: 1, color: p.hairline),
-                            ListTile(
-                              minTileHeight: 52,
-                              leading: Icon(
-                                Icons.help_outline_rounded,
-                                color: p.primary,
+                          ),
+                          trailing: Icon(
+                            Icons.chevron_right_rounded,
+                            color: p.muted,
+                          ),
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            final nav = Navigator.of(
+                              context,
+                              rootNavigator: true,
+                            );
+                            nav.pop();
+                            nav.push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => const HelpScreen(),
                               ),
-                              title: Text(
-                                shellTr(
-                                  context,
-                                  'help_support',
-                                  fallback: 'Help',
-                                ),
-                              ),
-                              trailing: Icon(
-                                Icons.chevron_right_rounded,
-                                color: p.muted,
-                              ),
-                              onTap: () {
-                                HapticFeedback.selectionClick();
-                                final nav = Navigator.of(
-                                  context,
-                                  rootNavigator: true,
-                                );
-                                nav.pop();
-                                nav.push(
-                                  MaterialPageRoute<void>(
-                                    builder: (_) => const HelpScreen(),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
+                            );
+                          },
                         ),
                       ),
 
                       if (!kReleaseMode) ...[
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 16),
                         Text(
                           shellTr(
                             context,
@@ -337,6 +383,93 @@ class AccountPrivacySheet extends ConsumerWidget {
                           },
                         ),
                       ],
+
+                      const SizedBox(height: 20),
+
+                      // 5. Sign Out (always at the very bottom, unmistakable logout style)
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: p.danger,
+                            side: BorderSide(
+                              color: p.danger.withValues(alpha: 0.45),
+                            ),
+                            minimumSize: const Size(double.infinity, 48),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          onPressed: () async {
+                            HapticFeedback.selectionClick();
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              useRootNavigator: true,
+                              builder: (dCtx) => AlertDialog(
+                                title: Text(
+                                  shellTr(
+                                    dCtx,
+                                    'logout_confirm_title',
+                                    fallback: 'Sign out',
+                                  ),
+                                ),
+                                content: Text(
+                                  shellTr(
+                                    dCtx,
+                                    'logout_confirm_body',
+                                    fallback:
+                                        'Are you sure you want to sign out?',
+                                  ),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(dCtx).pop(false),
+                                    child: Text(
+                                      shellTr(dCtx, 'cancel', fallback: 'Cancel'),
+                                    ),
+                                  ),
+                                  FilledButton(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: p.danger,
+                                    ),
+                                    onPressed: () =>
+                                        Navigator.of(dCtx).pop(true),
+                                    child: Text(
+                                      shellTr(
+                                        dCtx,
+                                        'logout_button',
+                                        fallback: 'Sign out',
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirmed == true && context.mounted) {
+                              HapticFeedback.mediumImpact();
+                              final nav = Navigator.of(
+                                context,
+                                rootNavigator: true,
+                              );
+                              nav.pop();
+                              nav.push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => const SignInScreen(),
+                                ),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.logout_rounded, size: 19),
+                          label: Text(
+                            shellTr(
+                              context,
+                              'logout_button',
+                              fallback: 'Sign out',
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),

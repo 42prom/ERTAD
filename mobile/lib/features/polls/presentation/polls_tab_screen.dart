@@ -125,8 +125,8 @@ class _PollsTabScreenState extends ConsumerState<PollsTabScreen> {
       }
       final ended = isEnded(poll);
       return switch (_filterIndex) {
-        1 => true,
-        2 => ended || poll.hasVoted,
+        1 => !ended && poll.hasVoted,
+        2 => ended,
         _ => !ended && !poll.hasVoted,
       };
     }).toList();
@@ -147,19 +147,6 @@ class _PollsTabScreenState extends ConsumerState<PollsTabScreen> {
     }
     final controller = ref.watch(tabScrollRegistryProvider).controllerFor(4);
 
-    final segmentItems = <ErtadCategoryItem>[
-      ErtadCategoryItem(
-        label: shellTr(context, 'polls_tab_active', fallback: 'Active'),
-        badgeCount: session.openDecisionsCount,
-      ),
-      ErtadCategoryItem(
-        label: shellTr(context, 'polls_tab_all', fallback: 'All'),
-      ),
-      ErtadCategoryItem(
-        label: shellTr(context, 'polls_tab_history', fallback: 'History'),
-      ),
-    ];
-
     List<Poll> mergeUnique(Iterable<Poll> first, Iterable<Poll> second) {
       final seen = <String>{};
       final out = <Poll>[];
@@ -169,19 +156,33 @@ class _PollsTabScreenState extends ConsumerState<PollsTabScreen> {
       return out;
     }
 
-    final List<Poll> historyCombined = mergeUnique(
+    final List<Poll> submittedActive = session.livePolls
+        .where((p) => !isEnded(p) && p.hasVoted)
+        .toList(growable: false);
+    final List<Poll> historyEnded = mergeUnique(
       session.historyPolls,
-      session.livePolls.where((p) => p.hasVoted),
+      session.livePolls.where((p) => isEnded(p)),
     );
-    final List<Poll> allCombined = mergeUnique(
-      session.livePolls,
-      session.historyPolls,
-    );
+
+    final segmentItems = <ErtadCategoryItem>[
+      ErtadCategoryItem(
+        label: shellTr(context, 'polls_tab_active', fallback: 'Active'),
+        badgeCount: session.openDecisionsCount,
+      ),
+      ErtadCategoryItem(
+        label: shellTr(context, 'polls_tab_submitted', fallback: 'Submitted'),
+        badgeCount: submittedActive.length,
+      ),
+      ErtadCategoryItem(
+        label: shellTr(context, 'polls_tab_history', fallback: 'History'),
+      ),
+    ];
+
     final List<Poll> source =
         (widget.pollsLoader == null && session.isLiveConnected)
             ? switch (_filterIndex) {
-                1 => allCombined,
-                2 => historyCombined,
+                1 => submittedActive,
+                2 => historyEnded,
                 _ => session.livePolls,
               }
             : _legacyPolls;

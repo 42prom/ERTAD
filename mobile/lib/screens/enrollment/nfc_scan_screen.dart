@@ -16,6 +16,7 @@ import '../../models/verification_models.dart';
 import '../../services/interfaces/i_api_service.dart';
 import '../../services/localization_service.dart';
 import '../../services/service_locator.dart';
+import '../../services/storage_service.dart';
 import '../../widgets/scanning_progress_indicator.dart';
 import '../../widgets/ui_components.dart';
 import 'document_entry_screen.dart';
@@ -251,6 +252,20 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
     final effectiveExpiry = chipMrz?.dateOfExpiry ?? _currentMrz.expiryDate;
     final effectiveNationality =
         chipMrz?.nationality ?? _currentMrz.nationality;
+
+    // Persist verified eID name & birth date strictly on-device (never sent to server).
+    try {
+      final storage = StorageService();
+      final first = (chipMrz?.firstName ?? '').trim();
+      final last = (chipMrz?.lastName ?? '').trim();
+      if (first.isNotEmpty || last.isNotEmpty) {
+        await storage.saveName(first, last);
+      }
+      await storage.saveBirthDate(effectiveDob);
+    } catch (_) {
+      // On-device profile cache is best-effort only.
+    }
+    if (!mounted) return;
 
     // Personal Number Strategy:
     // 0. Try DG11 (New!)

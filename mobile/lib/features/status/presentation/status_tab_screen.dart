@@ -394,11 +394,16 @@ class _PersonalReferralsCard extends StatelessWidget {
               Expanded(
                 child: _RefStatCell(
                   value: '$directCount',
-                  subtitle: '$directVerified ${shellTr(context, 'ref_verified_label', fallback: 'Verified')}',
-                  label: shellTr(context, 'ref_direct_label', fallback: 'Direct'),
+                  subtitle:
+                      '$directVerified ${shellTr(context, 'ref_verified_label', fallback: 'Verified')}',
+                  label: shellTr(
+                    context,
+                    'ref_direct_label',
+                    fallback: 'Direct',
+                  ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(
                 child: _RefStatCell(
                   value: '$networkTotal',
@@ -409,19 +414,43 @@ class _PersonalReferralsCard extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _RefStatCell(
-                  value: '+$pointsEarned',
-                  label: shellTr(
-                    context,
-                    'ref_points_label',
-                    fallback: 'Points',
-                  ),
-                  highlight: true,
-                ),
-              ),
             ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: p.primarySoft,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: p.primary.withValues(alpha: 0.25)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.stars_rounded, size: 18, color: p.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    shellTr(
+                      context,
+                      'ref_earned_points_banner',
+                      fallback: 'Points earned from referrals',
+                    ),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: p.text,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ),
+                Text(
+                  '+$pointsEarned',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: p.primary,
+                      ),
+                ),
+              ],
+            ),
           ),
           if (ruleParts.isNotEmpty) ...[
             const SizedBox(height: 10),
@@ -573,24 +602,22 @@ class _RefStatCell extends StatelessWidget {
   final String value;
   final String label;
   final String? subtitle;
-  final bool highlight;
 
   const _RefStatCell({
     required this.value,
     required this.label,
     this.subtitle,
-    this.highlight = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final p = context.ertad;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: highlight ? p.primarySoft : p.elevated,
+        color: p.elevated,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: highlight ? p.primary : p.hairline),
+        border: Border.all(color: p.hairline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -602,7 +629,7 @@ class _RefStatCell extends StatelessWidget {
               value,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: highlight ? p.primary : p.text,
+                    color: p.text,
                   ),
             ),
           ),

@@ -61,36 +61,37 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        child: legacy_provider.ChangeNotifierProvider<LocalizationService>.value(
-          value: loc,
-          child: Consumer(
-            builder: (context, ref, _) {
-              final themeMode = ref.watch(themeModeProvider);
-              return MaterialApp.router(
-                theme: ErtadTheme.lightTheme,
-                darkTheme: ErtadTheme.darkTheme,
-                themeMode: brightness == Brightness.dark
-                    ? ThemeMode.dark
-                    : themeMode == ThemeMode.system
-                    ? ThemeMode.light
-                    : themeMode,
-                locale: loc.locale,
-                routerConfig: router,
-                builder: (context, child) {
-                  final mq = MediaQuery.of(context);
-                  return MediaQuery(
-                    data: mq.copyWith(
-                      padding: safePadding,
-                      viewPadding: safePadding,
-                      textScaler: TextScaler.linear(textScale),
-                    ),
-                    child: child!,
+        child:
+            legacy_provider.ChangeNotifierProvider<LocalizationService>.value(
+              value: loc,
+              child: Consumer(
+                builder: (context, ref, _) {
+                  final themeMode = ref.watch(themeModeProvider);
+                  return MaterialApp.router(
+                    theme: ErtadTheme.lightTheme,
+                    darkTheme: ErtadTheme.darkTheme,
+                    themeMode: brightness == Brightness.dark
+                        ? ThemeMode.dark
+                        : themeMode == ThemeMode.system
+                        ? ThemeMode.light
+                        : themeMode,
+                    locale: loc.locale,
+                    routerConfig: router,
+                    builder: (context, child) {
+                      final mq = MediaQuery.of(context);
+                      return MediaQuery(
+                        data: mq.copyWith(
+                          padding: safePadding,
+                          viewPadding: safePadding,
+                          textScaler: TextScaler.linear(textScale),
+                        ),
+                        child: child!,
+                      );
+                    },
                   );
                 },
-              );
-            },
-          ),
-        ),
+              ),
+            ),
       ),
     );
     await tester.pumpAndSettle();
@@ -163,10 +164,7 @@ void main() {
         // Switch via icons-only dock keys: Status -> Messages -> Tasks -> Polls -> Home
         await tester.tap(find.byKey(const Key('dock_tab_0')));
         await tester.pumpAndSettle();
-        expect(
-          find.text('კონტრიბუციის ქულები (ხილულ სკოპში)'),
-          findsOneWidget,
-        );
+        expect(find.text('კონტრიბუციის ქულები (ხილულ სკოპში)'), findsOneWidget);
 
         await tester.tap(find.byKey(const Key('dock_tab_1')));
         await tester.pumpAndSettle();
@@ -176,12 +174,14 @@ void main() {
 
         await tester.tap(find.byKey(const Key('dock_tab_3')));
         await tester.pumpAndSettle();
-        expect(find.text('ღონისძიებები'), findsOneWidget);
+        expect(find.text('ახალი'), findsAtLeastNWidgets(1));
+        expect(find.text('მიმდინარე'), findsOneWidget);
+        expect(find.text('დასრულებული'), findsOneWidget);
 
         await tester.tap(find.byKey(const Key('dock_tab_4')));
         await tester.pumpAndSettle();
         expect(find.text('აქტიური'), findsOneWidget);
-        expect(find.text('ყველა'), findsOneWidget);
+        expect(find.text('დაფიქსირებული'), findsOneWidget);
         expect(find.text('ისტორია'), findsOneWidget);
 
         await tester.tap(find.byKey(const Key('dock_tab_2')));
@@ -214,6 +214,11 @@ void main() {
         await tester.ensureVisible(optInTile);
         await tester.pumpAndSettle();
         await tester.tap(optInTile);
+        await tester.pumpAndSettle();
+
+        // Confirm privacy change in the confirmation AlertDialog
+        expect(find.byType(AlertDialog), findsOneWidget);
+        await tester.tap(find.text('დადასტურება'));
         await tester.pumpAndSettle();
 
         // Close sheet via unified X button and confirm Member Privacy updates cleanly
@@ -263,9 +268,9 @@ void main() {
         );
 
         final shellContext = tester.element(find.byType(AdaptiveHeader));
-        Navigator.of(
-          shellContext,
-        ).push(MaterialPageRoute<void>(builder: (_) => SurveyScreen(poll: survey)));
+        Navigator.of(shellContext).push(
+          MaterialPageRoute<void>(builder: (_) => SurveyScreen(poll: survey)),
+        );
         await tester.pumpAndSettle();
 
         expect(find.byType(SurveyScreen), findsOneWidget);
@@ -324,7 +329,7 @@ void main() {
           await tester.pumpAndSettle();
         }
 
-        // Tasks tab (#64): Available | Mine | Events | History
+        // Tasks tab (#64): New | In progress | Completed
         await tester.tap(find.byKey(const Key('dock_tab_3')));
         await tester.pumpAndSettle();
         final tasksBar = find.descendant(
@@ -332,10 +337,9 @@ void main() {
           matching: find.byType(ErtadCategoryBar),
         );
         for (final cat in [
-          'ხელმისაწვდომი',
-          'ჩემი',
-          'ღონისძიებები',
-          'ისტორია',
+          'ახალი',
+          'მიმდინარე',
+          'დასრულებული',
         ]) {
           final target = find.descendant(
             of: tasksBar,
@@ -434,9 +438,7 @@ void main() {
           type: 'referendum',
           tags: const [],
           hasVoted: true,
-          options: [
-            PollOption(id: '0', text: 'Support', displayOrder: 0),
-          ],
+          options: [PollOption(id: '0', text: 'Support', displayOrder: 0)],
         );
         Navigator.of(shellContext, rootNavigator: true).push(
           MaterialPageRoute<void>(
@@ -580,20 +582,23 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            child: legacy_provider.ChangeNotifierProvider<LocalizationService>.value(
-              value: loc,
-              child: MaterialApp(
-                theme: ErtadTheme.lightTheme,
-                home: Scaffold(
-                  body: StatusTabScreen(onSwitchTab: switchedTabs.add),
+            child:
+                legacy_provider.ChangeNotifierProvider<
+                  LocalizationService
+                >.value(
+                  value: loc,
+                  child: MaterialApp(
+                    theme: ErtadTheme.lightTheme,
+                    home: Scaffold(
+                      body: StatusTabScreen(onSwitchTab: switchedTabs.add),
+                    ),
+                  ),
                 ),
-              ),
-            ),
           ),
         );
         await tester.pumpAndSettle();
 
-        final mineFinder = find.text('Mine');
+        final mineFinder = find.text('In progress');
         await tester.scrollUntilVisible(
           mineFinder,
           150,
@@ -623,13 +628,16 @@ void main() {
         await tester.pumpWidget(
           UncontrolledProviderScope(
             container: container,
-            child: legacy_provider.ChangeNotifierProvider<LocalizationService>.value(
-              value: loc,
-              child: MaterialApp(
-                theme: ErtadTheme.lightTheme,
-                home: const Scaffold(body: HomeTabScreen()),
-              ),
-            ),
+            child:
+                legacy_provider.ChangeNotifierProvider<
+                  LocalizationService
+                >.value(
+                  value: loc,
+                  child: MaterialApp(
+                    theme: ErtadTheme.lightTheme,
+                    home: const Scaffold(body: HomeTabScreen()),
+                  ),
+                ),
           ),
         );
         await tester.pumpAndSettle();
@@ -647,12 +655,15 @@ void main() {
         await tester.pumpWidget(
           UncontrolledProviderScope(
             container: container,
-            child: legacy_provider.ChangeNotifierProvider<LocalizationService>.value(
-              value: loc,
-              child: const MaterialApp(
-                home: Scaffold(body: TasksTabScreen()),
-              ),
-            ),
+            child:
+                legacy_provider.ChangeNotifierProvider<
+                  LocalizationService
+                >.value(
+                  value: loc,
+                  child: const MaterialApp(
+                    home: Scaffold(body: TasksTabScreen()),
+                  ),
+                ),
           ),
         );
         await tester.pumpAndSettle();
@@ -663,4 +674,3 @@ void main() {
     );
   });
 }
-
