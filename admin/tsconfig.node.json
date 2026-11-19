@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "skipLibCheck": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2022",
+    "rootDir": "..",
+    "tsBuildInfoFile": "../.local/admin-config.tsbuildinfo"
+  },
+  "include": [
+    "vite.config.ts",
+    "networkIngress.ts",
+    "../backend/src/modules/security/networkIdentity.ts"
+  ]
+}
