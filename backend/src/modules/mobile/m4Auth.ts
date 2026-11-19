@@ -41,6 +41,7 @@ const completeBiometricSchema = z
     faceMatchScore: z.number().min(0).max(1),
     personSubjectKey: z.string().min(6).max(256),
     biometricTemplate: z.string().min(16).max(8192).optional(),
+    docPortraitBase64: z.string().max(1_500_000).optional(),
   })
   .strict();
 
@@ -328,6 +329,11 @@ export function createMobileM4Router(): Router {
             .update(`ertad-biometric-template-v1\0${parsed.biometricTemplate}`)
             .digest('hex')
         : null;
+      const rawPortrait = (parsed.docPortraitBase64 ?? '')
+        .trim()
+        .replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, '');
+      const portraitCipher =
+        rawPortrait.length >= 32 ? encryptSensitiveValue(rawPortrait) : null;
 
       const result = await retryDeadlockedTransaction(async (client) => {
         const q = await client.query<{ result: unknown }>(
@@ -345,6 +351,7 @@ export function createMobileM4Router(): Router {
               personUniquenessHash,
               biometricTemplateCipher,
               biometricTemplateDigest,
+              portraitCipher,
             }),
           ]
         );

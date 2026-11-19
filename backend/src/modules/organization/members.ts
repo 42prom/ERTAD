@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { retryDeadlockedTransaction } from '../../db/client';
+import { decryptSensitiveValue } from '../../services/secretEncryption';
 import { SecurityService } from '../../services/security';
 import { requireAdmin } from '../../middleware/auth';
 import type { AdminSessionIdentity } from '../../services/adminSession';
@@ -52,7 +53,54 @@ export async function memberDirectoryCommand(
         'MEMBER_DIRECTORY_READ',
         first.audit
       );
-      return (await read()).data;
+      const data = (await read()).data;
+      if (
+        operation === 'detail' &&
+        data &&
+        typeof data === 'object' &&
+        'organizationId' in args &&
+        'memberId' in args
+      ) {
+        const vq = await client.query<{
+          v: {
+            assuranceLevel?: string;
+            citizenshipCountry?: string;
+            sodCscaVerified?: boolean;
+            verifiedAt?: string | null;
+            portraitCipher?: string | null;
+          } | null;
+        }>(
+          'SELECT ertad.member_directory_verification_summary($1,$2,$3,$4) AS v',
+          [
+            session.sessionId,
+            session.sessionTokenHash,
+            args.organizationId,
+            args.memberId,
+          ]
+        );
+        const raw = vq.rows[0]?.v ?? null;
+        if (raw) {
+          let portraitDataUrl: string | null = null;
+          if (raw.portraitCipher) {
+            try {
+              const dec = decryptSensitiveValue(raw.portraitCipher);
+              if (dec && dec.length >= 16) {
+                portraitDataUrl = `data:image/jpeg;base64,${dec}`;
+              }
+            } catch {
+              portraitDataUrl = null;
+            }
+          }
+          data.verification = {
+            assuranceLevel: raw.assuranceLevel ?? 'google_scoped',
+            citizenshipCountry: raw.citizenshipCountry ?? '',
+            sodCscaVerified: raw.sodCscaVerified === true,
+            verifiedAt: raw.verifiedAt ?? null,
+            portraitDataUrl,
+          };
+        }
+      }
+      return data;
     });
   } catch (error) {
     const code = (error as { code?: string }).code;

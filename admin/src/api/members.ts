@@ -26,9 +26,17 @@ export interface DirectoryMember {
   memberships: DirectoryMembership[];
   points: string | null;
 }
+export interface MemberVerificationSummary {
+  assuranceLevel: string;
+  citizenshipCountry: string;
+  sodCscaVerified: boolean;
+  verifiedAt: string | null;
+  portraitDataUrl: string | null;
+}
 export interface MemberDetail extends DirectoryMember {
   canPropose: boolean;
   pointsScopes: MemberUnit[];
+  verification?: MemberVerificationSummary | null;
   work: MemberPage<{
     id: string;
     title: string;

@@ -997,6 +997,7 @@ class MobileApiClient {
     required double faceMatchScore,
     required String personSubjectKey,
     String? biometricTemplate,
+    String? docPortraitBase64,
   }) async {
     try {
       final res = await _dio.post<Map<String, dynamic>>(
@@ -1009,6 +1010,7 @@ class MobileApiClient {
           'faceMatchScore': faceMatchScore,
           'personSubjectKey': personSubjectKey,
           'biometricTemplate': ?biometricTemplate,
+          'docPortraitBase64': ?docPortraitBase64,
         },
       );
       return Map<String, dynamic>.from(res.data ?? const {});

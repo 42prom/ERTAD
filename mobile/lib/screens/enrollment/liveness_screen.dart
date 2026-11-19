@@ -114,7 +114,9 @@ class _LivenessScreenState extends State<LivenessScreen>
     try {
       if (_cameraController != null &&
           _cameraController!.value.isStreamingImages) {
+        if (_cameraController!.value.isStreamingImages) {
         await _cameraController!.stopImageStream();
+      }
       }
     } catch (e) {
       debugPrint("Pause camera error: $e");
@@ -245,7 +247,9 @@ class _LivenessScreenState extends State<LivenessScreen>
     try {
       // Stop stream first to avoid conflict? usually safe to take picture during stream on modern devices,
       // but stopping stream is safer for "one-shot" verification.
-      await _cameraController!.stopImageStream();
+      if (_cameraController!.value.isStreamingImages) {
+        await _cameraController!.stopImageStream();
+      }
 
       final XFile file = await _cameraController!.takePicture();
       Uint8List bytes = await file.readAsBytes();
@@ -315,6 +319,9 @@ class _LivenessScreenState extends State<LivenessScreen>
         personSubjectKey: widget.m4PersonSubjectKey ??
             'm4-subject-${DateTime.now().millisecondsSinceEpoch}',
         biometricTemplate: 'ertad-tpl-v1:$templateDigest',
+        docPortraitBase64: widget.docPortraitBase64.isNotEmpty
+            ? widget.docPortraitBase64
+            : null,
       );
       await container.read(shellSessionProvider.notifier).refreshWorkspace();
       if (!mounted) return;
@@ -531,7 +538,9 @@ class _LivenessScreenState extends State<LivenessScreen>
     try {
       if (_cameraController != null &&
           _cameraController!.value.isStreamingImages) {
+        if (_cameraController!.value.isStreamingImages) {
         await _cameraController!.stopImageStream();
+      }
       }
     } catch (e) {
       debugPrint("Error stopping stream: $e");

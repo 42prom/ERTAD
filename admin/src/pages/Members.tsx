@@ -487,16 +487,41 @@ export default function Members() {
           {detail && (
             <>
               <Card>
-                <h2
-                  tabIndex={-1}
-                  ref={heading}
-                  className="text-xl font-semibold"
-                >
-                  {name(detail)}
-                </h2>
-                <p className="break-all text-sm text-[var(--muted)]">
-                  {t("წევრის კოდი", "Member code")}: {detail.id}
-                </p>
+                <div className="flex flex-wrap items-start gap-4">
+                  {detail.verification?.portraitDataUrl && (
+                    <img
+                      src={detail.verification.portraitDataUrl}
+                      alt={name(detail)}
+                      className="h-20 w-20 rounded-xl border border-[var(--border)] object-cover"
+                    />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2
+                        tabIndex={-1}
+                        ref={heading}
+                        className="text-xl font-semibold"
+                      >
+                        {name(detail)}
+                      </h2>
+                      {detail.verification?.assuranceLevel ===
+                        "biometric_verified" && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                          {t(
+                            "eID ბიომეტრიულად დადასტურებული",
+                            "eID Biometrically Verified",
+                          )}
+                          {detail.verification.citizenshipCountry
+                            ? ` · ${detail.verification.citizenshipCountry}`
+                            : ""}
+                        </span>
+                      )}
+                    </div>
+                    <p className="break-all text-sm text-[var(--muted)]">
+                      {t("წევრის კოდი", "Member code")}: {detail.id}
+                    </p>
+                  </div>
+                </div>
                 <p className="mt-3">
                   {t("ქულები ხილულ ფარგლებში", "Points in visible scope")}:{" "}
                   {detail.points ?? t("შეზღუდულია", "Restricted")}
