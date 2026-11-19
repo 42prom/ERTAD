@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
+import { readdir, readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { loadEnvFile } from 'node:process';
 import { S3Client, HeadBucketCommand, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
@@ -14,9 +15,12 @@ try {
   assert.ok(Object.values(role).every(value => value === false));
   await assert.rejects(pg.query('CREATE TABLE ertad.forbidden_probe(id int)'), error => error.code === '42501');
   await assert.rejects(pg.query('SET ROLE ertad_owner'), error => error.code === '42501');
-  const versions = await pg.query('SELECT version FROM ertad.schema_migrations');
-  assert.equal(versions.rowCount, 1);
-  console.log('PASS restricted DB role, owner separation, applied migration');
+  const versions = await pg.query('SELECT version, checksum FROM ertad.schema_migrations ORDER BY version');
+  const directory = new URL('../backend/db/foundation/', import.meta.url);
+  const files = (await readdir(directory)).filter(file => /^\d{4}_[a-z0-9_]+\.sql$/.test(file)).sort();
+  const expected = await Promise.all(files.map(async version => ({ version, checksum: createHash('sha256').update(await readFile(new URL(version, directory))).digest('hex') })));
+  assert.deepEqual(versions.rows, expected);
+  console.log('PASS restricted DB role, owner separation, exact applied migrations/checksums');
 } finally { await pg.end(); }
 const redis = createClient({ url: `redis://:${encodeURIComponent(process.env.REDIS_PASSWORD)}@127.0.0.1:${process.env.ERTAD_REDIS_PORT}`, socket: { reconnectStrategy: false, connectTimeout: 3000 } });
 redis.on('error', () => {});

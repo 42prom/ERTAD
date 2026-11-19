@@ -1,0 +1,2503 @@
+{
+  "sourceHead": "a839b212516b7bee3601dc10aaab5e79a5f4b522",
+  "sourceWorkingTreeStatusSha256": "5db71e244de8753c04b52ae212c91d9105c86c74f6d9e07df6b68069dcb13b8d",
+  "copiedAt": "2026-10-02T00:38:47.389Z",
+  "method": "Complete application code baseline, followed by isolated ERTAD composition; no data transfer",
+  "byArea": {
+    "admin": {
+      "files": 59,
+      "tests": 6
+    },
+    "backend": {
+      "files": 176,
+      "tests": 29
+    },
+    "biometric-service": {
+      "files": 6,
+      "tests": 0
+    },
+    "mobile": {
+      "files": 162,
+      "tests": 6
+    },
+    "ertad-shield-service": {
+      "files": 9,
+      "tests": 1
+    }
+  },
+  "files": [
+    {
+      "sourceEntry": 1,
+      "sourceSha256": "f32df37bde9c8981b1ab4e9313cc706db3c2e74da2a21b0132da72d1187cb6de",
+      "targetPath": "admin/.dockerignore",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 2,
+      "sourceSha256": "6b3b1fcb8fb1ec21f939fb5f10f4ad0ae5f105046cad83d7883fb34a792944cb",
+      "targetPath": "admin/.eslintrc.cjs",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 3,
+      "sourceSha256": "40361ebaa3b1145693496bb196b6b6a63c55df4142bff0b3ed75a647d0f3105c",
+      "targetPath": "admin/eslint.config.js",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 4,
+      "sourceSha256": "146252a8a3a555bbf6af667f05a0e451ea4bad645d97511963541a555ea9a6c4",
+      "targetPath": "admin/package.json",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 5,
+      "sourceSha256": "95e7304c6941ad59c90e575dd89b374d67b9c31c9456df7a9cd007edb46f2129",
+      "targetPath": "admin/postcss.config.cjs",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 6,
+      "sourceSha256": "2dba75ef40f7a6dd1cc99f6740806d631442fd7f5a58dfe9cec8df7d0f371db8",
+      "targetPath": "admin/src/App.tsx",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 7,
+      "sourceSha256": "365142f0e776593cacb5e84a46cdec0b3b996d90123ee6869e5a44e621763488",
+      "targetPath": "admin/src/api/client.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 8,
+      "sourceSha256": "d8a3938a84cb7d69f5e31d2c95831105d35d687dbe1b2acbbd08e386e96266f9",
+      "targetPath": "admin/src/components/AuditExportModal.tsx",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 9,
+      "sourceSha256": "86304cddda187f54820fde00cbcb97ca156623c5ab7e12bdfb89f1a62ef8b990",
+      "targetPath": "admin/src/components/Layout.tsx",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 10,
+      "sourceSha256": "9605439db11339bc529e7ca5cddfefe2cd7a0137934bb62f3a3271c546de88f8",
+      "targetPath": "admin/src/components/MessagePreview.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 11,
+      "sourceSha256": "58adce6f74fce2c50e806e07f24d59bedd9d4eae70ea65914f85101e9569d031",
+      "targetPath": "admin/src/components/ReferendumResults.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 12,
+      "sourceSha256": "9725daa155605b20b86121419c5d1ca100f0a1f820d458732e0a4b8f2f093238",
+      "targetPath": "admin/src/components/SettingsLayout.tsx",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 13,
+      "sourceSha256": "d8f2166217afe7ab94e453be7391cb220c9137b3e9cbabfe2146c0336195064c",
+      "targetPath": "admin/src/components/analytics/DemographicsCharts.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 14,
+      "sourceSha256": "ccb2ceb6aeabed1d379d283cf921fb51e6179f1c4c9938a531017b4344236088",
+      "targetPath": "admin/src/components/ui/Button.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 15,
+      "sourceSha256": "9ee12ded17707a41d0ba02d7b067531ef180fc28bba3ca3774f3351bc2168313",
+      "targetPath": "admin/src/components/ui/Card.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 16,
+      "sourceSha256": "a6e03d7eb32c4328a4b6402a5140e5238efb0a0cbfce2f922eccf0bd52d41f3f",
+      "targetPath": "admin/src/components/ui/DateTimePicker24h.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 17,
+      "sourceSha256": "27dca363ac43fc9e39351d47fb33ebfc3e5284fb682eaddaa83de3f0de2a56de",
+      "targetPath": "admin/src/components/ui/Input.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 18,
+      "sourceSha256": "723d66fb299d26804ced57a96a70b9e0b44a0d76e700165f72a490fd1f8af85d",
+      "targetPath": "admin/src/components/ui/Modal.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 19,
+      "sourceSha256": "b5c04fed093f2f320d0cecdef247e02c39d92f4d2055395cc565a538db6f9595",
+      "targetPath": "admin/src/components/ui/RegionSelector.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 20,
+      "sourceSha256": "b192184089fdb807aebfa71361b67804d9a6c27fb57a676437fe80eacc5351ab",
+      "targetPath": "admin/src/components/ui/Select.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 21,
+      "sourceSha256": "12a8ec44dbaa155b6a11f9cdf207544174d231783eac5103eed742fb526b3786",
+      "targetPath": "admin/src/components/ui/Textarea.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 22,
+      "sourceSha256": "b60d3de786462c6be7d933ba536ede83fa0834226f0f32646df94a64ecaabd34",
+      "targetPath": "admin/src/index.css",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 23,
+      "sourceSha256": "288e42c2a3bf6182b6df03a2fb9f1ba0b7f9c8a5e5ed7b99bfbc9d31ac400e4e",
+      "targetPath": "admin/src/main.tsx",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 24,
+      "sourceSha256": "932813834e0ef2b92b5fa2bb815daf0750dcecdb589cb19cbdc1248476650ca3",
+      "targetPath": "admin/src/pages/ActivePolls.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 25,
+      "sourceSha256": "08aa6409bf090710cf208b228c8dbfdf4e7d4d40694879dc5037c252dc1440ae",
+      "targetPath": "admin/src/pages/AdminUsers.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 26,
+      "sourceSha256": "af6ebb09347b986b94da6a2f7376cc1548e08bcbad7f1ae67baa0022b7db0eb6",
+      "targetPath": "admin/src/pages/CreatePoll.tsx",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 27,
+      "sourceSha256": "06e5366d7d37fe14060ee07d3582e034494be5d6e0c509bcdcbd99069a315119",
+      "targetPath": "admin/src/pages/Dashboard.tsx",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 28,
+      "sourceSha256": "12a5c6433ca93d7ded2e0d775efbcde3f21f53afb5116c3f3ad3ed57b06f427a",
+      "targetPath": "admin/src/pages/DraftedPolls.tsx",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 29,
+      "sourceSha256": "e67e7d111c41ba5b0d80ee2bf1351dab5dad09a89618b145a974d2931895a32a",
+      "targetPath": "admin/src/pages/Insights.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 30,
+      "sourceSha256": "b6e977b1dd793c72f55db1b0e17967ca11306d5b6735313a6e2cf8eda7125914",
+      "targetPath": "admin/src/pages/Login.tsx",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 31,
+      "sourceSha256": "93b1816c36acfa151b777bcf38931377d1e42a415e65de756851cec8799d0e60",
+      "targetPath": "admin/src/pages/MessageEditor.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 32,
+      "sourceSha256": "f04744d0c1ccd834df680495287c04ef6fc0c0ddf6d21dbc82d949f0f4104665",
+      "targetPath": "admin/src/pages/MessagesList.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 33,
+      "sourceSha256": "7d9e92cf0ec67f95ac631c0df5283b8991c4ff387a6df5028fe97f24190e9126",
+      "targetPath": "admin/src/pages/PollDetails.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 34,
+      "sourceSha256": "1a1f45187c3bed3f9ce1edaccc31aa2dc8e5cea04bc6df4ccd8f79179adcf075",
+      "targetPath": "admin/src/pages/Profiles.tsx",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 35,
+      "sourceSha256": "00cd7a8249aa1c0b50753f42e76911d90b08c3a0217d3ac91c9495870fa57015",
+      "targetPath": "admin/src/pages/SecurityLogs.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 36,
+      "sourceSha256": "217e4da1b8045627903c165cf4b37c67e2b2ae41faae0aed4833de476aa47b7c",
+      "targetPath": "admin/src/pages/SettingsBlockchain.tsx",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 37,
+      "sourceSha256": "e3059b0f2b17327a1e453a9d59c422c82cad18ffde1d563d9bebe4601ce85a9e",
+      "targetPath": "admin/src/pages/SettingsGeoBlocking.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 38,
+      "sourceSha256": "407c3113875f0f79a1fdc16994e15d646ac772dd1d1341fb03c9a028b4d631fb",
+      "targetPath": "admin/src/pages/SettingsNotifications.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 39,
+      "sourceSha256": "a70dfe9aaa87960bde3ff06acd6a75210510d3c866b800ece8ae1536e63ee587",
+      "targetPath": "admin/src/pages/SettingsRegions.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 40,
+      "sourceSha256": "158a6d6e8c0c26a1feac131974c5830476a3f33d2f2bd6beb5bca2a5d30c1a86",
+      "targetPath": "admin/src/pages/SettingsSecurity.tsx",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 41,
+      "sourceSha256": "4c79086fbed4ab28b6de50520a33bd926d22446de20debeb82604adeb853b95b",
+      "targetPath": "admin/src/pages/SettingsVerificationProviders.tsx",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 42,
+      "sourceSha256": "fd230bdcb2678fb3a1d165d241c538cd42d3df8d892cea2e02bdba7c04a3bb29",
+      "targetPath": "admin/src/pages/ShieldDashboard.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 43,
+      "sourceSha256": "7b1dd0864b7749f9e9e83fed3031cb853da0f0b0e000b19421ac17b902e6105c",
+      "targetPath": "admin/src/pages/TicketDetail.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 44,
+      "sourceSha256": "85db2ab0e6473ccddd11454c65ba62fba5c10a9541b6a53a234ab7d3dfe85ce1",
+      "targetPath": "admin/src/pages/Tickets.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 45,
+      "sourceSha256": "ff3736e88535300cedec012efb9c8ddfc89a4f36eee164ddab2e935014b73bd4",
+      "targetPath": "admin/src/pages/VotingHistory.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 46,
+      "sourceSha256": "68ef5671e9b8d9cc7897be9883c97bfdc3c4458c099c4938513f8d107a39b6c3",
+      "targetPath": "admin/src/tests/AdminUsers.test.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 47,
+      "sourceSha256": "51a373acacbe25da5cbb74db98fd9532db30642548adfddea53bf74f724304e3",
+      "targetPath": "admin/src/tests/CreatePoll.test.tsx",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 48,
+      "sourceSha256": "ea0dce4063009950a50ba1a0ae9472b820d647f4d06896c21583c16589844c29",
+      "targetPath": "admin/src/tests/Insights.test.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 49,
+      "sourceSha256": "4a07c779d57da6022fd06f110f81566551835201d632279c2ef3b2be8f68490d",
+      "targetPath": "admin/src/tests/Profiles.test.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 50,
+      "sourceSha256": "fc2cab5bef5fe76e77e2b7628debdeaab3af7acee38d5d577bfe2b0c28048028",
+      "targetPath": "admin/src/tests/SettingsRegions.test.tsx",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 51,
+      "sourceSha256": "287bd91299c91fc992c8ec8b76b08c6bc6840dfd292a010305e1701e9a0f032c",
+      "targetPath": "admin/src/tests/setup.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 52,
+      "sourceSha256": "ecf4c1c886cea8248c74e96c761bcdc6de139cf78a1a22fc2a8ef9f3318ebc4b",
+      "targetPath": "admin/src/types/index.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 53,
+      "sourceSha256": "15a89b3e00c230842dd07dbfcb92724c68a9d987d9dd1fade081b0b07a7efb26",
+      "targetPath": "admin/src/types/security.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 54,
+      "sourceSha256": "d71e1af1256ff9c05a2e74fc06709c2054c24995a1b57638dc2ec6573c188182",
+      "targetPath": "admin/src/utils/format.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 55,
+      "sourceSha256": "2b5ea3a5f69cc771431a70cd80fd21b6fffa3d67bbf45629470e2f4ad20189b7",
+      "targetPath": "admin/src/vite-env.d.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 56,
+      "sourceSha256": "0bee45e7b783fe6ebf811b4ba24f918ac1649b7bcc5311d3db199badc39f133f",
+      "targetPath": "admin/tailwind.config.js",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 57,
+      "sourceSha256": "0ea12afb3e77453ea62b716809e26d5c46b01cc668c582193da920c4c821c484",
+      "targetPath": "admin/tsconfig.json",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 58,
+      "sourceSha256": "9e2abb169ea87b7190613a1d4da57ca608463a453bd4231fa3aeee5e308370dd",
+      "targetPath": "admin/tsconfig.node.json",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 59,
+      "sourceSha256": "22296ca15e4b5ee3d99b3a7248c2abac522cab5742ca7ec5942af6c04d991968",
+      "targetPath": "admin/vitest.config.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 60,
+      "sourceSha256": "0cbe1f8fd18a791a94900eebd78c5a9aed255beaa6735c37355e89766533413a",
+      "targetPath": "backend/.audit-ci.json",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 61,
+      "sourceSha256": "9b9f8896dac1fca73c6c8fbc854ab77d73f00b0b382fa60bc277402e97724490",
+      "targetPath": "backend/.dockerignore",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 62,
+      "sourceSha256": "2c313e7cec45761adfad5ee4d358e7c84cd8579b70ec82496f2cbcc26f7f9965",
+      "targetPath": "backend/.eslintignore",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 63,
+      "sourceSha256": "45abe2f7ace4a5b4dbac1e845889c60586e8fa0c116cf8635dc9d4a532923028",
+      "targetPath": "backend/.prettierrc.json",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 64,
+      "sourceSha256": "d406b935ac73eb9d4f381c622004e8af0d85f75148c1421f2592d7f4336f5bed",
+      "targetPath": "backend/circuits/nullifier.circom",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 65,
+      "sourceSha256": "0f4e5609c23aa85716a69ccff11ba88f3a4595db112a11fc0d2ed90bedba68f9",
+      "targetPath": "backend/db/migrations/0000_create_app_role.sh",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 66,
+      "sourceSha256": "ab09c151347ecba35aba4bd1fb6ce4007eb54a4d082c81dab6231323f24e5da0",
+      "targetPath": "backend/db/migrations/0001_initial_schema.sql",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 67,
+      "sourceSha256": "853b8e91813986655bef60635ae9d48d4bdcd54887c3802c7b9c2db43a0d660f",
+      "targetPath": "backend/db/migrations/0044_survey_submission_ids.sql",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 68,
+      "sourceSha256": "cb64b8dd25f93dd929d69e05d55a54a9086c6673d494cd8bb871a81bb0968467",
+      "targetPath": "backend/db/migrations/0045_idempotency_privacy.sql",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 69,
+      "sourceSha256": "3879313ca3b9fcd7c57d066e711499b101caa3325e77e93e302257e602f545dd",
+      "targetPath": "backend/db/migrations/0046_idempotency_unlinkability.sql",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 70,
+      "sourceSha256": "a57e497f6da541482b01459f4c4a7fe72afbf475bd2d75a9e9b903d4b2d82b4b",
+      "targetPath": "backend/db/migrations/0047_admin_control_plane.sql",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 71,
+      "sourceSha256": "1aea6cfa745bc2a5bdb1f446b3f6f54f6a4202b78aee8fd7af6f8a8816153122",
+      "targetPath": "backend/db/migrations/0048_admin_mfa.sql",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 72,
+      "sourceSha256": "1cb5cb461d3889620c8e83356d9542a4544afdf40c1021eaa021cdb79e7317da",
+      "targetPath": "backend/db/migrations/0049_admin_audit_indexes.sql",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 73,
+      "sourceSha256": "d9f7a803555069b1b19703f2ea26b44681134b754cf61afbff22c5dc5d8aeedf",
+      "targetPath": "backend/db/migrations/0050_admin_identity_and_session_hygiene.sql",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 74,
+      "sourceSha256": "b406669eb8cc2e5e8310bb6760374014ac1cdb446f0334e34e1e6c5358186a11",
+      "targetPath": "backend/db/migrations/0051_poll_lifecycle_invariants.sql",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 75,
+      "sourceSha256": "5bc53864ebf5878fc1bd5f018d46c3ff572888c444e677e5ea780ac88e698336",
+      "targetPath": "backend/db/migrations/0052_admin_step_up.sql",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 76,
+      "sourceSha256": "1561184a9a20c7c8b78b1be05ff6d555a98e95b33bd4ee215e8c1fda91517634",
+      "targetPath": "backend/db/migrations/0053_apple_app_attest.sql",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 77,
+      "sourceSha256": "4daf516bb8e3f1d06b43f81b11e30406af8965b7801c861d717fad35508b12e8",
+      "targetPath": "backend/db/migrations/0054_audit_checkpoints.sql",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 78,
+      "sourceSha256": "2de8bf38db3f00706e6ec237220292d5dd9019d251b6c339c6491c294fee8b00",
+      "targetPath": "backend/db/migrations/9999_grant_app_role.sh",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 79,
+      "sourceSha256": "260186fc31035162f8ba56310088ea28ced4ec1135046c4f93ef38a5fee43798",
+      "targetPath": "backend/eslint.config.mjs",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 80,
+      "sourceSha256": "c7243601e45ba64d5083aa3a46ce4d582fb16cd3a509447ae2f89a5a08f7132e",
+      "targetPath": "backend/jest.config.cjs",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 81,
+      "sourceSha256": "b54a114166d7f9366d0518cead7022edb312acde312373334fad9b5518a2a7b1",
+      "targetPath": "backend/jest.integration.config.js",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 82,
+      "sourceSha256": "2b492bcbb49a155aa927f6653f0758a45c6c2f2b8569716ca6b209de2b02086e",
+      "targetPath": "backend/jest.setup.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 83,
+      "sourceSha256": "6399b6310b2952c53c672051b4892fe6dd76d855fe5014fdd16f8075eb235849",
+      "targetPath": "backend/package.json",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 84,
+      "sourceSha256": "948492c2b2c8d4d4543b42721a73807696818fc2c1014ae0be403949f8a8dc76",
+      "targetPath": "backend/scripts/check_blocks.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 85,
+      "sourceSha256": "b3b63a6af09691b8fa1d5514373262f1492cb821ee9bcabeee7835897b64bff2",
+      "targetPath": "backend/scripts/check_redis.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 86,
+      "sourceSha256": "fdf3124edda2b29439726ca5b390a09f35eb844bc34b4ddcc221bd741aba769a",
+      "targetPath": "backend/scripts/clear_polls_votes.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 87,
+      "sourceSha256": "d9f3371e2f634dba5381f29f49f5e5a8c08290868b5ff2511a6e2ca7dc1802a4",
+      "targetPath": "backend/scripts/create_settings_table.sql",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 88,
+      "sourceSha256": "4424e3d265e190aaa9d197faefb965db0df53eb1f5cac639ea4c3d17ac1c612d",
+      "targetPath": "backend/scripts/identify_users.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 89,
+      "sourceSha256": "800c12ea9c67d2ec745b82df8ece54a64ba24ddfacb5429744ca277c18b858b9",
+      "targetPath": "backend/scripts/migrations/fix_message_regions.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 90,
+      "sourceSha256": "a1817c699d63411c1e020c4c4e0b65089d417d5fe98a741e6387faa233a7299b",
+      "targetPath": "backend/scripts/migrations/fix_missing_regions.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 91,
+      "sourceSha256": "a4d936709634a8928c9abab1ee085965dff319d0f13257e6f87e6da39542ac88",
+      "targetPath": "backend/scripts/migrations/fix_poll_regions.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 92,
+      "sourceSha256": "ec71903db85b88d0319717ea5f6b07b5ad205cfc2ae98d3e018f1e7a84f3fdbe",
+      "targetPath": "backend/scripts/reset_rate_limits.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 93,
+      "sourceSha256": "8a0cd1e14249ffa6fb4b4e80a326ef3844b5e720ff1223c65398405e1ffd48e1",
+      "targetPath": "backend/scripts/simulate_enrollment.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 94,
+      "sourceSha256": "6722bdaf9017a0ce01245bce407b6b63299e61f8877ce7b68918e0e012472848",
+      "targetPath": "backend/scripts/validate-openapi.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 95,
+      "sourceSha256": "c1b7728a501199c06ecc9580948f4d2badb3fb9ef3be49b66f6c1549fe5781ee",
+      "targetPath": "backend/scripts/verification/verify_demographics_unified.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 96,
+      "sourceSha256": "16838a89a8d224318b6c52df385c622c5156674e988c18d8b383ff6d9389efc7",
+      "targetPath": "backend/scripts/verification/verify_profile_alignment.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 97,
+      "sourceSha256": "8e60b54b6e209f020738b3ac5d42b744f20cf28374b2bafe444e65e59f16b15b",
+      "targetPath": "backend/scripts/verify_privacy_simulation.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 98,
+      "sourceSha256": "ca18dfd147b55d62a2ea4e3167dcca48b0277a7bfeb443d736a55e8b97623222",
+      "targetPath": "backend/src/config/app.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 99,
+      "sourceSha256": "ecd95e19c003da2fddd7762b68c06dc7b0515cec3dcfe285d84a6d03ad6275d1",
+      "targetPath": "backend/src/config/jwt.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 100,
+      "sourceSha256": "8112b8a5af69f24e5e6d7d41c5a126917976563cf7528bf6416d071a2614f7e8",
+      "targetPath": "backend/src/config/secrets.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 101,
+      "sourceSha256": "f023fb1124288d003947fde480e1f66c1496a9e63de0eec1f4881f810773515b",
+      "targetPath": "backend/src/config/securityValidation.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 102,
+      "sourceSha256": "bd5a35761e8116edc5a3d032f100f275d5890a012c229c0796b256170b8b487e",
+      "targetPath": "backend/src/config/vault.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 103,
+      "sourceSha256": "b595598bac667f9423d6e9fa3ec7a595e3f734abb0446ea9d599b9b8b554ef4c",
+      "targetPath": "backend/src/crypto/CryptoRegistry.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 104,
+      "sourceSha256": "101d98ea222da423d763ad725ae027337201e0c12d18823766bd9223822860e8",
+      "targetPath": "backend/src/crypto/HmacHasher.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 105,
+      "sourceSha256": "dd0f5227d0c7065051643fdc2d633e2e5710e36802a58a43677fff609802cba6",
+      "targetPath": "backend/src/crypto/IHasher.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 106,
+      "sourceSha256": "0518f3c3f453506f4c238357dd51d44d51edcd77967be2e319ff0047d469556e",
+      "targetPath": "backend/src/crypto/PoseidonHasher.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 107,
+      "sourceSha256": "c3f1ee71197c75818c2cd57f242de5f50649ce8edbc29fa6a8718d6f7c352183",
+      "targetPath": "backend/src/crypto/zkVerifier.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 108,
+      "sourceSha256": "67bfb644cc78b6c630c1d5fc4ab4634085544b6c49dc34a9e932c3c4b3b4268a",
+      "targetPath": "backend/src/db/client.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 109,
+      "sourceSha256": "320aad6e8a8844099e593ec6cb5fdc5a68c99c171d283a14757f2303e98e2447",
+      "targetPath": "backend/src/db/migrate.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 110,
+      "sourceSha256": "35db8102c92fb3232c8901e73fc91b467cdd81ea5273ff7ce379f3cb09270151",
+      "targetPath": "backend/src/db/redis.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 111,
+      "sourceSha256": "888ca6f85b5afbdb10818eb6a13358a7fbba0de940c48bae8021c0b3dc952f08",
+      "targetPath": "backend/src/ertad-server.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 112,
+      "sourceSha256": "8d80e213f94ce26dfc5ee718c8004537092cdc7836631bcbaf1b35d62512a039",
+      "targetPath": "backend/src/middleware/adminAuthorization.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 113,
+      "sourceSha256": "5d0b17f235e64063d931085ab4db75671b9e105de1b1d4bb7c54b02e1f286708",
+      "targetPath": "backend/src/middleware/auth.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 114,
+      "sourceSha256": "5489c4f6126b1859cc25442adecfd3c69f7248c69a35f49de37592fb60b983db",
+      "targetPath": "backend/src/middleware/dynamicRateLimit.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 115,
+      "sourceSha256": "c4f88ae9b9280870768162f1389249184353d37d3be94a4b53f9c74e3863a6f2",
+      "targetPath": "backend/src/middleware/errorHandler.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 116,
+      "sourceSha256": "0c6f7eb778feda3df17abf227e3e67081c0f2e452d729c44c333a2c09706b2b6",
+      "targetPath": "backend/src/middleware/geoBlocking.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 117,
+      "sourceSha256": "43b95664eb674be5a4da9b2e0b8b87ee57aa2cfe3e6136dbd5ec081f6031b8b5",
+      "targetPath": "backend/src/middleware/idempotency.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 118,
+      "sourceSha256": "0fa89fcf0239737fe16c509b79e7551a0eadc63eda182099ad110c0d2581c2d5",
+      "targetPath": "backend/src/middleware/logger.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 119,
+      "sourceSha256": "6a317c81422498e636899db3876613b598800a90b60877b2b7542061680e4b4c",
+      "targetPath": "backend/src/middleware/metrics.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 120,
+      "sourceSha256": "c2b03f2af94e778c7a796149aef32f0d3861128e9aeb6e521f7256b1a5f39736",
+      "targetPath": "backend/src/middleware/rateLimit.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 121,
+      "sourceSha256": "d888b778c415621b8bb8707f900398fb10a57c5ac68d91d3482e01a212e0e6bd",
+      "targetPath": "backend/src/middleware/requestId.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 122,
+      "sourceSha256": "4551c326656f6f57d5e7c1983fb9254577356044ba157771b5b789dd4dc5f208",
+      "targetPath": "backend/src/middleware/security.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 123,
+      "sourceSha256": "f3a25b1aafbad01bdb0563864722859019bbb8650a4690980e8d90f0592e1ab8",
+      "targetPath": "backend/src/routes/activity.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 124,
+      "sourceSha256": "5471f5558e42c9f883bb7fa0cb04f9c290d398eef43e2c4831dc168db2a61c0b",
+      "targetPath": "backend/src/routes/admin/audit.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 125,
+      "sourceSha256": "f3b1f31c53a10abd0be376e889da82fe980b71ab43acf36bf385619ec92ca503",
+      "targetPath": "backend/src/routes/admin/auth.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 126,
+      "sourceSha256": "d8b37820f97c6d68e0796198d06b288ceab844830c57a45aba420dad872d9dab",
+      "targetPath": "backend/src/routes/admin/export.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 127,
+      "sourceSha256": "d178693f898ba9eba4273cdb151ea419bb899ea0dcc6957bc9fc57a22fcdf507",
+      "targetPath": "backend/src/routes/admin/geoBlocking.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 128,
+      "sourceSha256": "29d0f762004aebec01078674d79a1448e881c6256d24bd3ba1c220e94e1b8675",
+      "targetPath": "backend/src/routes/admin/insights.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 129,
+      "sourceSha256": "46ea13f6309c4a98c2bc20c71b8f3a27895b8f35804db35537a9756693a6c895",
+      "targetPath": "backend/src/routes/admin/messages.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 130,
+      "sourceSha256": "06e167f33a27dabada36321bd9af66aa40c495c55c1f12b495272e94fb88f4d0",
+      "targetPath": "backend/src/routes/admin/polls.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 131,
+      "sourceSha256": "8e0f4e3748ebb5f40737ca39c07d9e934659a5818fc731306f6e9f231d7f662d",
+      "targetPath": "backend/src/routes/admin/profiles.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 132,
+      "sourceSha256": "ff90cf5163b795a2226d9723674b5b09b8bb37ec5931ad1330d9f55e007d22af",
+      "targetPath": "backend/src/routes/admin/regions.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 133,
+      "sourceSha256": "ca27f941aa351490b8ccd2d67b272922582f7411d109982291647c4e3e34cc34",
+      "targetPath": "backend/src/routes/admin/security.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 134,
+      "sourceSha256": "1bba64661122a9c742079290403739d1ecd79e768d9793069145c815761c142b",
+      "targetPath": "backend/src/routes/admin/settings.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 135,
+      "sourceSha256": "60398d1b53887facb1122cc66577e2090f0f9232e34a7a8fe0063a1e6e341243",
+      "targetPath": "backend/src/routes/admin/shield.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 136,
+      "sourceSha256": "eb712828e98f61f41505a93b1b98e2f3a47948aa7360d2b2953bb9777b5344a4",
+      "targetPath": "backend/src/routes/admin/tickets.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 137,
+      "sourceSha256": "608e52e0ed50183072faa1020dc3f4f0263cd62a3e8b688dbbd74d78e36e707f",
+      "targetPath": "backend/src/routes/admin/users.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 138,
+      "sourceSha256": "3c8c8b918d9b28cc249dde68b4ebbe8259cfe0855d50e650a5d58acf1423eb2e",
+      "targetPath": "backend/src/routes/auth.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 139,
+      "sourceSha256": "bbf66b7d51963926cfc71bfcec9f85ca28be2eaa21823cce188ed180a2cc21bf",
+      "targetPath": "backend/src/routes/devices.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 140,
+      "sourceSha256": "51c33ac8ed309c8d5afa67bee711c3401d2bdfc672bc126d20874ba792b15f43",
+      "targetPath": "backend/src/routes/enrollment.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 141,
+      "sourceSha256": "1b4f05fb85e6f8fac793c2b82626943745f370f242305481210fbaa4eaccc5b7",
+      "targetPath": "backend/src/routes/health.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 142,
+      "sourceSha256": "cba87c55568907f59f5082d23a962f83cff949a0cc698e05587c7bf3551850f1",
+      "targetPath": "backend/src/routes/messages.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 143,
+      "sourceSha256": "326e9fda5a1c942dd107638cfa8e61f2f55f14c1d6446046812fc12c38b36507",
+      "targetPath": "backend/src/routes/polls.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 144,
+      "sourceSha256": "97917f8061cf5f81fc503909bc05d0c64d572e85b31a628c02ba4fbe0e34867b",
+      "targetPath": "backend/src/routes/profile.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 145,
+      "sourceSha256": "6d50a31bcc6c9f7f465789df3079f5862afd0385621d71ab0ee2b439b64ea579",
+      "targetPath": "backend/src/routes/rewards.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 146,
+      "sourceSha256": "0da8d66b1ff6c2d2bf21fb44f1165ed3fdf3c5a2727720d67baa21354eec61d4",
+      "targetPath": "backend/src/routes/settings.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 147,
+      "sourceSha256": "c3cb71540b57444e21065394e3d323220817c9246e7e9a030dbab8b63e82ee84",
+      "targetPath": "backend/src/routes/stats.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 148,
+      "sourceSha256": "f777f04aec28b648155edf30b39e2c302ef918a0dbebd3f8c8786e913423bfae",
+      "targetPath": "backend/src/routes/tickets.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 149,
+      "sourceSha256": "144b6c6b5a4e0b54e6af5dcb66e2eeba159d58c6c9d40b85429f89257c25c85e",
+      "targetPath": "backend/src/routes/verify.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 150,
+      "sourceSha256": "37e77d33c2091e3b3d60d81e3ab9c514e04661fc8d9f213de3e3b8a1b2090bcb",
+      "targetPath": "backend/src/routes/wallet.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 151,
+      "sourceSha256": "1fa37ae8a7dc13c2017ad4b246d8ec8eae2a1bbcdcf2b8718441b76f7572dcb0",
+      "targetPath": "backend/src/scripts/admin_mfa_status.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 152,
+      "sourceSha256": "479ffcfb92b5f505ebea4729811edbf9146058cc6d38979e340ab8586982e9dd",
+      "targetPath": "backend/src/scripts/apply_ledger_manual.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 153,
+      "sourceSha256": "a60ad4ec550242b021bbb0d1263a5db7d6379db63e6137d2406acba86f7196f1",
+      "targetPath": "backend/src/scripts/check_analytics_service.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 154,
+      "sourceSha256": "cbe6ec50c2481662e000c53ca3cda190b24857cbd3523b0a3796fa6efe4e754e",
+      "targetPath": "backend/src/scripts/fix_k_anonymity.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 155,
+      "sourceSha256": "c354742aa787c4273bf412a0a5a442105f4963ec530af5dc9b412eb9e6e9deca",
+      "targetPath": "backend/src/scripts/inspect_votes.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 156,
+      "sourceSha256": "08d604e9b04780cd370e82a20f9546130a228b1397c83a26390b80acf29c91cf",
+      "targetPath": "backend/src/scripts/provision_admin_mfa.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 157,
+      "sourceSha256": "99a2a7f4a964e6e472c45b2e2c7c872395acaecd98aca4d86be1035a641736ba",
+      "targetPath": "backend/src/scripts/reset_admin_password.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 158,
+      "sourceSha256": "d7373c9fabd551a8bf29049af888ee92611bcd653284290deb43d82c4b46a78f",
+      "targetPath": "backend/src/scripts/verify_audit_log.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 159,
+      "sourceSha256": "94a04b3c519c7e49909faf80d131330fd15ad782a9db9073f9d413bd9ea6c39e",
+      "targetPath": "backend/src/scripts/verify_merkle.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 160,
+      "sourceSha256": "cbf8646bd0d13e372456ccf0be28b4fb91296d422b43b83f6422e0fd27ba445f",
+      "targetPath": "backend/src/scripts/verify_vote_integrity.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 161,
+      "sourceSha256": "87305d122fb8f64c0a3cb758a976d99068f9ab2fff6a776e35f85da9586b62d1",
+      "targetPath": "backend/src/services/adminMfa.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 162,
+      "sourceSha256": "cf95188580d8493be2cf0bca5d060de14ddb637f75f9241a407c17759bae3495",
+      "targetPath": "backend/src/services/adminPassword.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 163,
+      "sourceSha256": "5986129b9b12d14808cf4ff33272a8b23d671ef48361cb259bf965b697d9d161",
+      "targetPath": "backend/src/services/adminSession.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 164,
+      "sourceSha256": "aefe6b8932e5406cfd21578197c69e8ed1b8c212d1d910a091ba1826a5481068",
+      "targetPath": "backend/src/services/adminSettingsValidation.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 165,
+      "sourceSha256": "42575ea709a310eb891fe12ed44223194353fa92f8c92c191934b018e4bee23d",
+      "targetPath": "backend/src/services/analytics.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 166,
+      "sourceSha256": "d362dc7cba9a174ffc8e665e62b0b054b1e95ad7e1610467269edfcadcc497dc",
+      "targetPath": "backend/src/services/appleAppAttest.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 167,
+      "sourceSha256": "2c2ae437009403cbb5579ba8f4a6b83a9bd11a0d64db76eabe8e0f30494ed02f",
+      "targetPath": "backend/src/services/auditCheckpoint.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 168,
+      "sourceSha256": "bb1198e02c2ffbbbc88b0d139e2af7d8907fc54d1db357568fe26a9b384ce4ef",
+      "targetPath": "backend/src/services/auditExport.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 169,
+      "sourceSha256": "591e1d28618518f4e96048ad387481f075aa7feb25cadc34ab81165cf06751bb",
+      "targetPath": "backend/src/services/authRateLimit.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 170,
+      "sourceSha256": "b77f3c2852f022d94f41bcf3ecc3881c70011ee58a069bdee8eefd5f4b4a9869",
+      "targetPath": "backend/src/services/biometrics.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 171,
+      "sourceSha256": "899b95b2a7549b64de853564a1405cbe64d3b86441fcc5c182be0f957cc50da2",
+      "targetPath": "backend/src/services/blockchain.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 172,
+      "sourceSha256": "11342c1acde8629ea746644109b3e7cc93ae927214e4bdf99f20746f6be9e0bd",
+      "targetPath": "backend/src/services/credentials.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 173,
+      "sourceSha256": "9e0a0ecff552cc76fb323654753ebdd287374d09b44e3f06e0ada4dc56b8d812",
+      "targetPath": "backend/src/services/deviceAttestation.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 174,
+      "sourceSha256": "c94a4259822b367b4ae145a8007ae8eb58d4b61a8980f9f3a76d18c7d6419dd6",
+      "targetPath": "backend/src/services/geoBlocking.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 175,
+      "sourceSha256": "52dad61a76a408c1a44b9bc21e68d0d77db9f5cf91dccc80016fc8d2de060682",
+      "targetPath": "backend/src/services/identity.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 176,
+      "sourceSha256": "8c3edf2f6d4020521faee40518cecbcd7a2a3fe800fe011df9c73d464b77f545",
+      "targetPath": "backend/src/services/ipRateLimit.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 177,
+      "sourceSha256": "868977d75d5d8b4f5ba806258f1d52bc77ef013af5ae4b41a41bd70d9333c071",
+      "targetPath": "backend/src/services/merkle.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 178,
+      "sourceSha256": "f96f7c121660e82fdcb4bc6cb5f3ae7f225908de5f36a4ac12ef46b154882e9f",
+      "targetPath": "backend/src/services/nonce.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 179,
+      "sourceSha256": "4c9a1a433a195274127fd90db09534d11f02180c80ae336858af2ee8c11b29dd",
+      "targetPath": "backend/src/services/nullifier.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 180,
+      "sourceSha256": "78e65056ee1f7c4d587a6cb2cbccc5d2d0b102f3b2b78408c90184d1dcd110cf",
+      "targetPath": "backend/src/services/outboundUrl.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 181,
+      "sourceSha256": "3862adb2b12e6ac2ad1de3bf095c0ecec5f71d1c1ec4b0c01c0c8db8992a255c",
+      "targetPath": "backend/src/services/pollMonitor.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 182,
+      "sourceSha256": "878a36a9198b05ceab68837e47b4295a4060807ef371d87718a95205d10ec9be",
+      "targetPath": "backend/src/services/pollValidation.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 183,
+      "sourceSha256": "63d1860681f8e4d28ee0343fa68484afd9868ca2f831eb33ad0e8f30588796c0",
+      "targetPath": "backend/src/services/polls.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 184,
+      "sourceSha256": "89c1cf853fec709ab9647d8d688abbbebb50e90b9a2addd3e0fb2b52b7d1ab4b",
+      "targetPath": "backend/src/services/pushNotifications.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 185,
+      "sourceSha256": "d75144a19771ec3e31a7fdb1f5d8f264d90bba744934d147ffa4236448ab6d3f",
+      "targetPath": "backend/src/services/receiptSigner.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 186,
+      "sourceSha256": "031bffde606a31b6c6e0a4fde19b45869fd73ee8437e4528d8a9fbf9ad3b1dc4",
+      "targetPath": "backend/src/services/rewardProcessor.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 187,
+      "sourceSha256": "23ded862b7e0f2f3df69f1ae0777f78cc3971b71740c10d1815c8d30c00e7e57",
+      "targetPath": "backend/src/services/secretEncryption.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 188,
+      "sourceSha256": "52ec1afe73b18dbbf7860e5ef596fae355ccfc4588880ea8c8a85a82fbb63302",
+      "targetPath": "backend/src/services/security.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 189,
+      "sourceSha256": "6b07f408ee2e6acfa2acd24b70555b064cb82e34c1b850854b0384528b98fe22",
+      "targetPath": "backend/src/services/settingsService.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 190,
+      "sourceSha256": "fd057953b5614e61a9f602ebee53295722e8fb76457d548f2adb2ee61524d508",
+      "targetPath": "backend/src/services/surveyVoting.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 191,
+      "sourceSha256": "9f663b1a66e2dda5bbc532174287c8b5bd0ba8067cc68286202dc83e38848db3",
+      "targetPath": "backend/src/services/tickets.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 192,
+      "sourceSha256": "14594ba277dc436500094cb0c9ef23136ef977b1fbd5cf0068213bc24dc06939",
+      "targetPath": "backend/src/services/verification/inHouseProviders.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 193,
+      "sourceSha256": "1e30e8f8dba31d576cee0c628f50f78ec5fa3084d02d63aa0118b832589ae26c",
+      "targetPath": "backend/src/services/verification/providerFactory.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 194,
+      "sourceSha256": "133b49c3cd6d77770edb29a520c8ae7096e51ff65c49cf98681dd59655d4fb1f",
+      "targetPath": "backend/src/services/verification/remoteProviders.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 195,
+      "sourceSha256": "3a2d19a7e37c9860dcfbfa95c1d0b85be0dd3e9b03cc3b9c1908e11ea40854e2",
+      "targetPath": "backend/src/services/verification/types.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 196,
+      "sourceSha256": "bb11c9148be1bef2b5d1a6e46d46bbc5dd4e8b2f97ed61a1552f0058165a26c5",
+      "targetPath": "backend/src/services/verificationSettings.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 197,
+      "sourceSha256": "9ce3ee5bc571732f422634d76a6ff92b66596466eb76ac856cdbfc6baecb27d8",
+      "targetPath": "backend/src/services/voteAnchor.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 198,
+      "sourceSha256": "2c754d32e7c08a7aa08383f6789859f5ebe43ec40a39baeb6519ce8d96c7bb56",
+      "targetPath": "backend/src/services/voteEncryption.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 199,
+      "sourceSha256": "f56d838b2417e81e1f52cee7d83d77635a4491756bb5dade089f4ebee35e9a25",
+      "targetPath": "backend/src/services/voting.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 200,
+      "sourceSha256": "d14cf46611aa4aa953fb8c1e417fe28efdaf780f4351e87d56a40be3ddf6ff61",
+      "targetPath": "backend/src/services/vpnDetection.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 201,
+      "sourceSha256": "9a5cc98b5890e5be59744815541ed6e575331d1cff38b1be2891cc5a45cee2a3",
+      "targetPath": "backend/src/services/zkProof.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 202,
+      "sourceSha256": "7ba73d690f331f85be3a5222ab0da8c4e12432a845bfe8467a28aed1566f5e54",
+      "targetPath": "backend/src/types/credentials.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 203,
+      "sourceSha256": "fc64a6417c4aeb2120dddafdedbc85220f9d06c7caab818edf0a3bb7b92259a3",
+      "targetPath": "backend/src/types/polls.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 204,
+      "sourceSha256": "1db7235d7b7f3d9230b3bea59945c8fb76da6c67a7301eb2b96a4f72fc203d44",
+      "targetPath": "backend/src/types/survey.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 205,
+      "sourceSha256": "9231070e03ef0d50ced2bd8d19447806a50ebe3cd154581fd939b85ff2f118ce",
+      "targetPath": "backend/src/utils/httpClient.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 206,
+      "sourceSha256": "8ca827c24bf50e38310a557c2d29a979728e88ad2a2a0b77f5b36831eb477129",
+      "targetPath": "backend/tests/__mocks__/uuid.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 207,
+      "sourceSha256": "6ebec2d81e011f4727a83790babb02696bf08ce83f9c1e3e630585910183971f",
+      "targetPath": "backend/tests/admin-audit.test.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 208,
+      "sourceSha256": "54edff7fbd839a14d916411a5127c44d48d8b2f50a7f5ce6d94412fb205e92b3",
+      "targetPath": "backend/tests/admin-authorization.test.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 209,
+      "sourceSha256": "df5d49e670fd82f13a9b33965fc9686bffafc498510886847a226b893905c8e7",
+      "targetPath": "backend/tests/admin-export.test.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 210,
+      "sourceSha256": "9e2c327f58d628660e337250fa731fb1da882f4854e12521e639d2deecfa4afa",
+      "targetPath": "backend/tests/admin-security-primitives.test.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 211,
+      "sourceSha256": "27c922239598477baa6f5a583cd537a16a9c9c2e41216fac5b9ebb35c5dd5bae",
+      "targetPath": "backend/tests/admin-settings-security.test.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 212,
+      "sourceSha256": "01a2b82d0d6e861ec936de22bd9e64e34e030b73c0be3e10ca6a776ebd3848c3",
+      "targetPath": "backend/tests/audit-chain-locking.test.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 213,
+      "sourceSha256": "e620cc112847b9962699cc75a90defcfc728dc8a757f75de719f5439a5749c83",
+      "targetPath": "backend/tests/audit-checkpoint.test.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 214,
+      "sourceSha256": "d6bc302227880fa86a8e27cee865ac9565f4f8447277aae35ab2d1811a4cf6f1",
+      "targetPath": "backend/tests/audit-export-privacy.test.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 215,
+      "sourceSha256": "7d2b9a9e9d19a08adfcd68ad6d04173a6e399c99fe9ab35cc995effccd2ce48b",
+      "targetPath": "backend/tests/auth.test.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 216,
+      "sourceSha256": "18f100896230f3a268a51a36dd7c2c4d73aebac00a60f9b25af2c442a7e64ac2",
+      "targetPath": "backend/tests/ballot-envelope-privacy.test.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 217,
+      "sourceSha256": "0d29ac5c790915277887c48dd7e2b6071218859866f041975929d2b20528d7a4",
+      "targetPath": "backend/tests/database-role-security.test.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 218,
+      "sourceSha256": "7a0f7fa80325b73426f2dbbce6cb174759e88a0223029df25bd762d542a876f3",
+      "targetPath": "backend/tests/device-attestation.test.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 219,
+      "sourceSha256": "429ae19ace84565ea00ff10b180c9e39173940796b05667da50b84e9ea0381c3",
+      "targetPath": "backend/tests/enrollment-e2e.test.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 220,
+      "sourceSha256": "fe783d65a3bd887d94f35fd2649ae7a4c99b1751ff07120860493c19c5acd5c6",
+      "targetPath": "backend/tests/error-handler-security.test.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 221,
+      "sourceSha256": "1366500aafbb4da489fcfe7d8ed803d2101949abf470fa07d074282ef164b69c",
+      "targetPath": "backend/tests/health-security.test.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 222,
+      "sourceSha256": "218a805cec1a3117cca8391d115cc7b994be4a485d0138675b4a0b67ebec17c4",
+      "targetPath": "backend/tests/health.test.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 223,
+      "sourceSha256": "f223c7fd42d983cae7a61cf863ef6ec404ae70f61cd62f5db14d4f22664cec38",
+      "targetPath": "backend/tests/idempotency-privacy.test.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 224,
+      "sourceSha256": "e29527d744a3f71d4cdc2d6d57c658c73127c81deebc03a79699db3c28fa7f2f",
+      "targetPath": "backend/tests/merkle.test.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 225,
+      "sourceSha256": "a9b77e637c9e3cbf6688649f314110ee0394a9813d0563be70bf2070e8a63c72",
+      "targetPath": "backend/tests/nonce.test.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 226,
+      "sourceSha256": "6fdccebfc1615b63a676333485ab9d2c29ddf15bf91ab18a9658b421eae1563b",
+      "targetPath": "backend/tests/nullifier.test.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 227,
+      "sourceSha256": "12c440f6264523d18584288b6c9bf285ab64dfd12533f9119c9ea2fd0ca9c5b8",
+      "targetPath": "backend/tests/poll-validation.test.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 228,
+      "sourceSha256": "5585e1b238d45be3da55ef20211674cd88f5e4a91757ecbb073735000f1282a7",
+      "targetPath": "backend/tests/receipt.test.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 229,
+      "sourceSha256": "79f8511229c5f9f4034fc7357994950e0b70a6ac5397c68db90d43a74b680030",
+      "targetPath": "backend/tests/sanity.test.ts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 230,
+      "sourceSha256": "6510bdc95cc8d32fce3f05407f60bd32780d3f2809d40608e0bc3f349bb69e41",
+      "targetPath": "backend/tests/security-validation.test.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 231,
+      "sourceSha256": "dbd20deb7a06858cb40e25d28d4fe15ed9e75b4b80572486f6939d775a001f09",
+      "targetPath": "backend/tests/survey-voting.integration.test.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 232,
+      "sourceSha256": "a21968344c7b62aef4de92790a3cec2a92d5ae7b32678eb688a6b1dc34791755",
+      "targetPath": "backend/tests/survey-voting.test.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 233,
+      "sourceSha256": "3e291671d747ff6f09a2e24f3246993c6bd54eb9ab93411c22daf59482ffdb24",
+      "targetPath": "backend/tests/vault-security.test.ts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 234,
+      "sourceSha256": "a7174359d951bbf253388ecea920b19659e895e15ed358bf943a8609a08c1996",
+      "targetPath": "backend/tests/vote-protocol.test.ts",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 235,
+      "sourceSha256": "2b6eec42e1d0144a5b07b16e2eb72bf19e05fdc9b9779b0b1e236bfb47e6cbf8",
+      "targetPath": "backend/tsconfig.json",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 236,
+      "sourceSha256": "fed182a888a61f294201e8098e0c17230bc37039f9e3ed8b1eb7f1f7f88fdc91",
+      "targetPath": "biometric-service/.dockerignore",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 237,
+      "sourceSha256": "b0b00d50f9983a39bec72f32fd2d823c7a006faafa9617741d9c07a61c392c93",
+      "targetPath": "biometric-service/Dockerfile",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 238,
+      "sourceSha256": "bd3c4606c3544c1265501020c3650f1afa5c3bf435d5ef899ada7d9168be669f",
+      "targetPath": "biometric-service/engine.py",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 239,
+      "sourceSha256": "a98cb09ef85d8b121fc39a3e005ab2de1471bb612bfd4b7a342e37ef81447fed",
+      "targetPath": "biometric-service/main.py",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 240,
+      "sourceSha256": "31c843e2db6bf49721a98dfc3d34a481bc4cd52ec0690392bbacc8722bbc92b4",
+      "targetPath": "biometric-service/requirements.lock",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 241,
+      "sourceSha256": "510058b3c5e9c42497de0f5128ae0f26be028a2ae545fab808197609ca00d1ea",
+      "targetPath": "biometric-service/requirements.txt",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 242,
+      "sourceSha256": "f32ca62f3d8ca70937df727d5c7619f66b32be2fbff71061d3ea74180d4bf24a",
+      "targetPath": "ertad-shield-service/.dockerignore",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 243,
+      "sourceSha256": "6b8011d9f59f0c7a14a2db1eff8156624cd0c3b41e1f553e2bfd406a2b370489",
+      "targetPath": "ertad-shield-service/Dockerfile",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 244,
+      "sourceSha256": "f6daeabf181c91bd19ae48c36ad8f22dc1ec09158bcbdffa94655b2c48ee8c4b",
+      "targetPath": "ertad-shield-service/auto_manager.py",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 245,
+      "sourceSha256": "266f6c50161026a7b7efbbb161cafaca1ebd78c2c31667a4ab4a7d43ada9a511",
+      "targetPath": "ertad-shield-service/config.py",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 246,
+      "sourceSha256": "849777699ef44397f90609a4cf1419ce277fa5ac9584a78bc35086e1e1d1fa04",
+      "targetPath": "ertad-shield-service/main.py",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 247,
+      "sourceSha256": "ec8986a5a7051792f0847fe896146a58c2381068de7f06e641b3b8f45fb12e3f",
+      "targetPath": "ertad-shield-service/requirements.lock",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 248,
+      "sourceSha256": "d7d0830fdfbf8091bdfc261e05ab311f0aa62b2d99fa325af68bd5270d17f537",
+      "targetPath": "ertad-shield-service/requirements.txt",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 249,
+      "sourceSha256": "df669e1653754c5daa5d485bda63d60f4680f97d71ce8170994b5097cebf09c0",
+      "targetPath": "ertad-shield-service/risk_engine.py",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 250,
+      "sourceSha256": "717bcac75a07988e84897c1b70a6ad6be4fb6ee35d6014d172655790072af720",
+      "targetPath": "ertad-shield-service/tests/test_client_ip.py",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 251,
+      "sourceSha256": "0760b6a7624712cbcdadd3991d232053460cca7c358897ecefb7f834f024d72b",
+      "targetPath": "mobile/.gitignore",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 252,
+      "sourceSha256": "8fcb13d47af7228dbc3b5cc0a47d181c9e13754cf32df5247339bf571af776ed",
+      "targetPath": "mobile/.metadata",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 253,
+      "sourceSha256": "b63207cf529949ec4727b68c23dbb38ce255b6f6f4ae1effcb5c1dcf2852d238",
+      "targetPath": "mobile/analysis_options.yaml",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 254,
+      "sourceSha256": "c9af75dbc2c8aa867476a09426c80b178c4aeed8b9393ae48503eedfa3273d71",
+      "targetPath": "mobile/android/.gitignore",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 255,
+      "sourceSha256": "8a35cff714697c4d3e152c7438b89a6220ad924818fb9470b74141bc42ebdbc7",
+      "targetPath": "mobile/android/app/build.gradle.kts",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 256,
+      "sourceSha256": "f10e183e805306ca6acf3a2fe6b84f6cdc91ef36949c8bd9d0c3bafaed9ac7f1",
+      "targetPath": "mobile/android/app/proguard-rules.pro",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 257,
+      "sourceSha256": "c8de4773699ffb4bd81c5f122d969efc084ea210940c75709b383328c7bdcc04",
+      "targetPath": "mobile/android/app/src/debug/AndroidManifest.xml",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 258,
+      "sourceSha256": "6c98c870183ef503da319208bdc0ca4dd41f1d4828266f1e0c65b9f794ee7323",
+      "targetPath": "mobile/android/app/src/main/AndroidManifest.xml",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 259,
+      "sourceSha256": "4ab3d8bcd1a00cba36ebf0abb6321c8c552ea807451334860f2b6378612e2b7a",
+      "targetPath": "mobile/android/app/src/main/kotlin/ge/ertad/mobile/MainActivity.kt",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 260,
+      "sourceSha256": "140e79ea075a843fdd13261b1df16d9fc8df2e8f51e3ed36a5dd3636d13d3574",
+      "targetPath": "mobile/android/app/src/main/res/drawable-hdpi/ic_launcher_foreground.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 261,
+      "sourceSha256": "22eae275ecee01d2d7008dc8da01154de3271528231fb3474c2677c7b65f99ad",
+      "targetPath": "mobile/android/app/src/main/res/drawable-mdpi/ic_launcher_foreground.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 262,
+      "sourceSha256": "dca312ec77de83e43ef70a825c299b51451247286c29167d62f19165750b8793",
+      "targetPath": "mobile/android/app/src/main/res/drawable-v21/launch_background.xml",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 263,
+      "sourceSha256": "296e08e8b5fc8733f5f90778f60f4131a0d1f5899bed4fadfa5de6adb8fff998",
+      "targetPath": "mobile/android/app/src/main/res/drawable-xhdpi/ic_launcher_foreground.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 264,
+      "sourceSha256": "6337c063d3268a273d79e118ff72f357bdb0bf5470291cac9276709ffbf2d946",
+      "targetPath": "mobile/android/app/src/main/res/drawable-xxhdpi/ic_launcher_foreground.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 265,
+      "sourceSha256": "d42a82941bcbda64bd7210ebd07ca98f00fcea501bf5ba41060a761ea1c96e01",
+      "targetPath": "mobile/android/app/src/main/res/drawable-xxxhdpi/ic_launcher_foreground.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 266,
+      "sourceSha256": "2df60e2cfbee873ce2858088cf003e6b93498f2f568476da437610467ea1a9d7",
+      "targetPath": "mobile/android/app/src/main/res/drawable/launch_background.xml",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 267,
+      "sourceSha256": "ddcd6eff64c66ee4394d18bc9431c89c418baec3eafac96347e561874d25217b",
+      "targetPath": "mobile/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 268,
+      "sourceSha256": "d8a6890ea99c92addd585b89f7ff4f2f8bdeb58f49435a7721bc5bf2d639f5b3",
+      "targetPath": "mobile/android/app/src/main/res/mipmap-hdpi/ic_launcher.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 269,
+      "sourceSha256": "c3ff4ed4115b7a8f5d50e9c2859f0ea641682b6392de69c03aac72ea310fb162",
+      "targetPath": "mobile/android/app/src/main/res/mipmap-mdpi/ic_launcher.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 270,
+      "sourceSha256": "42a0d3e18396397741364a47075521db1c5be5e57c2e1821ce04e35f1e5b3b88",
+      "targetPath": "mobile/android/app/src/main/res/mipmap-xhdpi/ic_launcher.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 271,
+      "sourceSha256": "1b3164943d8f4f6e80a85e845f72f3b869d5ad3ab6baed431c0dc3af2904084a",
+      "targetPath": "mobile/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 272,
+      "sourceSha256": "2b7c2279179138a506e851a9ed5a9f9d1fce738dd55562708b0da4504dcbd09e",
+      "targetPath": "mobile/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 273,
+      "sourceSha256": "ea763597dc1a84c8034251caee98d7753e0fbf57340ffc94677427de4b537516",
+      "targetPath": "mobile/android/app/src/main/res/values-night/styles.xml",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 274,
+      "sourceSha256": "cd40bafe618ff506f4088778b135cb4faa15f25e0c9b475e22d730c74b7be115",
+      "targetPath": "mobile/android/app/src/main/res/values/colors.xml",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 275,
+      "sourceSha256": "cca15a99b59380a548bf6a890f7ca5380ee509b1f9bbb2f5f9ec3589fa25c2f7",
+      "targetPath": "mobile/android/app/src/main/res/values/styles.xml",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 276,
+      "sourceSha256": "b01a4541a8144c15bc617bab7eb267c99fa1476368fbbda5a12cdbf4e316a34c",
+      "targetPath": "mobile/android/app/src/profile/AndroidManifest.xml",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 277,
+      "sourceSha256": "218f400e3fff31c9c986a2535dfb974560e1b4d33cc27b7c1fee96a2b7e44454",
+      "targetPath": "mobile/android/build.gradle.kts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 278,
+      "sourceSha256": "4922e39cd2ea910bd97156fd4320b0be9217df262fc45435ce408bad534a20d0",
+      "targetPath": "mobile/android/gradle.properties",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 279,
+      "sourceSha256": "1220fdd333a881e47441de07b23f9dd1ebd35459730543ae429cf249847d91bf",
+      "targetPath": "mobile/android/gradle/wrapper/gradle-wrapper.properties",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 280,
+      "sourceSha256": "084e3e42bfc2c073688e1b377fc3bd4ddde604be0d82508f6144e1515507ea6d",
+      "targetPath": "mobile/android/settings.gradle.kts",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 281,
+      "sourceSha256": "578ceecf1461a1d8204dca3284153df1ff5a6a7952471649a157583c555b8625",
+      "targetPath": "mobile/assets/images/enrollment_illustration.png",
+      "state": "removed",
+      "replacement": "mobile/assets/images/ertad-mark.png"
+    },
+    {
+      "sourceEntry": 282,
+      "sourceSha256": "44f81bc102f5c28855799e203308f142d36317119c009bc8c93c75c9302c193b",
+      "targetPath": "mobile/assets/images/ertad-mark.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 283,
+      "sourceSha256": "371986d7e4de9b4499160b6fce46edfd5c32d3fa45d5a639fc484510247db96c",
+      "targetPath": "mobile/assets/images/overlay_id_back_mrz_guides.png",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 284,
+      "sourceSha256": "fcfeb14742771ef27d1b2cc07cf21f8931fe9fbf3fe0dd73a27da816d478ff3a",
+      "targetPath": "mobile/assets/images/overlay_passport_mrz_guides.png",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 285,
+      "sourceSha256": "0d0f98bd61000669e15909da374e87a2ac12bfa72edc3b2b08e1b92c98a21809",
+      "targetPath": "mobile/assets/lottie/nfc_scan.json",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 286,
+      "sourceSha256": "51fd5545a7009e0cc26337ede8fd91688d25c4ebb9d40a6e5febfec959de93be",
+      "targetPath": "mobile/assets/lottie/nfc_tap_guide.json",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 287,
+      "sourceSha256": "0d0f98bd61000669e15909da374e87a2ac12bfa72edc3b2b08e1b92c98a21809",
+      "targetPath": "mobile/assets/lottie/success.json",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 288,
+      "sourceSha256": "52815bb3f7692361d01103377d9f6d8a9e1344fe5245acb01d04122ab02a4cb9",
+      "targetPath": "mobile/integration_test/app_smoke_test.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 289,
+      "sourceSha256": "e85b4db8ba6ed14708e5f7d3c60336e5a3067ce11329b84aa8ba5d98603ee253",
+      "targetPath": "mobile/ios/.gitignore",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 290,
+      "sourceSha256": "88e403d33087654522431733ad261741f836f92c94a50ee792820b4f1ed89716",
+      "targetPath": "mobile/ios/Flutter/AppFrameworkInfo.plist",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 291,
+      "sourceSha256": "48ee977ee7179680a40f4e597bce90896405af3a345b238997ed66685b7fa14f",
+      "targetPath": "mobile/ios/Flutter/Debug.xcconfig",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 292,
+      "sourceSha256": "b81b8d6a19ac8f3df25f4e92f693052ce3ab30a4f623d656282e29fc06d33f19",
+      "targetPath": "mobile/ios/Flutter/Release.xcconfig",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 293,
+      "sourceSha256": "7f2d02df8c420e7a2646100cc9dc3b5fc500f94655acb7c8c06b1f0969a1fc3c",
+      "targetPath": "mobile/ios/Runner.xcodeproj/project.pbxproj",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 294,
+      "sourceSha256": "ac28b35c2b940210bec0fff8e424b07fd0efe9112ab178a10533583f251a386c",
+      "targetPath": "mobile/ios/Runner.xcodeproj/project.xcworkspace/contents.xcworkspacedata",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 295,
+      "sourceSha256": "d557c2c32fc6258ec28981fa45dc847b76c9968beb90a2e26d13ef9c4ea45c30",
+      "targetPath": "mobile/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 296,
+      "sourceSha256": "dd64c0308ab2971c456871b990b24a008bdc3ece09833e8dbe9675e33a496e74",
+      "targetPath": "mobile/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 297,
+      "sourceSha256": "570c49fd61c67330efb75097018d1b0df0c68d03667631105a5acf5621112b1b",
+      "targetPath": "mobile/ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 298,
+      "sourceSha256": "706a4c812f2a1e220e6785c27580020d58048e2ae4d30d1280f3c43344ce6b38",
+      "targetPath": "mobile/ios/Runner.xcworkspace/contents.xcworkspacedata",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 299,
+      "sourceSha256": "d557c2c32fc6258ec28981fa45dc847b76c9968beb90a2e26d13ef9c4ea45c30",
+      "targetPath": "mobile/ios/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 300,
+      "sourceSha256": "dd64c0308ab2971c456871b990b24a008bdc3ece09833e8dbe9675e33a496e74",
+      "targetPath": "mobile/ios/Runner.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 301,
+      "sourceSha256": "b81ccf21230cbfe09bca1542c5683ef1e21c9762a3ee690daeabab17151539ca",
+      "targetPath": "mobile/ios/Runner/AppDelegate.swift",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 302,
+      "sourceSha256": "c9d16d02d04504b95e9e8174dc601560c66b45644e4269991883810904b53baf",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/AppIcon-1024x1024@1x.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 303,
+      "sourceSha256": "85f13262fb8ba466bfdbf11c2732597cf1236fe5aca13c01cfb8e809ec402dda",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/AppIcon-20x20@1x.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 304,
+      "sourceSha256": "4845723856e3bedd7d2de7347d600b3390fcd8142ae5fea6c5dcf96f8ec80cdb",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/AppIcon-20x20@2x.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 305,
+      "sourceSha256": "b7402107084922f59643db148f9393ebd53ed73827f644675565f6b15635807e",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/AppIcon-20x20@3x.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 306,
+      "sourceSha256": "ea824aecd087d6f8adc8f977fc24d37e01c6f42e47ce736c92494481763c7719",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/AppIcon-29x29@1x.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 307,
+      "sourceSha256": "27377f3baf0b9f9bce5bb90d69c1fe7e49bb175d5d2b8e8b5b67458bb9a338d7",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/AppIcon-29x29@2x.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 308,
+      "sourceSha256": "8a64650e4f311ab47366e647cca2b7641e839f96566c8bb8cc8f8285f01b2e38",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/AppIcon-29x29@3x.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 309,
+      "sourceSha256": "4845723856e3bedd7d2de7347d600b3390fcd8142ae5fea6c5dcf96f8ec80cdb",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/AppIcon-40x40@1x.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 310,
+      "sourceSha256": "96b6cbf2f47203e4100aee6c115200e9c22565615fecb68aa201116cdea3dc75",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/AppIcon-40x40@2x.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 311,
+      "sourceSha256": "7504b00a7d2874c61b04ba613f05763e1d4a6c9c7d8caa0ef7c985e89acda914",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/AppIcon-40x40@3x.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 312,
+      "sourceSha256": "fed46061ed787c294c2cb681c73682d707ce3e46f5a1fb875de21938efec68b5",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/AppIcon-50x50@1x.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 313,
+      "sourceSha256": "90f9b72ed4da65989cd832b2db03a6ad3b2285d27e6118b7e2548683539645c6",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/AppIcon-50x50@2x.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 314,
+      "sourceSha256": "4a6843c90acc09659750e22befdb6be486d591d08fb7aa2a5366dc7945497b95",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/AppIcon-57x57@1x.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 315,
+      "sourceSha256": "256b9a562a0685f32d052ba53117cfa7e30a00b006d99c88ab73183458d0a997",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/AppIcon-57x57@2x.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 316,
+      "sourceSha256": "7504b00a7d2874c61b04ba613f05763e1d4a6c9c7d8caa0ef7c985e89acda914",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/AppIcon-60x60@2x.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 317,
+      "sourceSha256": "bd35ed1c5ec54a6b5177dd8087495d165761c9686c8a9b86fac6f7057ae8856b",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/AppIcon-60x60@3x.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 318,
+      "sourceSha256": "12d8fba2462f63a2f8228d4ab12f230b838ed4ef69d4d6af7aed920f7077e3e6",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/AppIcon-72x72@1x.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 319,
+      "sourceSha256": "27c427b4d8c1a2821d52b0332c94bedee3b1563960e2f0e07f5bf494eea0ccea",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/AppIcon-72x72@2x.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 320,
+      "sourceSha256": "90a125ec2658eaeeff2c9fe6ca4201fd4dc80c07ff2d32ba3354c3e449a334f2",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/AppIcon-76x76@1x.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 321,
+      "sourceSha256": "148a1beff9467dac12dd537caa3f5b2bd04be1ddab12b8ab44f3956575299caf",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/AppIcon-76x76@2x.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 322,
+      "sourceSha256": "46649c3f9dc867399eaa1ab8e0d7660d8db501b368ebdc8d9c5410a7d2547ef6",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/AppIcon-83.5x83.5@2x.png",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 323,
+      "sourceSha256": "07d863743886b0372ac6894311165019d5d39f74cf8ea5650e9086a60b790290",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 324,
+      "sourceSha256": "fbd112a9f3b541a1d811f71ac8e4fe68b6176687d973a5f4d99b7aa4a722e94e",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/LaunchImage.imageset/Contents.json",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 325,
+      "sourceSha256": "93ae7d494fad0fb30cbf3ae746a39c4bc7a0f8bbf87fbb587a3f3c01f3c5ce20",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage.png",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 326,
+      "sourceSha256": "93ae7d494fad0fb30cbf3ae746a39c4bc7a0f8bbf87fbb587a3f3c01f3c5ce20",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@2x.png",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 327,
+      "sourceSha256": "93ae7d494fad0fb30cbf3ae746a39c4bc7a0f8bbf87fbb587a3f3c01f3c5ce20",
+      "targetPath": "mobile/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@3x.png",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 328,
+      "sourceSha256": "bc3644fbb251ff1e18de25a4932c927850ae1a025be3dd1447940429633fe4b2",
+      "targetPath": "mobile/ios/Runner/Base.lproj/LaunchScreen.storyboard",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 329,
+      "sourceSha256": "dcea4686c02065e56217fd19fcfb73d7509b41872e7486126149d47a18559363",
+      "targetPath": "mobile/ios/Runner/Base.lproj/Main.storyboard",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 330,
+      "sourceSha256": "297c8ba8013cf71b84a44669c3a303fbf7130c4b18662f31a42390c920b34c6a",
+      "targetPath": "mobile/ios/Runner/Info.plist",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 331,
+      "sourceSha256": "efe657d8b27f7f8595a0d416bffb33fe7d93bd2869d81f7353b556c439d7a1a7",
+      "targetPath": "mobile/ios/Runner/Runner-Bridging-Header.h",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 332,
+      "sourceSha256": "23a12d3bb495c67ad8b37183d641a24e1c746519679826fc99e6224298699996",
+      "targetPath": "mobile/ios/Runner/Runner.entitlements",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 333,
+      "sourceSha256": "c0e04141287eb7f9c9f3d31cf5be8cb626a9ea71351206c9121578e8b8f480c3",
+      "targetPath": "mobile/ios/RunnerTests/RunnerTests.swift",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 334,
+      "sourceSha256": "ed97eb3ea111c240e892c54046389e7a49bf93fc1b14c1264d0b3d8a307e5f7e",
+      "targetPath": "mobile/lib/config/app_config.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 335,
+      "sourceSha256": "f79999929b584dd44792553e878cca8c5e93090248a4ae7519b58ad5ed7f8ee9",
+      "targetPath": "mobile/lib/config/theme.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 336,
+      "sourceSha256": "2545e06dc97b58168ba2fbe96fd195fcb046b496590aee7ed81f501ed4a644c3",
+      "targetPath": "mobile/lib/main.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 337,
+      "sourceSha256": "2551f204305d31388ee1bb1e15e9e85034872509408ba2cf6d06b167f4bcaf32",
+      "targetPath": "mobile/lib/models/activity_item.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 338,
+      "sourceSha256": "70596b584fc2082b1cd786506235e20184d8f66e9533d686491e79b719c97f4c",
+      "targetPath": "mobile/lib/models/message.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 339,
+      "sourceSha256": "9d5c60a719010b4c1d179b1d80e47a3e46ef4a7a26ba9798d52eebabe5e85de0",
+      "targetPath": "mobile/lib/models/poll.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 340,
+      "sourceSha256": "9cbf6c1e9bf65921032ceebff3ff776d4cb57f869f59493e9629aae51e5210ba",
+      "targetPath": "mobile/lib/models/reward_balance.dart",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 341,
+      "sourceSha256": "ab8dfb0ed6bb3bf90a0b8ee716e986cb345e64558381e7a51f379a988099532e",
+      "targetPath": "mobile/lib/models/ticket.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 342,
+      "sourceSha256": "a43027c038461702953c2029815979f1539db7c22153a9619f7d279d5830a6e8",
+      "targetPath": "mobile/lib/models/transaction.dart",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 343,
+      "sourceSha256": "4262d3fedc563b4a008cc4d5b2c2c20e7bb2c5b2c0664b201c77690b0b415ca6",
+      "targetPath": "mobile/lib/models/verification_models.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 344,
+      "sourceSha256": "72898a69ec5b6cfadad085e200e64ba7dde4069734d9c0e6af29d1aa0fb45e27",
+      "targetPath": "mobile/lib/screens/activity/activity_detail_screen.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 345,
+      "sourceSha256": "16990974aef85cea380c11c2972f53a9723b272cecd9355b41401f45b51ca89d",
+      "targetPath": "mobile/lib/screens/activity/my_activity_screen.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 346,
+      "sourceSha256": "326ec59d81a72e9d91a3bac88e326d8a9da9d64a3096c5588b2cb861a41f2f03",
+      "targetPath": "mobile/lib/screens/dashboard/dashboard_screen.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 347,
+      "sourceSha256": "6021c85e49e27e23f44b067766ca4f5d39baccce9f3618b362c77f687bb815df",
+      "targetPath": "mobile/lib/screens/dashboard/poll_card.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 348,
+      "sourceSha256": "8b5b2be56a32a7e642b10e6007f5117247c3e726664cb1bdcf344289522538b1",
+      "targetPath": "mobile/lib/screens/enrollment/document_camera_screen.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 349,
+      "sourceSha256": "83865f2df1c5c41cd2423ed43bde9aeadc2fe6291b758c46ee7bcf6a5e8b254f",
+      "targetPath": "mobile/lib/screens/enrollment/document_entry_screen.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 350,
+      "sourceSha256": "93c9eb23cf60368d238795128165c690bbdcfd7706c18b48fd5b4f73fdf8dc51",
+      "targetPath": "mobile/lib/screens/enrollment/enrollment_step_header.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 351,
+      "sourceSha256": "bfea1b59ca2630a477d5bd7f7fcceedd773af93fee4ddea7d23316c0faaef8a8",
+      "targetPath": "mobile/lib/screens/enrollment/intro_screen.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 352,
+      "sourceSha256": "cb20201619896d380a6bfc157a82326e7e580b6fe9ae11b5f198a68ef95dbc91",
+      "targetPath": "mobile/lib/screens/enrollment/liveness_screen.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 353,
+      "sourceSha256": "cd04d143aec0eaec2d63093df9328b517f5972f588027f282dd50752a587e92c",
+      "targetPath": "mobile/lib/screens/enrollment/mrz_scanner_screen.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 354,
+      "sourceSha256": "80ec38e6e49f53362570370775286c2403f95e1831a992e20973abbcacf0f0ff",
+      "targetPath": "mobile/lib/screens/enrollment/nfc_scan_screen.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 355,
+      "sourceSha256": "4b961ec74efe9d578d9e1c0d4b422e25c98635d083d37f129b90a72c8df60084",
+      "targetPath": "mobile/lib/screens/enrollment/profile_creation_screen.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 356,
+      "sourceSha256": "97af122fd06faca832758eaefdd9c4f0e76c736606a32faf9df47abd273b01db",
+      "targetPath": "mobile/lib/screens/enrollment/selfie_camera_screen.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 357,
+      "sourceSha256": "1572d73773072557622837f040a15c4530913ae1efed7ce6cebee4aabad34e7f",
+      "targetPath": "mobile/lib/screens/receipt_verification_screen.dart",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 358,
+      "sourceSha256": "00d5bfeadb7e22c06a1d3fc23a7994c6b22a4a9de97263554a95a0a72e26070d",
+      "targetPath": "mobile/lib/screens/settings/create_ticket_screen.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 359,
+      "sourceSha256": "34e1e2e01d4301aaaca2fe10a6a4ef89bf7a6f7e0086fd5d141bcb92d051eae7",
+      "targetPath": "mobile/lib/screens/settings/help_screen.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 360,
+      "sourceSha256": "b2a7bb897787f9c1e721b57752cf5fc8ef5c606619df7646164258803b32b277",
+      "targetPath": "mobile/lib/screens/settings/language_settings_screen.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 361,
+      "sourceSha256": "2890338edf1074edb4fa2493c84b76e55e4001b3526837dfd5fc4982614bb68f",
+      "targetPath": "mobile/lib/screens/settings/notification_settings_screen.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 362,
+      "sourceSha256": "8c7264b0887239c92ed5bed87c4b35aeffbb62e76daa44971dc950d835cc2fec",
+      "targetPath": "mobile/lib/screens/settings/settings_detail_screen.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 363,
+      "sourceSha256": "da118253cc86c48ae564deca5f1dec2287d47aeabffb930f250a1b591e18d38b",
+      "targetPath": "mobile/lib/screens/settings/ticket_detail_screen.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 364,
+      "sourceSha256": "a9c55eb18b20952f0f8474362e4d9985c401e1e1afc618ac094556e4fa3b9c4a",
+      "targetPath": "mobile/lib/screens/settings/tickets_list_screen.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 365,
+      "sourceSha256": "aa4267d746209b059c402a5e0a62910ccef070a084617e86a0f2b2bda381c937",
+      "targetPath": "mobile/lib/screens/vote_history_screen.dart",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 366,
+      "sourceSha256": "7ca5a6c269c306e5cb086081208eeb36a8c45e6a2f88b86af3de5dc466c688fa",
+      "targetPath": "mobile/lib/screens/voting/confirm_vote_screen.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 367,
+      "sourceSha256": "e3b513236deb414986515e2cd0b277744fbbcc969d1c0d39dc7237ca9e81b637",
+      "targetPath": "mobile/lib/screens/voting/poll_details_screen.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 368,
+      "sourceSha256": "44e83f0623faf009384c2b2dfb8def46763fdcd7093c2e6349126bc7c4ee161c",
+      "targetPath": "mobile/lib/screens/voting/referendum_screen.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 369,
+      "sourceSha256": "9aad80faa2c06981db28317cbd6be2973c0c240dd1ba6290ea542d5a42bde54d",
+      "targetPath": "mobile/lib/screens/voting/survey_screen.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 370,
+      "sourceSha256": "0c7f3b61584c01ab945bb5767e7981ed1d8cf8c03913997fdd74c99bfa9db7a5",
+      "targetPath": "mobile/lib/screens/voting/vote_receipt_screen.dart",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 371,
+      "sourceSha256": "34e1938d76386e1155e5477c8b1e93b7640bf660ee02ab815de59587e51a32f0",
+      "targetPath": "mobile/lib/screens/wallet/qr_scan_screen.dart",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 372,
+      "sourceSha256": "cf805853acc0cf57c87b9f2021bebc43e2a376dd168a6feaec134428e15cd9e9",
+      "targetPath": "mobile/lib/screens/wallet/receive_screen.dart",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 373,
+      "sourceSha256": "d7f44ea631b8f0dcf83b618e1bb40fcbd0e7de8c521c83e61f53ecc38a132fd7",
+      "targetPath": "mobile/lib/screens/wallet/send_screen.dart",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 374,
+      "sourceSha256": "c9200f92be3b17d61b2d6c08e52e6e8c0bcd3397a3234e2aa86d36b815e8d4d0",
+      "targetPath": "mobile/lib/screens/wallet/transaction_detail_screen.dart",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 375,
+      "sourceSha256": "0a9efe307ca2c9e16ed5cffe067112b3f13b079af792d85d362fedafe4348e08",
+      "targetPath": "mobile/lib/screens/wallet/unlock_wallet_screen.dart",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 376,
+      "sourceSha256": "fb95fbd43260e18c9942105f426ba2572e758f8127587c8efecc41099ba7b9bd",
+      "targetPath": "mobile/lib/screens/wallet/wallet_screen.dart",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 377,
+      "sourceSha256": "9b7b6dad30d1672059e9de2dc67f4f3b3fdd9ccdc17d1aedc0b1a158e5e1174b",
+      "targetPath": "mobile/lib/services/api_service.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 378,
+      "sourceSha256": "7fc1da0f8f5eb572a9673143be8e913e93e8b81d45ebfa45fbf2abaacf63d49e",
+      "targetPath": "mobile/lib/services/biometric_gate.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 379,
+      "sourceSha256": "5c73cce3af8dda63a31b4db60f08df3d76464b0015f556850e143b6af9ebc190",
+      "targetPath": "mobile/lib/services/device_attestation_service.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 380,
+      "sourceSha256": "e20bb08d606c9f1e4398505d34e570131496ca1bf86cc8a672385238e6ea951e",
+      "targetPath": "mobile/lib/services/device_capability_service.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 381,
+      "sourceSha256": "ec6493c11fabfd5d6008afc9cfa9d764ad29acc2b07a56032abbd81107d548c9",
+      "targetPath": "mobile/lib/services/interfaces/i_api_service.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 382,
+      "sourceSha256": "911c2878092e406a85c3719876ef58e1702824661dadd0361da87b6cefe564f3",
+      "targetPath": "mobile/lib/services/liveness/face_mesh_service.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 383,
+      "sourceSha256": "fa456c20c28d629f05d9112ba4fc0fb13e1d7bc41659eebf68a51930efc2badf",
+      "targetPath": "mobile/lib/services/liveness/image_format_converter.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 384,
+      "sourceSha256": "b7f75213fdd92fafd0bc86cdf137f1d26b4cd5a9e274af3e6f171f2d1b7997a4",
+      "targetPath": "mobile/lib/services/liveness/liveness_controller.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 385,
+      "sourceSha256": "f56f5a67edc3f3367ee9d1917f17600bff42cee985a7abf75fba67521a94aaf1",
+      "targetPath": "mobile/lib/services/localization_service.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 386,
+      "sourceSha256": "b2f20c9480b5a072f63373426ff1843add7665006d20ea32a1d39365e99456de",
+      "targetPath": "mobile/lib/services/message_service.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 387,
+      "sourceSha256": "561d2be9f3b400cc6993b58d9447249d68fe7fffa59be069f0c270a8dbdf27c5",
+      "targetPath": "mobile/lib/services/notification_service.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 388,
+      "sourceSha256": "dd9702780fc626756e1e9151e891d0a297328e39e845c9b956bae75de833ed06",
+      "targetPath": "mobile/lib/services/real/real_api_service.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 389,
+      "sourceSha256": "bc0e97b48680ee15dc8cd7c021e15b1b5fbcc7a6605953f1183afc5e08fd4f1a",
+      "targetPath": "mobile/lib/services/secure_storage_service.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 390,
+      "sourceSha256": "827562edc862d30037d400e34ae5910b8ee46e55636af116139d6a5af562a76e",
+      "targetPath": "mobile/lib/services/service_locator.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 391,
+      "sourceSha256": "ec61a357292fb2fafac18221278eb8112bead69e1032770af7677722eb62f618",
+      "targetPath": "mobile/lib/services/storage_service.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 392,
+      "sourceSha256": "8dff5d1c571294b7f8cce402444a755ab25012822b8bcfe9d0e9b18e0ccff694",
+      "targetPath": "mobile/lib/services/verification/document_scanner.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 393,
+      "sourceSha256": "2111cdac91456c64ad6a0ca5888a21c241d66268a700d8a53fa2401d3b27c9c5",
+      "targetPath": "mobile/lib/services/verification/face_matcher.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 394,
+      "sourceSha256": "9b248a8c18354219c66d7f6934b6f580632fdc93ce5ff35954db4fd19a6519d5",
+      "targetPath": "mobile/lib/services/verification/liveness_verifier.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 395,
+      "sourceSha256": "4c860bbb42f8a98e475932686a30693a74f15b304149ec777198f8cdd5f06665",
+      "targetPath": "mobile/lib/services/verification/verification_models.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 396,
+      "sourceSha256": "1b993f1241e6266c1ea64b06be6a7de8e137cbb7e94070a58a3f366f48b9e9dd",
+      "targetPath": "mobile/lib/services/verification/verification_service.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 397,
+      "sourceSha256": "222b54bd3be8225d1f76d8e9fb7bbb021d3164680cb4fc79a5c78fe7fd0f9076",
+      "targetPath": "mobile/lib/services/wallet_service.dart",
+      "state": "removed"
+    },
+    {
+      "sourceEntry": 398,
+      "sourceSha256": "1d97db76c511144a7c72172ec4e29dd2c90b431f4c6d1f79a65d701c99c7891d",
+      "targetPath": "mobile/lib/widgets/bottom_nav.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 399,
+      "sourceSha256": "8c07a3778b8c29511c215426f31bddf74d38770b102beee041c1e9868a659f48",
+      "targetPath": "mobile/lib/widgets/liveness/face_contour_overlay.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 400,
+      "sourceSha256": "9eef1dacb68206d04a521673e6ee974f7ca57fcf50ad7d376a1556c80463db55",
+      "targetPath": "mobile/lib/widgets/liveness/liveness_animations.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 401,
+      "sourceSha256": "95145d750f4ad604374450acc0408ad1ec87526608945d203f9eba69e9cc5e95",
+      "targetPath": "mobile/lib/widgets/message_card.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 402,
+      "sourceSha256": "9d25da9bf4bce2d72adf38f91c72f34fb19ae776a4b45102726d362f80016f89",
+      "targetPath": "mobile/lib/widgets/message_shimmer.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 403,
+      "sourceSha256": "255734faee8eb14ed79c6cd06d82a0835341243d382082835cd75956e3e27066",
+      "targetPath": "mobile/lib/widgets/region_selection_sheet.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 404,
+      "sourceSha256": "cf4f0678e4b72b2ff2510383fbc9e833bafb8c6be015b953d8fa23294d5e0d18",
+      "targetPath": "mobile/lib/widgets/scanning_progress_indicator.dart",
+      "state": "unchanged"
+    },
+    {
+      "sourceEntry": 405,
+      "sourceSha256": "afbe5944d9d046ed238205ca4e33c876677adb798a3f315ef8d1775f1a7e0c58",
+      "targetPath": "mobile/lib/widgets/ui_components.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 406,
+      "sourceSha256": "cd2356f8a5143bbc85920f97dc6b5169a3c1a412a185d219f735b851123a112f",
+      "targetPath": "mobile/pubspec.lock",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 407,
+      "sourceSha256": "bf60483a12dfb5429f70e23ef6ee0bf01f878eb84d39c0e698ecca1340ff175a",
+      "targetPath": "mobile/pubspec.yaml",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 408,
+      "sourceSha256": "684d5366e3b527ac75601a1e406b750fc15f66ea8385245652133fcae205d2b5",
+      "targetPath": "mobile/test/accessibility_test.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 409,
+      "sourceSha256": "cd62a744127729a94c3d62e4830b55bb5dfecc9faa01d13445683d18fe129f76",
+      "targetPath": "mobile/test/admin_compliance_test.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 410,
+      "sourceSha256": "abf215be26b79e825adafbdf9215e8c94ce69c98c7536d206f476d3fb7f0ff80",
+      "targetPath": "mobile/test/footer_rule_test.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 411,
+      "sourceSha256": "99e6b1cce5d47b353bb2dba5145b60d4fc514b832d456fbcfc01be6e3ee711a4",
+      "targetPath": "mobile/test/voting_flow_test.dart",
+      "state": "adapted"
+    },
+    {
+      "sourceEntry": 412,
+      "sourceSha256": "e0a02caaae580215259981ef9eb8c1e4a7d7f9cff2e9c4a7c230efc217964be0",
+      "targetPath": "mobile/test/wallet_mvp_test.dart",
+      "state": "removed"
+    }
+  ]
+}

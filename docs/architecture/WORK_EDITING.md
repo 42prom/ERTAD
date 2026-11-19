@@ -1,0 +1,21 @@
+# Task amendments and lifecycle
+
+Migration 29 extends the existing Work command transaction. **Tasks → open task → Edit task** allows current scoped managers to correct the title, description, priority, meeting place/start time, deadline and capacity. A reason is required. This works after participation or verification begins: changing instructions does not repeat verification, rewrite an immutable Activity or recalculate earned points.
+
+The current unit, frozen ancestry, parent, event, participant role, qualifications and pinned reward offer cannot be replaced through editing. Offered tasks must first use the existing acceptance flow; completed and cancelled tasks are read-only for definition edits. Existing coordinator, materials, needs, criteria and funding flows retain their own lifecycle rules.
+
+Root-task capacity may change within 1–100 but cannot fall below occupied places (including verified assignments and non-cancelled child allocations) or defined active people-role quantities. A delegated task keeps the capacity granted upstream; acceptance can still reduce an offered allocation. Increasing or reallocating a delegated budget needs a separate reviewed workflow.
+
+An unchanged overdue deadline permits factual corrections. A changed deadline must be in the future and within 365 days, at or before the parent's deadline, and at or after every active child's and non-cancelled need's deadline. An explicit extension permits new enrollment again under normal authority and capacity rules. Related tasks/needs are never silently rescheduled. A start time must be finite and at or before the deadline. Event schedule amendment is separate: editing a linked task leaves its shared event context and canonical reward occurrence unchanged.
+
+Edits serialize with existing organization/authority locks, require the current task version, and preserve payload-bound UUID retries. Exact retries return the original receipt even after task closure, provided current authority still exists. Changed payloads or stale versions conflict. Audit failure or authority expiry rolls back the task, history, notices and receipt together. A newly changed deadline is checked again after audit. Runtime clients cannot directly access the underlying tables or predecessor command functions.
+
+The existing immutable work event stores shared before/after definition snapshots and the reason; the retry receipt keeps only a payload digest. History expands the changed fields. These are operational instructions visible to current task readers, not a place for private identity or completion evidence. The normal history limit is the latest 100 visible events; older events remain stored. Current authorized participants and managers receive existing Work inbox notices, with no email/push delivery added. Removing wording from the current definition does not erase its historical snapshot.
+
+The editor preserves untouched timestamp precision, requires a reason and locks the request after an uncertain response. Retry resends the same payload and key. A permission or version conflict closes the stale editor and reloads current data. English/Georgian and web light/dark use existing primitives and semantic tokens.
+
+## Remaining lifecycle work
+
+Task archive, unstarted draft deletion, reassignment and delegated capacity renegotiation are not implemented by this migration. Cancellation remains available under its existing safeguards; verified work cannot be physically deleted. Events need editing/rescheduling; groups need reviewed rename/reparent/archive; Decisions retain their existing draft editing and publish/close/cancel lifecycle; reward rules remain prospective versions with compensating corrections for the ledger. Deliver each module's real lifecycle through its existing authority and history, rather than adding a generic deletion API.
+
+`npm run test:work-editing` uses a disposable database for scope, schema, concurrency, retry, allocation/deadline, preservation and audit tests. `npm run test:work-editing:browser` additionally uses local Chrome against that isolated API. Activation and completed checks are recorded in STATUS; this contract is not a production security certification.

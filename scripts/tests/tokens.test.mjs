@@ -11,11 +11,12 @@ for (const family of ['web', 'mobile']) for (const mode of ['light', 'dark']) {
   test(`${family}/${mode}: readable semantic text and actions`, () => {
     const palette = tokens[family][mode];
     for (const surface of ['background', 'surface', 'elevated']) {
-      for (const text of ['text', 'muted', 'success', 'danger']) {
+      for (const text of ['text', 'muted', 'success', 'warning', 'danger']) {
         assert.ok(contrast(palette[text], palette[surface]) >= 4.5, `${text}/${surface}`);
       }
     }
     assert.ok(contrast(palette.primary, palette.onPrimary) >= 4.5, 'primary label');
+    assert.ok(contrast(palette.danger, palette.onPrimary) >= 4.5, 'danger label');
     assert.ok(contrast(palette.focus, palette.surface) >= 3, 'focus indicator');
   });
 }
