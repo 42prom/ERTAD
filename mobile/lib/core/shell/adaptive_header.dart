@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../state/shell_providers.dart';
 import '../theme/ertad_theme.dart';
 import 'account_privacy_sheet.dart';
-import 'inbox_sheet.dart';
 import 'org_context_sheet.dart';
 import 'shell_l10n.dart';
 
@@ -83,8 +82,8 @@ class AdaptiveHeader extends ConsumerWidget {
                                         ),
                                       ),
                                       child: Icon(
-                                        Icons.groups_2_rounded,
-                                        size: 19,
+                                        Icons.person_rounded,
+                                        size: 20,
                                         color: privacyAccent,
                                       ),
                                     ),
@@ -148,24 +147,6 @@ class AdaptiveHeader extends ConsumerWidget {
                       _HeaderActionButton(
                         tooltip: shellTr(
                           context,
-                          'inbox_title',
-                          fallback: 'Inbox',
-                        ),
-                        badgeCount: session.unreadInboxCount,
-                        onPressed: () {
-                          HapticFeedback.selectionClick();
-                          showInboxSheet(context);
-                        },
-                        child: Icon(
-                          Icons.notifications_none_rounded,
-                          color: p.text,
-                          size: 21,
-                        ),
-                      ),
-                      SizedBox(width: 2),
-                      _HeaderActionButton(
-                        tooltip: shellTr(
-                          context,
                           'account_privacy_title',
                           fallback: 'Account & Privacy',
                         ),
@@ -193,13 +174,11 @@ class AdaptiveHeader extends ConsumerWidget {
 
 class _HeaderActionButton extends StatelessWidget {
   final String tooltip;
-  final int badgeCount;
   final VoidCallback onPressed;
   final Widget child;
 
   const _HeaderActionButton({
     required this.tooltip,
-    this.badgeCount = 0,
     required this.onPressed,
     required this.child,
   });
@@ -214,44 +193,15 @@ class _HeaderActionButton extends StatelessWidget {
         tooltip: tooltip,
         constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
         onPressed: onPressed,
-        icon: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: p.elevated,
-                borderRadius: BorderRadius.circular(13),
-                border: Border.all(color: p.hairline),
-              ),
-              child: Center(child: child),
-            ),
-            if (badgeCount > 0)
-              Positioned(
-                right: -4,
-                top: -4,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 5,
-                    vertical: 1,
-                  ),
-                  decoration: BoxDecoration(
-                    color: p.danger,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: p.surface, width: 1.5),
-                  ),
-                  child: Text(
-                    badgeCount > 99 ? '99+' : '$badgeCount',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-          ],
+        icon: Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: p.elevated,
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(color: p.hairline),
+          ),
+          child: Center(child: child),
         ),
       ),
     );

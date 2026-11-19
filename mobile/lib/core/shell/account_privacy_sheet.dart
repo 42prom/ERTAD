@@ -4,16 +4,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../screens/auth/sign_in_screen.dart';
-import '../../screens/enrollment/intro_screen.dart';
 import '../../screens/settings/help_screen.dart';
 import '../../services/localization_service.dart';
 import '../state/shell_providers.dart';
 import '../theme/ertad_theme.dart';
 import '../widgets/ertad_ui.dart';
-import 'org_context_sheet.dart';
 import 'shell_l10n.dart';
 
-/// Opens the universal Account, Privacy & Settings hub sheet.
+/// Opens the clean, compact Settings & Privacy sheet.
 Future<void> showAccountPrivacySheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
@@ -50,7 +48,7 @@ class AccountPrivacySheet extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 12, 8),
                   child: ErtadModalSheetHeader(
-                    icon: Icons.shield_outlined,
+                    icon: Icons.tune_rounded,
                     title: shellTr(
                       context,
                       'account_privacy_title',
@@ -64,407 +62,281 @@ class AccountPrivacySheet extends ConsumerWidget {
                     controller: scrollController,
                     padding: EdgeInsets.fromLTRB(16, 4, 16, 28 + bottomInset),
                     children: [
-
-                // 0. Active Organization / Group Switcher (obvious, zero hidden tiny header tap)
-                ErtadSurfaceCard(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          ErtadIconCircle(
-                            icon: session.m4AssuranceLevel ==
-                                    'biometric_verified'
-                                ? Icons.verified_user_rounded
-                                : Icons.fingerprint_rounded,
-                            tone: session.m4AssuranceLevel ==
-                                    'biometric_verified'
-                                ? ErtadTone.success
-                                : ErtadTone.primary,
+                      // 1. Compact Visibility Toggle (Anonymous | Public)
+                      Text(
+                        shellTr(
+                          context,
+                          'privacy_title',
+                          fallback: 'Profile visibility',
+                        ),
+                        style: Theme.of(context).textTheme.labelLarge
+                            ?.copyWith(color: p.muted),
+                      ),
+                      const SizedBox(height: 8),
+                      SegmentedButton<PrivacyDisclosureLevel>(
+                        showSelectedIcon: false,
+                        segments: [
+                          ButtonSegment<PrivacyDisclosureLevel>(
+                            value: PrivacyDisclosureLevel.privateHidden,
+                            icon: const Icon(Icons.visibility_off_outlined, size: 17),
+                            label: Text(
+                              shellTr(
+                                context,
+                                'privacy_private',
+                                fallback: 'Anonymous',
+                              ),
+                            ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  shellTr(
-                                    context,
-                                    'm4_assurance_title',
-                                    fallback: 'Identity & device assurance',
-                                  ),
-                                  style: Theme.of(context).textTheme.titleSmall,
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  session.m4AssuranceLevel ==
-                                          'biometric_verified'
-                                      ? shellTr(
-                                          context,
-                                          'm4_verified_badge',
-                                          fallback: 'eID biometric verified',
-                                        )
-                                      : shellTr(
-                                          context,
-                                          'm4_google_scoped_badge',
-                                          fallback:
-                                              'Google scoped · eID biometric verification pending',
-                                        ),
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(color: p.muted),
-                                ),
-                              ],
+                          ButtonSegment<PrivacyDisclosureLevel>(
+                            value: PrivacyDisclosureLevel.sharedContextOptIn,
+                            icon: const Icon(Icons.badge_outlined, size: 17),
+                            label: Text(
+                              shellTr(
+                                context,
+                                'privacy_optin',
+                                fallback: 'Public',
+                              ),
                             ),
                           ),
                         ],
+                        selected: <PrivacyDisclosureLevel>{session.privacyLevel},
+                        onSelectionChanged: (sel) {
+                          if (sel.isEmpty) return;
+                          HapticFeedback.selectionClick();
+                          ref
+                              .read(shellSessionProvider.notifier)
+                              .setPrivacyLevel(sel.first);
+                        },
                       ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.tonalIcon(
-                          onPressed: () {
-                            final nav = Navigator.of(
-                              context,
-                              rootNavigator: true,
-                            );
-                            nav.pop();
-                            nav.push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => const IntroScreen(),
+                      const SizedBox(height: 6),
+                      Text(
+                        session.privacyLevel ==
+                                PrivacyDisclosureLevel.privateHidden
+                            ? shellTr(
+                                context,
+                                'privacy_private_desc',
+                                fallback:
+                                    'Only an anonymous code is shown in groups.',
+                              )
+                            : shellTr(
+                                context,
+                                'privacy_optin_desc',
+                                fallback:
+                                    'Your chosen name is visible in groups and chats.',
                               ),
-                            );
-                          },
-                          icon: const Icon(Icons.verified_outlined, size: 18),
-                          label: Text(
-                            session.m4AssuranceLevel == 'biometric_verified'
-                                ? shellTr(
-                                    context,
-                                    'profile_reverify_cta',
-                                    fallback: 'Biometric re-check / Re-verify',
-                                  )
-                                : shellTr(
-                                    context,
-                                    'm4_start_biometric',
-                                    fallback: 'Start eID biometric verification',
-                                  ),
-                          ),
-                        ),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: p.muted),
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      // 2. Opt-in Parallel Notification Channels (Push / Telegram / WhatsApp / Viber)
+                      _NotificationChannelsSection(
+                        channels: session.notificationChannels,
+                        isLiveConnected: session.isLiveConnected,
+                        onToggle: (channel, enabled, handle) async {
+                          HapticFeedback.selectionClick();
+                          try {
+                            await ref
+                                .read(shellSessionProvider.notifier)
+                                .updateNotificationChannel(
+                                  channel: channel,
+                                  enabled: enabled,
+                                  handle: handle,
+                                );
+                          } catch (_) {
+                            // Non-blocking in offline/preview mode.
+                          }
+                        },
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      // 3. Appearance & Language (compact icon-driven controls)
+                      Text(
+                        shellTr(context, 'theme_mode', fallback: 'Theme'),
+                        style: Theme.of(context).textTheme.labelLarge
+                            ?.copyWith(color: p.muted),
                       ),
                       const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            final nav = Navigator.of(
-                              context,
-                              rootNavigator: true,
-                            );
-                            nav.pop();
-                            nav.push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => const SignInScreen(),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.login_rounded, size: 18),
-                          label: Text(
-                            shellTr(
-                              context,
-                              'open_signin_screen',
-                              fallback: 'Google Sign-In / Switch account',
+                      SegmentedButton<ThemeMode>(
+                        showSelectedIcon: false,
+                        segments: [
+                          ButtonSegment<ThemeMode>(
+                            value: ThemeMode.system,
+                            icon: const Icon(Icons.brightness_auto_outlined, size: 17),
+                            label: Text(
+                              shellTr(context, 'theme_system', fallback: 'Auto'),
                             ),
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                ErtadSurfaceCard(
-                  onTap: () {
-                    final hostContext = Navigator.of(
-                      context,
-                      rootNavigator: true,
-                    ).context;
-                    Navigator.of(context).pop();
-                    showOrgContextSheet(hostContext);
-                  },
-                  padding: const EdgeInsets.all(14),
-                  child: Row(
-                    children: [
-                      const ErtadIconCircle(
-                        icon: Icons.groups_2_rounded,
-                        tone: ErtadTone.primary,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              shellTr(
-                                context,
-                                'org_context_switch',
-                                fallback: 'Organization & Group',
-                              ),
-                              style: Theme.of(context).textTheme.bodySmall,
+                          ButtonSegment<ThemeMode>(
+                            value: ThemeMode.light,
+                            icon: const Icon(Icons.light_mode_outlined, size: 17),
+                            label: Text(
+                              shellTr(context, 'theme_light', fallback: 'Light'),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${session.activeOrg.name} · ${session.activeOrg.unitName}',
-                              style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          ButtonSegment<ThemeMode>(
+                            value: ThemeMode.dark,
+                            icon: const Icon(Icons.dark_mode_outlined, size: 17),
+                            label: Text(
+                              shellTr(context, 'theme_dark', fallback: 'Dark'),
+                            ),
+                          ),
+                        ],
+                        selected: <ThemeMode>{themeMode},
+                        onSelectionChanged: (modes) {
+                          if (modes.isNotEmpty) {
+                            HapticFeedback.selectionClick();
+                            ref
+                                .read(themeModeProvider.notifier)
+                                .setThemeMode(modes.first);
+                          }
+                        },
+                      ),
+                      if (loc != null) ...[
+                        const SizedBox(height: 12),
+                        SegmentedButton<AppLanguage>(
+                          showSelectedIcon: false,
+                          segments: const [
+                            ButtonSegment<AppLanguage>(
+                              value: AppLanguage.georgian,
+                              label: Text('ქართული'),
+                            ),
+                            ButtonSegment<AppLanguage>(
+                              value: AppLanguage.english,
+                              label: Text('English'),
+                            ),
+                          ],
+                          selected: <AppLanguage>{currentLang},
+                          onSelectionChanged: (langs) {
+                            if (langs.isNotEmpty) {
+                              HapticFeedback.selectionClick();
+                              loc.setLanguage(langs.first);
+                            }
+                          },
+                        ),
+                      ],
+
+                      const SizedBox(height: 18),
+
+                      // 4. Account & Help (unified clean list)
+                      ErtadSurfaceCard(
+                        padding: EdgeInsets.zero,
+                        child: Column(
+                          children: [
+                            ListTile(
+                              minTileHeight: 52,
+                              leading: Icon(Icons.login_rounded, color: p.primary),
+                              title: Text(
+                                shellTr(
+                                  context,
+                                  'open_signin_screen',
+                                  fallback: 'Google Sign-In / Switch account',
+                                ),
+                              ),
+                              trailing: Icon(
+                                Icons.chevron_right_rounded,
+                                color: p.muted,
+                              ),
+                              onTap: () {
+                                HapticFeedback.selectionClick();
+                                final nav = Navigator.of(
+                                  context,
+                                  rootNavigator: true,
+                                );
+                                nav.pop();
+                                nav.push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => const SignInScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                            Divider(height: 1, color: p.hairline),
+                            ListTile(
+                              minTileHeight: 52,
+                              leading: Icon(
+                                Icons.help_outline_rounded,
+                                color: p.primary,
+                              ),
+                              title: Text(
+                                shellTr(
+                                  context,
+                                  'help_support',
+                                  fallback: 'Help',
+                                ),
+                              ),
+                              trailing: Icon(
+                                Icons.chevron_right_rounded,
+                                color: p.muted,
+                              ),
+                              onTap: () {
+                                HapticFeedback.selectionClick();
+                                final nav = Navigator.of(
+                                  context,
+                                  rootNavigator: true,
+                                );
+                                nav.pop();
+                                nav.push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => const HelpScreen(),
+                                  ),
+                                );
+                              },
                             ),
                           ],
                         ),
                       ),
-                      Icon(Icons.chevron_right_rounded, color: p.muted),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
 
-                // 1. Privacy & Anonymity Disclosure Selector (Private default)
-                Text(
-                  shellTr(
-                    context,
-                    'privacy_title',
-                    fallback: 'Profile visibility & anonymity',
-                  ),
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                _PrivacyOptionTile(
-                  level: PrivacyDisclosureLevel.privateHidden,
-                  selected:
-                      session.privacyLevel ==
-                      PrivacyDisclosureLevel.privateHidden,
-                  title: shellTr(
-                    context,
-                    'privacy_private',
-                    fallback: 'Private (Default)',
-                  ),
-                  description: shellTr(
-                    context,
-                    'privacy_private_desc',
-                    fallback:
-                        'Only an anonymous ID is shown within groups; personal fields stay hidden.',
-                  ),
-                  icon: Icons.visibility_off_outlined,
-                  onTap: () => ref
-                      .read(shellSessionProvider.notifier)
-                      .setPrivacyLevel(PrivacyDisclosureLevel.privateHidden),
-                ),
-                const SizedBox(height: 8),
-                _PrivacyOptionTile(
-                  level: PrivacyDisclosureLevel.sharedContextOptIn,
-                  selected:
-                      session.privacyLevel ==
-                      PrivacyDisclosureLevel.sharedContextOptIn,
-                  title: shellTr(
-                    context,
-                    'privacy_optin',
-                    fallback: 'Shared-context Opt-in',
-                  ),
-                  description: shellTr(
-                    context,
-                    'privacy_optin_desc',
-                    fallback:
-                        'Shares your chosen display label only inside the selected group.',
-                  ),
-                  icon: Icons.badge_outlined,
-                  onTap: () => ref
-                      .read(shellSessionProvider.notifier)
-                      .setPrivacyLevel(
-                        PrivacyDisclosureLevel.sharedContextOptIn,
-                      ),
-                ),
-                const SizedBox(height: 10),
-                ErtadStateBanner(
-                  icon: Icons.how_to_vote_outlined,
-                  tone: ErtadTone.primary,
-                  message: shellTr(
-                    context,
-                    'privacy_ballot_notice',
-                    fallback:
-                        'Anonymous ballots stay strictly unlinkable regardless of profile visibility.',
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // 2. Appearance (System / Light / Dark)
-                Text(
-                  shellTr(context, 'theme_mode', fallback: 'Appearance'),
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                SegmentedButton<ThemeMode>(
-                  showSelectedIcon: false,
-                  segments: [
-                    ButtonSegment<ThemeMode>(
-                      value: ThemeMode.system,
-                      label: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          shellTr(context, 'theme_system', fallback: 'System'),
-                          maxLines: 1,
-                        ),
-                      ),
-                      icon: const Icon(Icons.brightness_auto_outlined, size: 18),
-                    ),
-                    ButtonSegment<ThemeMode>(
-                      value: ThemeMode.light,
-                      label: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          shellTr(context, 'theme_light', fallback: 'Light'),
-                          maxLines: 1,
-                        ),
-                      ),
-                      icon: const Icon(Icons.light_mode_outlined, size: 18),
-                    ),
-                    ButtonSegment<ThemeMode>(
-                      value: ThemeMode.dark,
-                      label: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          shellTr(context, 'theme_dark', fallback: 'Dark'),
-                          maxLines: 1,
-                        ),
-                      ),
-                      icon: const Icon(Icons.dark_mode_outlined, size: 18),
-                    ),
-                  ],
-                  selected: <ThemeMode>{themeMode},
-                  onSelectionChanged: (modes) {
-                    if (modes.isNotEmpty) {
-                      HapticFeedback.selectionClick();
-                      ref
-                          .read(themeModeProvider.notifier)
-                          .setThemeMode(modes.first);
-                    }
-                  },
-                ),
-
-                const SizedBox(height: 16),
-
-                // 3. Language Switch (KA / EN)
-                if (loc != null) ...[
-                  Text(
-                    shellTr(context, 'language_label', fallback: 'Language'),
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  SegmentedButton<AppLanguage>(
-                    segments: const [
-                      ButtonSegment<AppLanguage>(
-                        value: AppLanguage.georgian,
-                        label: Text('ქართული'),
-                      ),
-                      ButtonSegment<AppLanguage>(
-                        value: AppLanguage.english,
-                        label: Text('English'),
-                      ),
-                    ],
-                    selected: <AppLanguage>{currentLang},
-                    onSelectionChanged: (langs) {
-                      if (langs.isNotEmpty) {
-                        HapticFeedback.selectionClick();
-                        loc.setLanguage(langs.first);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                ],
-
-                // 3.5 Opt-in Parallel Notification Channels (Push / Telegram / WhatsApp / Viber)
-                _NotificationChannelsSection(
-                  channels: session.notificationChannels,
-                  isLiveConnected: session.isLiveConnected,
-                  onToggle: (channel, enabled, handle) async {
-                    try {
-                      await ref
-                          .read(shellSessionProvider.notifier)
-                          .updateNotificationChannel(
-                            channel: channel,
-                            enabled: enabled,
-                            handle: handle,
-                          );
-                    } catch (_) {
-                      // Non-blocking in offline/preview mode.
-                    }
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // 4. Help & Support Entry Point
-                ErtadSurfaceCard(
-                  padding: EdgeInsets.zero,
-                  child: ListTile(
-                    minTileHeight: 54,
-                    leading: Icon(Icons.help_outline, color: p.primary),
-                    title: Text(
-                      shellTr(context, 'help_support', fallback: 'Help'),
-                    ),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () {
-                      final nav = Navigator.of(context, rootNavigator: true);
-                      nav.pop();
-                      nav.push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const HelpScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-
-                if (!kReleaseMode) ...[
-                  const SizedBox(height: 16),
-                  Text(
-                    shellTr(
-                      context,
-                      'dev_persona_title',
-                      fallback: 'Dev Workspace Persona',
-                    ),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  const SizedBox(height: 8),
-                  SegmentedButton<DevPersona>(
-                    segments: [
-                      ButtonSegment<DevPersona>(
-                        value: DevPersona.member,
-                        label: Text(
+                      if (!kReleaseMode) ...[
+                        const SizedBox(height: 18),
+                        Text(
                           shellTr(
                             context,
-                            'dev_persona_member',
-                            fallback: 'Member',
+                            'dev_persona_title',
+                            fallback: 'Dev Workspace Persona',
                           ),
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(color: p.muted),
                         ),
-                      ),
-                      ButtonSegment<DevPersona>(
-                        value: DevPersona.groupManager,
-                        label: Text(
-                          shellTr(
-                            context,
-                            'dev_persona_manager',
-                            fallback: 'Group Manager',
-                          ),
+                        const SizedBox(height: 8),
+                        SegmentedButton<DevPersona>(
+                          showSelectedIcon: false,
+                          segments: [
+                            ButtonSegment<DevPersona>(
+                              value: DevPersona.member,
+                              label: Text(
+                                shellTr(
+                                  context,
+                                  'dev_persona_member',
+                                  fallback: 'Member',
+                                ),
+                              ),
+                            ),
+                            ButtonSegment<DevPersona>(
+                              value: DevPersona.groupManager,
+                              label: Text(
+                                shellTr(
+                                  context,
+                                  'dev_persona_manager',
+                                  fallback: 'Group Manager',
+                                ),
+                              ),
+                            ),
+                          ],
+                          selected: <DevPersona>{session.devPersona},
+                          onSelectionChanged: (personas) {
+                            if (personas.isNotEmpty) {
+                              HapticFeedback.selectionClick();
+                              ref
+                                  .read(shellSessionProvider.notifier)
+                                  .setDevPersona(personas.first);
+                            }
+                          },
                         ),
-                      ),
-                    ],
-                    selected: <DevPersona>{session.devPersona},
-                    onSelectionChanged: (personas) {
-                      if (personas.isNotEmpty) {
-                        HapticFeedback.selectionClick();
-                        ref
-                            .read(shellSessionProvider.notifier)
-                            .setDevPersona(personas.first);
-                      }
-                    },
-                  ),
-                ],
+                      ],
                     ],
                   ),
                 ),
@@ -473,62 +345,6 @@ class AccountPrivacySheet extends ConsumerWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _PrivacyOptionTile extends StatelessWidget {
-  final PrivacyDisclosureLevel level;
-  final bool selected;
-  final String title;
-  final String description;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _PrivacyOptionTile({
-    required this.level,
-    required this.selected,
-    required this.title,
-    required this.description,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.ertad;
-    return ErtadSurfaceCard(
-      padding: const EdgeInsets.all(14),
-      backgroundColor: selected ? p.primarySoft : p.surface,
-      borderColor: selected ? p.primary : p.hairline,
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 22, color: selected ? p.primary : p.muted),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 2),
-                Text(description, style: Theme.of(context).textTheme.bodySmall),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Icon(
-            selected
-                ? Icons.check_circle_rounded
-                : Icons.radio_button_unchecked_rounded,
-            color: selected ? p.primary : p.muted,
-          ),
-        ],
-      ),
     );
   }
 }
@@ -558,12 +374,18 @@ class _NotificationChannelsSection extends StatelessWidget {
       context: context,
       useRootNavigator: true,
       builder: (ctx) => AlertDialog(
-        title: Text('$label · ${shellTr(ctx, 'notif_ch_enter_handle', fallback: 'Enter contact')}'),
+        title: Text(
+          '$label · ${shellTr(ctx, 'notif_ch_enter_handle', fallback: 'Enter contact')}',
+        ),
         content: TextField(
           controller: controller,
           autofocus: true,
           decoration: InputDecoration(
-            hintText: shellTr(ctx, 'notif_ch_handle_hint', fallback: '@username or +995...'),
+            hintText: shellTr(
+              ctx,
+              'notif_ch_handle_hint',
+              fallback: '@username or +995...',
+            ),
             border: const OutlineInputBorder(),
           ),
         ),
@@ -595,19 +417,11 @@ class _NotificationChannelsSection extends StatelessWidget {
           shellTr(
             context,
             'notif_channels_title',
-            fallback: 'Notification channels (Opt-in)',
+            fallback: 'Notification channels',
           ),
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          shellTr(
+          style: Theme.of(
             context,
-            'notif_channels_subtitle',
-            fallback:
-                'Choose where to receive notifications alongside the app. Contact handles are stored encrypted.',
-          ),
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: p.muted),
+          ).textTheme.labelLarge?.copyWith(color: p.muted),
         ),
         const SizedBox(height: 8),
         ErtadSurfaceCard(
@@ -633,11 +447,7 @@ class _NotificationChannelsSection extends StatelessWidget {
                   ),
                 _ => (
                     Icons.notifications_active_outlined,
-                    shellTr(
-                      context,
-                      'notif_ch_push',
-                      fallback: 'Push notifications',
-                    ),
+                    shellTr(context, 'notif_ch_push', fallback: 'Push'),
                   ),
               };
               final statusText = platformEnabled
@@ -645,7 +455,7 @@ class _NotificationChannelsSection extends StatelessWidget {
                   : shellTr(
                       context,
                       'notif_ch_pending_setup',
-                      fallback: 'Integration not enabled yet',
+                      fallback: 'Off',
                     );
               final subtitle =
                   hint.isNotEmpty ? '$hint · $statusText' : statusText;
@@ -681,4 +491,3 @@ class _NotificationChannelsSection extends StatelessWidget {
     );
   }
 }
-

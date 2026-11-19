@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/feedback/ertad_feedback.dart';
-import '../../../core/shell/account_privacy_sheet.dart';
 import '../../../core/shell/shell_l10n.dart';
 import '../../../core/shell/tab_scroll_registry.dart';
 import '../../../core/state/shell_providers.dart';
@@ -60,30 +59,8 @@ class StatusTabScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final p = context.ertad;
     final session = ref.watch(shellSessionProvider);
     final controller = ref.watch(tabScrollRegistryProvider).controllerFor(0);
-
-    final (
-      String privacySummary,
-      ErtadTone privacyTone,
-      IconData privacyIcon,
-    ) = switch (session.privacyLevel) {
-      PrivacyDisclosureLevel.privateHidden => (
-        shellTr(context, 'privacy_private', fallback: 'Private (Default)'),
-        ErtadTone.success,
-        Icons.visibility_off_rounded,
-      ),
-      PrivacyDisclosureLevel.sharedContextOptIn => (
-        shellTr(
-          context,
-          'privacy_optin',
-          fallback: 'Shared-context Opt-in',
-        ),
-        ErtadTone.warning,
-        Icons.badge_rounded,
-      ),
-    };
 
     final entries = session.contributionEntries;
 
@@ -103,73 +80,41 @@ class StatusTabScreen extends ConsumerWidget {
         }
       },
       children: [
-        // 1. Live Contribution Points Summary Card (V1: zero XP/ranks/leaderboards)
+        // 1. Clean Contribution Points Hero Card (zero technical badges or verbose notes)
         ErtadSurfaceCard(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          padding: const EdgeInsets.all(16),
+          child: Row(
             children: [
-              Row(
-                children: [
-                  const ErtadIconCircle(
-                    icon: Icons.stars_rounded,
-                    tone: ErtadTone.primary,
-                    size: 44,
-                    iconSize: 22,
-                    radius: 14,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          shellTr(
-                            context,
-                            'status_points_title',
-                            fallback: 'Contribution Points (Visible Scope)',
-                          ),
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${session.contributionBalance} ${shellTr(context, 'status_points_unit', fallback: 'pts')}',
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.4,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const ErtadStatusPill(
-                    icon: Icons.lock_outline_rounded,
-                    label: 'V1',
-                    tone: ErtadTone.primary,
-                  ),
-                ],
+              const ErtadIconCircle(
+                icon: Icons.stars_rounded,
+                tone: ErtadTone.primary,
+                size: 46,
+                iconSize: 22,
+                radius: 14,
               ),
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: p.elevated,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: p.hairline),
-                ),
-                child: Text(
-                  shellTr(
-                    context,
-                    'status_points_note',
-                    fallback:
-                        'Private history only — no public leaderboards, XP levels or cash exchange.',
-                  ),
-                  style: Theme.of(context).textTheme.bodySmall,
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${session.contributionBalance} ${shellTr(context, 'status_points_unit', fallback: 'pts')}',
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.4,
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      shellTr(
+                        context,
+                        'status_points_title',
+                        fallback: 'Contribution Points',
+                      ),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -178,10 +123,11 @@ class StatusTabScreen extends ConsumerWidget {
 
         const SizedBox(height: 14),
 
-        // 1.5 Personal Referral Hierarchy & Points Card
+        // 2. Personal Referral Hierarchy & Points Card
         _PersonalReferralsCard(
           summary: session.referralSummary,
           onCopyCode: (code) {
+            HapticFeedback.lightImpact();
             Clipboard.setData(ClipboardData(text: code));
             ref.read(ertadFeedbackProvider.notifier).showSuccess(
                   shellTr(
@@ -192,57 +138,12 @@ class StatusTabScreen extends ConsumerWidget {
                 );
           },
           onShareCode: (code) {
+            HapticFeedback.selectionClick();
             SharePlus.instance.share(ShareParams(text: 'ERTAD · $code'));
           },
         ),
 
-        const SizedBox(height: 14),
-
-        // 2. Membership & Privacy Visibility Card
-        ErtadSurfaceCard(
-          onTap: () => showAccountPrivacySheet(context),
-          child: Row(
-            children: [
-              ErtadIconCircle(
-                icon: privacyIcon,
-                tone: privacyTone,
-                size: 44,
-                iconSize: 22,
-                radius: 14,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      shellTr(
-                        context,
-                        'status_memberships_title',
-                        fallback: 'Memberships & Privacy',
-                      ),
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${session.activeOrg.unitName} · ${session.activeOrg.name}',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    const SizedBox(height: 8),
-                    ErtadStatusPill(
-                      label: privacySummary,
-                      icon: privacyIcon,
-                      tone: privacyTone,
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right_rounded, color: p.muted),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 20),
+        const SizedBox(height: 18),
 
         // 3. Real Activity Ledger (#61: what happened, why, source, verified status)
         ErtadSectionHeader(

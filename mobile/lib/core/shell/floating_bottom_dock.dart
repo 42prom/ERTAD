@@ -32,8 +32,8 @@ class FloatingBottomDock extends StatelessWidget {
     final items = <_DockTabSpec>[
       _DockTabSpec(
         semanticLabel: shellTr(context, 'nav_status', fallback: 'Status'),
-        icon: Icons.verified_user_outlined,
-        activeIcon: Icons.verified_user_rounded,
+        icon: Icons.insights_outlined,
+        activeIcon: Icons.insights_rounded,
       ),
       _DockTabSpec(
         semanticLabel: shellTr(context, 'nav_messages', fallback: 'Messages'),
@@ -88,7 +88,9 @@ class FloatingBottomDock extends StatelessWidget {
                           offset: const Offset(0, 10),
                         ),
                         BoxShadow(
-                          color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+                          color: const Color(
+                            0xFF0F172A,
+                          ).withValues(alpha: 0.06),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -228,11 +230,7 @@ class _DockItemState extends State<_DockItem> {
                             ),
                           ],
                         ),
-                        child: Icon(
-                          spec.activeIcon,
-                          size: 25,
-                          color: p.onOrb,
-                        ),
+                        child: Icon(spec.activeIcon, size: 25, color: p.onOrb),
                       )
                     : AnimatedContainer(
                         duration: const Duration(milliseconds: 180),
@@ -240,9 +238,7 @@ class _DockItemState extends State<_DockItem> {
                         width: 46,
                         height: 42,
                         decoration: BoxDecoration(
-                          color: selected
-                              ? p.primarySoft
-                              : Colors.transparent,
+                          color: selected ? p.primarySoft : Colors.transparent,
                           borderRadius: BorderRadius.circular(999),
                           border: isCenter && !selected
                               ? Border.all(

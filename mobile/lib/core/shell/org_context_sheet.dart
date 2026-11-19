@@ -3,16 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../screens/auth/sign_in_screen.dart';
 import '../../screens/enrollment/intro_screen.dart';
 import '../feedback/ertad_feedback.dart';
 import '../state/shell_providers.dart';
 import '../theme/ertad_theme.dart';
 import '../widgets/ertad_ui.dart';
-import 'account_privacy_sheet.dart';
 import 'shell_l10n.dart';
 
-/// Opens modal My Profile, Verified Identity Data, Encrypted Phone, Personal Referral & Group hub.
+/// Opens the clean, icon-driven My Profile modal sheet.
 Future<void> showOrgContextSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
@@ -31,26 +29,131 @@ class OrgContextSheet extends ConsumerStatefulWidget {
 }
 
 class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
-  final TextEditingController _refCodeController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
-  bool _redeeming = false;
-  bool _savingPhone = false;
-
-  @override
-  void dispose() {
-    _refCodeController.dispose();
-    _phoneController.dispose();
-    super.dispose();
+  Future<void> _editPhoneDialog({required bool hasPhone}) async {
+    final controller = TextEditingController();
+    final action = await showDialog<String>(
+      context: context,
+      useRootNavigator: true,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          shellTr(ctx, 'profile_phone_title', fallback: 'Phone Number'),
+        ),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.phone,
+          decoration: InputDecoration(
+            hintText: shellTr(
+              ctx,
+              'profile_phone_hint',
+              fallback: '+995 5XX XX XX XX',
+            ),
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          if (hasPhone)
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop('__CLEAR__'),
+              child: Text(
+                shellTr(ctx, 'delete', fallback: 'Remove'),
+                style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+              ),
+            ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(shellTr(ctx, 'cancel', fallback: 'Cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+            child: Text(shellTr(ctx, 'save', fallback: 'Save')),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (!mounted || action == null) return;
+    try {
+      if (action == '__CLEAR__') {
+        await ref
+            .read(shellSessionProvider.notifier)
+            .updateMemberPhone(clear: true);
+        if (!mounted) return;
+        HapticFeedback.lightImpact();
+        ref.read(ertadFeedbackProvider.notifier).showSuccess(
+              shellTr(
+                context,
+                'profile_phone_cleared',
+                fallback: 'Phone number removed',
+              ),
+            );
+      } else if (action.length >= 7) {
+        await ref
+            .read(shellSessionProvider.notifier)
+            .updateMemberPhone(phone: action);
+        if (!mounted) return;
+        HapticFeedback.lightImpact();
+        ref.read(ertadFeedbackProvider.notifier).showSuccess(
+              shellTr(
+                context,
+                'profile_phone_saved',
+                fallback: 'Phone number saved',
+              ),
+            );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ref.read(ertadFeedbackProvider.notifier).showWarning(
+            shellTr(
+              context,
+              'profile_phone_error',
+              fallback: 'Please enter a valid phone number',
+            ),
+          );
+    }
   }
 
-  Future<void> _redeemCode() async {
-    final code = _refCodeController.text.trim().toUpperCase();
-    if (code.isEmpty || _redeeming) return;
-    setState(() => _redeeming = true);
+  Future<void> _enterReferralDialog() async {
+    final controller = TextEditingController();
+    final code = await showDialog<String>(
+      context: context,
+      useRootNavigator: true,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          shellTr(ctx, 'ref_enter_code_title', fallback: 'Referrer code'),
+        ),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.characters,
+          decoration: InputDecoration(
+            hintText: shellTr(
+              ctx,
+              'ref_enter_code_hint',
+              fallback: 'ERTAD-P-XXXX-XXXX',
+            ),
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(shellTr(ctx, 'cancel', fallback: 'Cancel')),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.of(ctx).pop(controller.text.trim().toUpperCase()),
+            child: Text(shellTr(ctx, 'ref_apply_code', fallback: 'Apply')),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (!mounted || code == null || code.isEmpty) return;
     try {
       await ref.read(shellSessionProvider.notifier).redeemReferralCode(code);
       if (!mounted) return;
-      _refCodeController.clear();
+      HapticFeedback.mediumImpact();
       ref.read(ertadFeedbackProvider.notifier).showSuccess(
             shellTr(
               context,
@@ -64,58 +167,9 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
             shellTr(
               context,
               'ref_code_error',
-              fallback: 'Could not apply code — check format or already linked.',
+              fallback: 'Could not apply code.',
             ),
           );
-    } finally {
-      if (mounted) setState(() => _redeeming = false);
-    }
-  }
-
-  Future<void> _savePhone({bool clear = false}) async {
-    if (_savingPhone) return;
-    final phone = _phoneController.text.trim();
-    if (!clear && phone.length < 7) {
-      ref.read(ertadFeedbackProvider.notifier).showWarning(
-            shellTr(
-              context,
-              'profile_phone_error',
-              fallback: 'Please enter a valid phone number',
-            ),
-          );
-      return;
-    }
-    setState(() => _savingPhone = true);
-    try {
-      await ref
-          .read(shellSessionProvider.notifier)
-          .updateMemberPhone(phone: clear ? null : phone, clear: clear);
-      if (!mounted) return;
-      _phoneController.clear();
-      ref.read(ertadFeedbackProvider.notifier).showSuccess(
-            clear
-                ? shellTr(
-                    context,
-                    'profile_phone_cleared',
-                    fallback: 'Phone number removed',
-                  )
-                : shellTr(
-                    context,
-                    'profile_phone_saved',
-                    fallback: 'Phone number saved',
-                  ),
-          );
-    } catch (_) {
-      if (!mounted) return;
-      ref.read(ertadFeedbackProvider.notifier).showWarning(
-            shellTr(
-              context,
-              'profile_phone_error',
-              fallback: 'Please enter a valid phone number',
-            ),
-          );
-    } finally {
-      if (mounted) setState(() => _savingPhone = false);
     }
   }
 
@@ -138,11 +192,7 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
     final prof = session.memberProfile;
     final citizenship = prof?['citizenshipCountry']?.toString().trim() ?? '';
     final nfcOk = prof?['sodCscaVerified'] == true || session.m4SodCscaVerified;
-    final hasTemplate = prof?['hasStoredTemplate'] == true;
     final googleLinked = prof?['googleLinked'] == true;
-    final verifiedAtRaw = prof?['verifiedAt']?.toString() ?? '';
-    final verifiedDate =
-        verifiedAtRaw.length >= 10 ? verifiedAtRaw.substring(0, 10) : '';
     final hasPhone = prof?['hasPhone'] == true;
     final phoneHint = prof?['phoneHint']?.toString() ?? '';
 
@@ -170,7 +220,7 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
                 ErtadModalSheetHeader(
                   icon: isVerified
                       ? Icons.verified_user_rounded
-                      : Icons.person_outline_rounded,
+                      : Icons.person_rounded,
                   title: shellTr(
                     context,
                     'profile_sheet_title',
@@ -180,9 +230,9 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
                 ),
                 const SizedBox(height: 12),
 
-                // 1. Member Profile, Verified Identity Details & Actions
+                // 1. Clean Identity & Compact Verification Chips Card
                 ErtadSurfaceCard(
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -191,10 +241,13 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
                           ErtadIconCircle(
                             icon: isVerified
                                 ? Icons.verified_rounded
-                                : Icons.fingerprint_rounded,
+                                : Icons.person_rounded,
                             tone: isVerified
                                 ? ErtadTone.success
                                 : ErtadTone.primary,
+                            size: 46,
+                            iconSize: 22,
+                            radius: 15,
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -223,19 +276,18 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
                                     ],
                                   ],
                                 ),
-                                const SizedBox(height: 2),
+                                const SizedBox(height: 3),
                                 Text(
                                   isVerified
                                       ? shellTr(
                                           context,
                                           'profile_verified_status',
-                                          fallback: 'Verified · eID biometrics',
+                                          fallback: 'Verified',
                                         )
                                       : shellTr(
                                           context,
                                           'profile_unverified_status',
-                                          fallback:
-                                              'Biometric verification required',
+                                          fallback: 'Unverified',
                                         ),
                                   style: Theme.of(context).textTheme.bodySmall
                                       ?.copyWith(
@@ -251,110 +303,34 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      // Verified eID Details Box
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: p.elevated,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: p.hairline),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              shellTr(
-                                context,
-                                'profile_verified_data_title',
-                                fallback: 'Verification Details',
-                              ),
-                              style: Theme.of(context).textTheme.labelMedium
-                                  ?.copyWith(color: p.muted),
-                            ),
-                            const SizedBox(height: 8),
-                            _ProfileInfoRow(
-                              label: shellTr(
-                                context,
-                                'profile_field_citizenship',
-                                fallback: 'Citizenship',
-                              ),
-                              value: citizenship.isNotEmpty
-                                  ? citizenship
-                                  : '—',
-                            ),
-                            _ProfileInfoRow(
-                              label: shellTr(
-                                context,
-                                'profile_field_nfc',
-                                fallback: 'eID Chip (NFC/SOD)',
-                              ),
-                              value: nfcOk
-                                  ? shellTr(
-                                      context,
-                                      'profile_val_confirmed',
-                                      fallback: 'Verified',
-                                    )
-                                  : shellTr(
-                                      context,
-                                      'status_pending',
-                                      fallback: 'Pending',
-                                    ),
-                              highlight: nfcOk,
-                            ),
-                            _ProfileInfoRow(
-                              label: shellTr(
-                                context,
-                                'profile_field_template',
-                                fallback: 'Biometric Template',
-                              ),
-                              value: hasTemplate
-                                  ? shellTr(
-                                      context,
-                                      'profile_val_encrypted',
-                                      fallback: 'Encrypted (AES-256)',
-                                    )
-                                  : '—',
-                              highlight: hasTemplate,
-                            ),
-                            _ProfileInfoRow(
-                              label: shellTr(
-                                context,
-                                'profile_field_google',
-                                fallback: 'Google Account',
-                              ),
-                              value: googleLinked
-                                  ? shellTr(
-                                      context,
-                                      'profile_val_linked',
-                                      fallback: 'Linked',
-                                    )
-                                  : shellTr(
-                                      context,
-                                      'profile_val_not_set',
-                                      fallback: 'Not set',
-                                    ),
-                              highlight: googleLinked,
-                            ),
-                            if (verifiedDate.isNotEmpty)
-                              _ProfileInfoRow(
-                                label: shellTr(
-                                  context,
-                                  'profile_field_verified_at',
-                                  fallback: 'Verified Date',
-                                ),
-                                value: verifiedDate,
-                              ),
-                          ],
-                        ),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _StatusChip(
+                            icon: Icons.public_rounded,
+                            label: citizenship.isNotEmpty ? citizenship : 'GE',
+                            active: citizenship.isNotEmpty,
+                          ),
+                          _StatusChip(
+                            icon: Icons.badge_outlined,
+                            label: 'eID',
+                            active: nfcOk,
+                          ),
+                          _StatusChip(
+                            icon: Icons.g_mobiledata_rounded,
+                            label: 'Google',
+                            active: googleLinked,
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 12),
-                      // Always show biometric verification / re-verification CTA
+                      const SizedBox(height: 14),
                       SizedBox(
                         width: double.infinity,
                         child: isVerified
-                            ? FilledButton.tonalIcon(
+                            ? OutlinedButton.icon(
                                 onPressed: () {
+                                  HapticFeedback.selectionClick();
                                   final nav = Navigator.of(
                                     context,
                                     rootNavigator: true,
@@ -374,12 +350,13 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
                                   shellTr(
                                     context,
                                     'profile_reverify_cta',
-                                    fallback: 'Biometric re-check / Re-verify',
+                                    fallback: 'Biometric re-check',
                                   ),
                                 ),
                               )
                             : FilledButton.icon(
                                 onPressed: () {
+                                  HapticFeedback.selectionClick();
                                   final nav = Navigator.of(
                                     context,
                                     rootNavigator: true,
@@ -392,7 +369,7 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
                                   );
                                 },
                                 icon: const Icon(
-                                  Icons.verified_outlined,
+                                  Icons.fingerprint_rounded,
                                   size: 18,
                                 ),
                                 label: Text(
@@ -404,407 +381,210 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
                                 ),
                               ),
                       ),
-                      const SizedBox(height: 8),
-                      // Always show Google Sign-In / Switch Account button
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            final nav = Navigator.of(
-                              context,
-                              rootNavigator: true,
-                            );
-                            nav.pop();
-                            nav.push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => const SignInScreen(),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.login_rounded, size: 18),
-                          label: Text(
-                            shellTr(
-                              context,
-                              'open_signin_screen',
-                              fallback: 'Google Sign-In / Switch account',
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        child: TextButton.icon(
-                          onPressed: () {
-                            final hostContext = Navigator.of(
-                              context,
-                              rootNavigator: true,
-                            ).context;
-                            Navigator.of(context).pop();
-                            showAccountPrivacySheet(hostContext);
-                          },
-                          icon: const Icon(Icons.tune_rounded, size: 17),
-                          label: Text(
-                            shellTr(
-                              context,
-                              'profile_open_privacy',
-                              fallback: 'Privacy & profile settings',
-                            ),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ),
 
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
 
-                // 2. Encrypted Personal Phone Number Card
+                // 2. Compact Phone & Personal Referral Card (icon-driven, zero clutter)
                 ErtadSurfaceCard(
-                  padding: const EdgeInsets.all(14),
+                  padding: EdgeInsets.zero,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.phone_outlined,
-                            size: 18,
+                      ListTile(
+                        minTileHeight: 54,
+                        leading: Icon(Icons.phone_outlined, color: p.primary),
+                        title: Text(
+                          hasPhone && phoneHint.isNotEmpty
+                              ? phoneHint
+                              : shellTr(
+                                  context,
+                                  'profile_phone_title',
+                                  fallback: 'Phone Number',
+                                ),
+                          style: hasPhone && phoneHint.isNotEmpty
+                              ? Theme.of(context).textTheme.titleSmall
+                                  ?.copyWith(fontFamily: 'monospace')
+                              : null,
+                        ),
+                        subtitle: hasPhone
+                            ? null
+                            : Text(
+                                shellTr(
+                                  context,
+                                  'profile_val_not_set',
+                                  fallback: 'Not set',
+                                ),
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                        trailing: Icon(
+                          Icons.edit_outlined,
+                          size: 18,
+                          color: p.muted,
+                        ),
+                        onTap: session.isLiveConnected
+                            ? () {
+                                HapticFeedback.selectionClick();
+                                _editPhoneDialog(hasPhone: hasPhone);
+                              }
+                            : null,
+                      ),
+                      if (personalCode.isNotEmpty) ...[
+                        Divider(height: 1, color: p.hairline),
+                        ListTile(
+                          minTileHeight: 56,
+                          leading: Icon(
+                            Icons.qr_code_2_rounded,
                             color: p.primary,
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              shellTr(
-                                context,
-                                'profile_phone_title',
-                                fallback: 'Phone Number',
-                              ),
-                              style: Theme.of(context).textTheme.titleSmall,
-                            ),
+                          title: Text(
+                            personalCode,
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(
+                                  fontFamily: 'monospace',
+                                  fontWeight: FontWeight.w700,
+                                  color: p.primary,
+                                ),
                           ),
-                          if (hasPhone)
-                            IconButton(
-                              tooltip: shellTr(
-                                context,
-                                'delete',
-                                fallback: 'Remove',
-                              ),
-                              onPressed: _savingPhone
-                                  ? null
-                                  : () => _savePhone(clear: true),
-                              icon: Icon(
-                                Icons.delete_outline_rounded,
-                                size: 18,
-                                color: p.danger,
-                              ),
+                          subtitle: Text(
+                            shellTr(
+                              context,
+                              'profile_referral_title',
+                              fallback: 'My personal referral code',
                             ),
-                        ],
-                      ),
-                      if (hasPhone && phoneHint.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          phoneHint,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                fontFamily: 'monospace',
-                                color: p.primary,
-                                fontWeight: FontWeight.w700,
-                              ),
-                        ),
-                      ],
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _phoneController,
-                              keyboardType: TextInputType.phone,
-                              decoration: InputDecoration(
-                                isDense: true,
-                                hintText: shellTr(
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                tooltip: shellTr(
                                   context,
-                                  'profile_phone_hint',
-                                  fallback: '+995 5XX XX XX XX',
+                                  'copy',
+                                  fallback: 'Copy',
                                 ),
-                                border: const OutlineInputBorder(),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 10,
-                                ),
+                                onPressed: () {
+                                  HapticFeedback.lightImpact();
+                                  Clipboard.setData(
+                                    ClipboardData(text: personalCode),
+                                  );
+                                  ref
+                                      .read(ertadFeedbackProvider.notifier)
+                                      .showSuccess(
+                                        shellTr(
+                                          context,
+                                          'profile_code_copied',
+                                          fallback: 'Code copied',
+                                        ),
+                                      );
+                                },
+                                icon: const Icon(Icons.copy_rounded, size: 18),
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          FilledButton(
-                            onPressed:
-                                (_savingPhone || !session.isLiveConnected)
-                                    ? null
-                                    : () => _savePhone(),
-                            child: _savingPhone
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : Text(
-                                    shellTr(
-                                      context,
-                                      'save',
-                                      fallback: 'Save',
-                                    ),
-                                  ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        shellTr(
-                          context,
-                          'profile_phone_note',
-                          fallback:
-                              'Stored encrypted on the server and never shown to other members.',
-                        ),
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: p.muted),
-                      ),
-                    ],
-                  ),
-                ),
-
-                if (personalCode.isNotEmpty) ...[
-                  const SizedBox(height: 14),
-                  // 3. Personal Referral Code & Upline Card
-                  ErtadSurfaceCard(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          shellTr(
-                            context,
-                            'profile_referral_title',
-                            fallback: 'My personal referral code',
-                          ),
-                          style: Theme.of(context).textTheme.labelMedium
-                              ?.copyWith(color: p.muted),
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: SelectableText(
-                                personalCode,
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(
-                                      fontFamily: 'monospace',
-                                      fontWeight: FontWeight.w700,
-                                      color: p.primary,
-                                    ),
-                              ),
-                            ),
-                            IconButton(
-                              tooltip: shellTr(
-                                context,
-                                'copy',
-                                fallback: 'Copy',
-                              ),
-                              onPressed: () {
-                                Clipboard.setData(
-                                  ClipboardData(text: personalCode),
-                                );
-                                ref
-                                    .read(ertadFeedbackProvider.notifier)
-                                    .showSuccess(
-                                      shellTr(
-                                        context,
-                                        'profile_code_copied',
-                                        fallback:
-                                            'Personal referral code copied',
-                                      ),
-                                    );
-                              },
-                              icon: const Icon(Icons.copy_rounded, size: 18),
-                            ),
-                            FilledButton.tonalIcon(
-                              onPressed: () {
-                                SharePlus.instance.share(
-                                  ShareParams(text: 'ERTAD · $personalCode'),
-                                );
-                              },
-                              icon: const Icon(Icons.share_rounded, size: 16),
-                              label: Text(
-                                shellTr(
+                              IconButton(
+                                tooltip: shellTr(
                                   context,
                                   'profile_share_invite',
                                   fallback: 'Share',
                                 ),
+                                onPressed: () {
+                                  HapticFeedback.selectionClick();
+                                  SharePlus.instance.share(
+                                    ShareParams(text: 'ERTAD · $personalCode'),
+                                  );
+                                },
+                                icon: const Icon(Icons.share_rounded, size: 18),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Divider(height: 1, color: p.hairline),
+                        ListTile(
+                          minTileHeight: 50,
+                          leading: Icon(
+                            Icons.account_tree_outlined,
+                            color: p.muted,
+                          ),
+                          title: Text(
+                            invitedBy != null
+                                ? '${shellTr(context, 'ref_invited_by', fallback: 'Invited by')}: ${invitedBy['displayLabel'] ?? invitedBy['code'] ?? ''}'
+                                : shellTr(
+                                    context,
+                                    'ref_enter_code_title',
+                                    fallback: 'Have a referrer code?',
+                                  ),
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                          trailing: invitedBy == null && session.isLiveConnected
+                              ? Icon(
+                                  Icons.add_rounded,
+                                  size: 20,
+                                  color: p.primary,
+                                )
+                              : null,
+                          onTap: invitedBy == null && session.isLiveConnected
+                              ? () {
+                                  HapticFeedback.selectionClick();
+                                  _enterReferralDialog();
+                                }
+                              : null,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                // 3. Only show group switcher if member belongs to >1 organizations
+                if (session.organizations.length > 1) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    shellTr(
+                      context,
+                      'profile_groups_section',
+                      fallback: 'Organization & Group',
+                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.labelMedium?.copyWith(color: p.muted),
+                  ),
+                  const SizedBox(height: 8),
+                  ...session.organizations.map((org) {
+                    final selected = org.id == session.activeOrgId;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: ErtadSurfaceCard(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        backgroundColor: selected ? p.primarySoft : p.surface,
+                        borderColor: selected ? p.primary : p.hairline,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          notifier.selectOrganization(org.id);
+                          Navigator.of(context).pop();
+                        },
+                        child: Row(
+                          children: [
+                            Icon(
+                              selected
+                                  ? Icons.radio_button_checked_rounded
+                                  : Icons.radio_button_off_rounded,
+                              color: selected ? p.primary : p.muted,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                '${org.name} · ${org.unitName}',
+                                style: Theme.of(context).textTheme.titleSmall,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          shellTr(
-                            context,
-                            'profile_referral_hint',
-                            fallback:
-                                'Personal invite code — signup and biometric verification points follow organization rules.',
-                          ),
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodySmall?.copyWith(color: p.muted),
-                        ),
-                        const SizedBox(height: 10),
-                        if (invitedBy != null)
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.account_tree_outlined,
-                                size: 16,
-                                color: p.muted,
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  '${shellTr(context, 'ref_invited_by', fallback: 'Invited by')}: ${invitedBy['displayLabel'] ?? invitedBy['code'] ?? ''}',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ),
-                            ],
-                          )
-                        else if (session.isLiveConnected) ...[
-                          Text(
-                            shellTr(
-                              context,
-                              'ref_enter_code_title',
-                              fallback: 'Have a referrer code?',
-                            ),
-                            style: Theme.of(
-                              context,
-                            ).textTheme.labelSmall?.copyWith(color: p.muted),
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: _refCodeController,
-                                  textCapitalization:
-                                      TextCapitalization.characters,
-                                  decoration: InputDecoration(
-                                    isDense: true,
-                                    hintText: shellTr(
-                                      context,
-                                      'ref_enter_code_hint',
-                                      fallback: 'ERTAD-P-XXXX-XXXX',
-                                    ),
-                                    border: const OutlineInputBorder(),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 10,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              FilledButton(
-                                onPressed: _redeeming ? null : _redeemCode,
-                                child: _redeeming
-                                    ? const SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    : Text(
-                                        shellTr(
-                                          context,
-                                          'ref_apply_code',
-                                          fallback: 'Apply',
-                                        ),
-                                      ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: 16),
-                Text(
-                  shellTr(
-                    context,
-                    'profile_groups_section',
-                    fallback: 'Organization & Group',
-                  ),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelLarge?.copyWith(color: p.muted),
-                ),
-                const SizedBox(height: 8),
-
-                // 4. Organization & Group Scope Selector
-                ...session.organizations.map((org) {
-                  final selected = org.id == session.activeOrgId;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: ErtadSurfaceCard(
-                      backgroundColor: selected ? p.primarySoft : p.surface,
-                      borderColor: selected ? p.primary : p.hairline,
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        notifier.selectOrganization(org.id);
-                        Navigator.of(context).pop();
-                      },
-                      child: Row(
-                        children: [
-                          Icon(
-                            selected
-                                ? Icons.radio_button_checked_rounded
-                                : Icons.radio_button_off_rounded,
-                            color: selected ? p.primary : p.muted,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${org.name} · ${org.unitName}',
-                                  style: Theme.of(context).textTheme.titleMedium,
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  switch (org.roleLabel) {
-                                    'Group Manager' => shellTr(
-                                        context,
-                                        'dev_persona_manager',
-                                        fallback: 'Group Manager',
-                                      ),
-                                    'Member' => shellTr(
-                                        context,
-                                        'dev_persona_member',
-                                        fallback: 'Member',
-                                      ),
-                                    _ => org.roleLabel,
-                                  },
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
                       ),
-                    ),
-                  );
-                }),
+                    );
+                  }),
+                ],
               ],
             ),
           ),
@@ -814,37 +594,39 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
   }
 }
 
-class _ProfileInfoRow extends StatelessWidget {
+class _StatusChip extends StatelessWidget {
+  final IconData icon;
   final String label;
-  final String value;
-  final bool highlight;
+  final bool active;
 
-  const _ProfileInfoRow({
+  const _StatusChip({
+    required this.icon,
     required this.label,
-    required this.value,
-    this.highlight = false,
+    required this.active,
   });
 
   @override
   Widget build(BuildContext context) {
     final p = context.ertad;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+    final fg = active ? p.success : p.muted;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: active ? p.success.withValues(alpha: 0.12) : p.elevated,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: active ? p.success.withValues(alpha: 0.35) : p.hairline,
+        ),
+      ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: p.muted),
-            ),
-          ),
-          const SizedBox(width: 8),
+          Icon(active ? Icons.check_circle_rounded : icon, size: 15, color: fg),
+          const SizedBox(width: 5),
           Text(
-            value,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: highlight ? p.success : p.text,
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: fg,
                   fontWeight: FontWeight.w600,
                 ),
           ),

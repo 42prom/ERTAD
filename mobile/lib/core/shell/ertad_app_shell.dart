@@ -83,7 +83,7 @@ class ErtadAppShell extends ConsumerWidget {
       ),
       bottomNavigationBar: FloatingBottomDock(
         currentIndex: idx,
-        messagesBadge: session.unreadMessagesCount,
+        messagesBadge: session.unreadMessagesCount + session.unreadInboxCount,
         tasksBadge: session.openWorkCount + session.upcomingEvents48h,
         pollsBadge: session.openDecisionsCount,
         onReselect: (tabIdx) => scrollRegistry.scrollToTop(tabIdx),

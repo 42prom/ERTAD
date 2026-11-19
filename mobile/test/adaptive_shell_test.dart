@@ -216,7 +216,7 @@ void main() {
         await tester.tap(optInTile);
         await tester.pumpAndSettle();
 
-        // Close sheet via unified X button and confirm Member Privacy updates on Home
+        // Close sheet via unified X button and confirm Member Privacy updates cleanly
         await tester.tap(
           find.descendant(
             of: sheet,
@@ -225,7 +225,6 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('საჯარო'), findsOneWidget);
         expect(find.text('MGR'), findsNothing);
         expect(tester.takeException(), isNull);
       },
@@ -551,7 +550,7 @@ void main() {
 
         final headerOrgBtn = find.descendant(
           of: find.byType(AdaptiveHeader),
-          matching: find.byIcon(Icons.groups_2_rounded),
+          matching: find.byIcon(Icons.person_rounded),
         );
         expect(headerOrgBtn, findsOneWidget);
         expect(find.byTooltip('Account & Privacy'), findsOneWidget);
@@ -566,7 +565,8 @@ void main() {
         await tester.tap(headerOrgBtn);
         await tester.pumpAndSettle();
 
-        expect(find.text('Saburtalo Group'), findsAtLeastNWidgets(1));
+        expect(find.text('Phone Number'), findsOneWidget);
+        expect(find.byIcon(Icons.phone_outlined), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
     );

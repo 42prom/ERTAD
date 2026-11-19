@@ -155,49 +155,53 @@ class _TasksTabScreenState extends ConsumerState<TasksTabScreen> {
         }
       },
       children: [
-        TextField(
-          controller: _search,
-          onChanged: (v) => setState(() => _query = v),
-          decoration: InputDecoration(
-            prefixIcon: Icon(Icons.search_rounded),
-            hintText: shellTr(
-              context,
-              'search_tasks_hint',
-              fallback: 'Search tasks or events...',
-            ),
-            suffixIcon: _query.isNotEmpty
-                ? IconButton(
-                    tooltip: shellTr(context, 'close', fallback: 'Close'),
-                    onPressed: () {
-                      _search.clear();
-                      setState(() => _query = '');
-                    },
-                    icon: Icon(Icons.close_rounded, size: 18),
-                  )
-                : null,
-            filled: true,
-            fillColor: p.elevated,
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 12,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: p.hairline),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: p.hairline),
-            ),
-          ),
-        ),
-        SizedBox(height: 12),
         ErtadCategoryBar(
           items: segmentItems,
           selectedIndex: activeSegment,
           onSelected: (i) => setState(() => _segment = i),
         ),
-        SizedBox(height: 14),
+        if (_query.isNotEmpty ||
+            rawWorkList.length > 4 ||
+            session.liveEvents.length > 4) ...[
+          const SizedBox(height: 12),
+          TextField(
+            controller: _search,
+            onChanged: (v) => setState(() => _query = v),
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search_rounded),
+              hintText: shellTr(
+                context,
+                'search_tasks_hint',
+                fallback: 'Search tasks or events...',
+              ),
+              suffixIcon: _query.isNotEmpty
+                  ? IconButton(
+                      tooltip: shellTr(context, 'close', fallback: 'Close'),
+                      onPressed: () {
+                        _search.clear();
+                        setState(() => _query = '');
+                      },
+                      icon: const Icon(Icons.close_rounded, size: 18),
+                    )
+                  : null,
+              filled: true,
+              fillColor: p.elevated,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: p.hairline),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: p.hairline),
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 14),
         if (activeSegment == 2) ...[
           if (filteredEvents.isNotEmpty)
             ...filteredEvents.map((ev) {

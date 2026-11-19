@@ -202,48 +202,50 @@ class _PollsTabScreenState extends ConsumerState<PollsTabScreen> {
       controller: controller,
       onRefresh: _load,
       children: [
-        TextField(
-          controller: _search,
-          onChanged: (v) => setState(() => _searchQuery = v),
-          decoration: InputDecoration(
-            prefixIcon: const Icon(Icons.search_rounded),
-            hintText: shellTr(
-              context,
-              'search_by_title',
-              fallback: 'Search by title...',
-            ),
-            suffixIcon: _searchQuery.isNotEmpty
-                ? IconButton(
-                    tooltip: shellTr(context, 'close', fallback: 'Close'),
-                    onPressed: () {
-                      _search.clear();
-                      setState(() => _searchQuery = '');
-                    },
-                    icon: const Icon(Icons.close_rounded, size: 18),
-                  )
-                : null,
-            filled: true,
-            fillColor: p.elevated,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 12,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: p.hairline),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: p.hairline),
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
         ErtadCategoryBar(
           items: segmentItems,
           selectedIndex: _filterIndex,
           onSelected: (i) => setState(() => _filterIndex = i),
         ),
+        if (_searchQuery.isNotEmpty || source.length > 4) ...[
+          const SizedBox(height: 10),
+          TextField(
+            controller: _search,
+            onChanged: (v) => setState(() => _searchQuery = v),
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search_rounded),
+              hintText: shellTr(
+                context,
+                'search_by_title',
+                fallback: 'Search by title...',
+              ),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      tooltip: shellTr(context, 'close', fallback: 'Close'),
+                      onPressed: () {
+                        _search.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                      icon: const Icon(Icons.close_rounded, size: 18),
+                    )
+                  : null,
+              filled: true,
+              fillColor: p.elevated,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 12,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: p.hairline),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: p.hairline),
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 14),
         if (_loading && !session.isLiveConnected)
           const ErtadSkeletonList(count: 3)

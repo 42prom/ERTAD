@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/feedback/ertad_feedback.dart';
-import '../../../core/shell/account_privacy_sheet.dart';
 import '../../../core/shell/inbox_sheet.dart';
-import '../../../core/shell/org_context_sheet.dart';
 import '../../../core/shell/shell_l10n.dart';
 import '../../../core/shell/tab_scroll_registry.dart';
 import '../../../core/state/shell_providers.dart';
@@ -24,24 +22,6 @@ class HomeTabScreen extends ConsumerWidget {
     final p = context.ertad;
     final session = ref.watch(shellSessionProvider);
     final controller = ref.watch(tabScrollRegistryProvider).controllerFor(2);
-
-    final (String privacyLabel, ErtadTone privacyTone, IconData privacyIcon) =
-        switch (session.privacyLevel) {
-          PrivacyDisclosureLevel.privateHidden => (
-            shellTr(context, 'privacy_private', fallback: 'Private (Default)'),
-            ErtadTone.success,
-            Icons.visibility_off_rounded,
-          ),
-          PrivacyDisclosureLevel.sharedContextOptIn => (
-            shellTr(
-              context,
-              'privacy_optin',
-              fallback: 'Shared-context Opt-in',
-            ),
-            ErtadTone.warning,
-            Icons.badge_rounded,
-          ),
-        };
 
     final openWorkAndEvents = session.openWorkCount + session.upcomingEvents48h;
 
@@ -103,86 +83,7 @@ class HomeTabScreen extends ConsumerWidget {
           const SizedBox(height: 12),
         ],
 
-        // 1. Clear Group & Privacy Card (obvious tap targets, zero tiny header dropdown)
-        ErtadSurfaceCard(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () => showOrgContextSheet(context),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Row(
-                    children: [
-                      const ErtadIconCircle(
-                        icon: Icons.groups_2_rounded,
-                        tone: ErtadTone.primary,
-                        size: 44,
-                        iconSize: 22,
-                        radius: 14,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              session.activeOrg.unitName,
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              session.activeOrg.name,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        Icons.swap_horiz_rounded,
-                        size: 20,
-                        color: p.primary,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Divider(height: 1, color: p.hairline),
-              const SizedBox(height: 12),
-              InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () => showAccountPrivacySheet(context),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: ErtadStatusPill(
-                          label: privacyLabel,
-                          icon: privacyIcon,
-                          tone: privacyTone,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      size: 20,
-                      color: p.muted,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 14),
-
-        // 2. Two Crisp Member Quick-Navigation Summary Cards
+        // 1. Crisp Member Quick-Navigation Summary Tiles (Polls, Tasks, Points)
         IntrinsicHeight(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -222,9 +123,38 @@ class HomeTabScreen extends ConsumerWidget {
           ),
         ),
 
-        const SizedBox(height: 20),
+        const SizedBox(height: 10),
 
-        // 3. Clean Unified Member Action Queue (no duplicate second feed)
+        // Compact Points & Referrals Quick Row
+        ErtadSurfaceCard(
+          onTap: () => onSwitchTab?.call(0),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              const ErtadIconCircle(
+                icon: Icons.stars_rounded,
+                tone: ErtadTone.secondary,
+                size: 38,
+                iconSize: 19,
+                radius: 12,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  '${session.contributionBalance} ${shellTr(context, 'status_points_unit', fallback: 'pts')}',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: p.muted, size: 20),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 18),
+
+        // 2. Clean Unified Member Action Queue
         ErtadSectionHeader(
           icon: Icons.bolt_rounded,
           title: shellTr(
@@ -233,17 +163,6 @@ class HomeTabScreen extends ConsumerWidget {
             fallback: 'Requires your action',
           ),
           tone: ErtadTone.primary,
-          trailing: ActionChip(
-            avatar: Icon(
-              Icons.notifications_none_rounded,
-              size: 16,
-              color: session.unreadInboxCount > 0 ? p.danger : p.primary,
-            ),
-            label: Text(
-              '${session.unreadInboxCount > 0 ? session.unreadInboxCount : session.liveInboxItems.length}',
-            ),
-            onPressed: () => showInboxSheet(context),
-          ),
         ),
         const SizedBox(height: 10),
         if (session.urgentItems.isEmpty)
