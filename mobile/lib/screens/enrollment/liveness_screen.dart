@@ -322,6 +322,7 @@ class _LivenessScreenState extends State<LivenessScreen>
         docPortraitBase64: widget.docPortraitBase64.isNotEmpty
             ? widget.docPortraitBase64
             : null,
+        selfieBase64: selfieBase64.isNotEmpty ? selfieBase64 : null,
       );
       await container.read(shellSessionProvider.notifier).refreshWorkspace();
       if (!mounted) return;

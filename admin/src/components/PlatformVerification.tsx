@@ -20,24 +20,6 @@ interface PlatformVerificationProps {
   refreshRevision: number;
 }
 
-const LIVENESS_PROVIDERS = [
-  "3d_face_detector",
-  "facetec",
-  "iproov",
-  "aws-rekognition",
-  "faceplusplus",
-  "doublescript",
-  "provider",
-] as const;
-
-const FACE_MATCH_PROVIDERS = [
-  "custom_biometric_matcher",
-  "aws-rekognition",
-  "faceplusplus",
-  "doublescript",
-  "provider",
-] as const;
-
 export default function PlatformVerification({
   canPropose,
   canApprove,
@@ -62,12 +44,11 @@ export default function PlatformVerification({
     requireGeorgianCitizen: true,
     livenessProvider: "3d_face_detector",
     faceMatchProvider: "custom_biometric_matcher",
-    livenessMinScore: 0.85,
-    faceMatchMinScore: 0.8,
+    livenessMinScore: 0.7,
+    faceMatchMinScore: 0.4,
     retryLimit: 3,
     biometricTtlSeconds: 900,
   });
-  const [apiKey, setApiKey] = useState("");
   const [reason, setReason] = useState<"security_tightening" | "provider_change" | "recovery">(
     "security_tightening",
   );
@@ -81,8 +62,8 @@ export default function PlatformVerification({
         requireDeviceAttestation: pol.policy.requireDeviceAttestation,
         requireNfc: pol.policy.requireNfc,
         requireGeorgianCitizen: pol.policy.requireGeorgianCitizen,
-        livenessProvider: pol.policy.livenessProvider,
-        faceMatchProvider: pol.policy.faceMatchProvider,
+        livenessProvider: "3d_face_detector",
+        faceMatchProvider: "custom_biometric_matcher",
         livenessMinScore: Number(pol.policy.livenessMinScore),
         faceMatchMinScore: Number(pol.policy.faceMatchMinScore),
         retryLimit: pol.policy.retryLimit,
@@ -148,10 +129,10 @@ export default function PlatformVerification({
         requestId: crypto.randomUUID(),
         expectedVersion: policyData.policy.version,
         ...draft,
-        ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}),
+        livenessProvider: "3d_face_detector",
+        faceMatchProvider: "custom_biometric_matcher",
         reason,
       });
-      setApiKey("");
       setNotice(
         t(
           "ცვლილების შეთავაზება გაიგზავნა დამოუკიდებელ დამტკიცებაზე.",
@@ -288,9 +269,10 @@ export default function PlatformVerification({
                 v{policyData.policy.version} · {policyData.policy.authProfile}
               </div>
               <div className="mt-1 text-xs text-[var(--color-text-muted)]">
-                {policyData.policy.hasCredential
-                  ? t("დაშიფრული გასაღები შენახულია (დამალული)", "Encrypted key stored (hidden)")
-                  : t("გასაღები არ არის დაყენებული", "No external provider key set")}
+                {t(
+                  "ERTAD-ის საკუთარი სუვერენული ბიომეტრიული ძრავა (გარე პროვაიდერების გარეშე)",
+                  "ERTAD sovereign in-house biometric engine (no third-party providers)",
+                )}
               </div>
             </div>
             <div className="rounded-lg border border-[var(--color-border)] p-3">
@@ -346,32 +328,6 @@ export default function PlatformVerification({
             }
           />
 
-          <Select
-            label={t("Liveness პროვაიდერი", "Liveness provider")}
-            value={draft.livenessProvider}
-            disabled={!canPropose || busy}
-            options={LIVENESS_PROVIDERS.map((p) => ({ value: p, label: p }))}
-            onChange={(e) =>
-              setDraft((d) => ({
-                ...d,
-                livenessProvider: e.target.value as VerificationPolicyValues["livenessProvider"],
-              }))
-            }
-          />
-
-          <Select
-            label={t("Face-Match პროვაიდერი", "Face-Match provider")}
-            value={draft.faceMatchProvider}
-            disabled={!canPropose || busy}
-            options={FACE_MATCH_PROVIDERS.map((p) => ({ value: p, label: p }))}
-            onChange={(e) =>
-              setDraft((d) => ({
-                ...d,
-                faceMatchProvider: e.target.value as VerificationPolicyValues["faceMatchProvider"],
-              }))
-            }
-          />
-
           <Input
             label={t("ბიომეტრიული TTL (წამი, 60–86400)", "Biometric TTL (seconds, 60–86400)")}
             type="number"
@@ -388,36 +344,47 @@ export default function PlatformVerification({
           />
 
           <Input
-            label={t("Liveness მინ. ზღვარი (0.50–0.99)", "Liveness min score (0.50–0.99)")}
+            label={t("Liveness მინ. ზღვარი (0.30–0.99)", "Liveness min score (0.30–0.99)")}
             type="number"
             step="0.01"
-            min={0.5}
+            min={0.3}
             max={0.99}
             value={String(draft.livenessMinScore)}
             disabled={!canPropose || busy}
             onChange={(e) =>
               setDraft((d) => ({
                 ...d,
-                livenessMinScore: Number(e.target.value) || 0.85,
+                livenessMinScore: Number(e.target.value) || 0.7,
               }))
             }
           />
 
-          <Input
-            label={t("Face-Match მინ. ზღვარი (0.50–0.99)", "Face-Match min score (0.50–0.99)")}
-            type="number"
-            step="0.01"
-            min={0.5}
-            max={0.99}
-            value={String(draft.faceMatchMinScore)}
-            disabled={!canPropose || busy}
-            onChange={(e) =>
-              setDraft((d) => ({
-                ...d,
-                faceMatchMinScore: Number(e.target.value) || 0.8,
-              }))
-            }
-          />
+          <div>
+            <Input
+              label={t(
+                "სახის მსგავსების მინ. ზღვარი (0.15–0.99 · რეკომენდებული: 0.40)",
+                "Face-Match min score (0.15–0.99 · Recommended: 0.40)",
+              )}
+              type="number"
+              step="0.01"
+              min={0.15}
+              max={0.99}
+              value={String(draft.faceMatchMinScore)}
+              disabled={!canPropose || busy}
+              onChange={(e) =>
+                setDraft((d) => ({
+                  ...d,
+                  faceMatchMinScore: Number(e.target.value) || 0.4,
+                }))
+              }
+            />
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+              {t(
+                "ArcFace 512-D კოსინუსური მსგავსება: პირადობის ჩიპის ფოტოსთან ერთი და იგივე ადამიანი იღებს ~0.38–0.65 (38%–65%). 0.40 (40%) უზრუნველყოფს 54%-იანი რეალური თანხვედრის უპრობლემო გატარებას.",
+                "ArcFace 512-D cosine similarity: same person against an eID chip photo scores ~0.38–0.65 (38%–65%). 0.40 (40%) comfortably passes a 54% real match.",
+              )}
+            </p>
+          </div>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-6 text-sm">
@@ -455,15 +422,7 @@ export default function PlatformVerification({
         </div>
 
         {canPropose && (
-          <div className="mt-5 grid grid-cols-1 gap-4 border-t border-[var(--color-border)] pt-4 md:grid-cols-3">
-            <Input
-              label={t("ახალი API გასაღები (არასავალდებულო)", "New API key (optional)")}
-              type="password"
-              value={apiKey}
-              disabled={busy}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="••••••••"
-            />
+          <div className="mt-5 grid grid-cols-1 gap-4 border-t border-[var(--color-border)] pt-4 md:grid-cols-2">
             <Select
               label={t("ცვლილების მიზეზი", "Change reason")}
               value={reason}
@@ -471,11 +430,7 @@ export default function PlatformVerification({
               options={[
                 {
                   value: "security_tightening",
-                  label: t("უსაფრთხოების გამკაცრება", "Security tightening"),
-                },
-                {
-                  value: "provider_change",
-                  label: t("პროვაიდერის შეცვლა", "Provider change"),
+                  label: t("ზღვრის / უსაფრთხოების კორექტირება", "Threshold / security adjustment"),
                 },
                 {
                   value: "recovery",

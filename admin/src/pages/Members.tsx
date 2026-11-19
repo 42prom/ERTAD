@@ -520,6 +520,36 @@ export default function Members() {
                     <p className="break-all text-sm text-[var(--muted)]">
                       {t("წევრის კოდი", "Member code")}: {detail.id}
                     </p>
+                    {detail.verification?.assuranceLevel ===
+                      "biometric_verified" && (
+                      <p className="mt-1 text-xs text-[var(--muted)]">
+                        {typeof detail.verification.faceMatchScore ===
+                          "number" && (
+                          <>
+                            {t("სახის თანხვედრა", "Face match")}:{" "}
+                            <strong>
+                              {Math.round(
+                                detail.verification.faceMatchScore * 100,
+                              )}
+                              %
+                            </strong>
+                            {" · "}
+                          </>
+                        )}
+                        {typeof detail.verification.livenessScore ===
+                          "number" && (
+                          <>
+                            Liveness:{" "}
+                            <strong>
+                              {Math.round(
+                                detail.verification.livenessScore * 100,
+                              )}
+                              %
+                            </strong>
+                          </>
+                        )}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <p className="mt-3">

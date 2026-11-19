@@ -42,8 +42,60 @@ const completeBiometricSchema = z
     personSubjectKey: z.string().min(6).max(256),
     biometricTemplate: z.string().min(16).max(8192).optional(),
     docPortraitBase64: z.string().max(1_500_000).optional(),
+    selfieBase64: z.string().max(1_500_000).optional(),
   })
   .strict();
+
+async function evaluateInHouseFaceMatch(
+  selfieBase64: string,
+  docPortraitBase64: string
+): Promise<{ evaluated: boolean; score?: number; error?: string }> {
+  const cleanSelfie = selfieBase64.trim().replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, '');
+  const cleanDoc = docPortraitBase64.trim().replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, '');
+  if (cleanSelfie.length < 128 || cleanDoc.length < 128) {
+    return { evaluated: false };
+  }
+  const urls = [
+    process.env.BIOMETRIC_SERVICE_URL?.trim(),
+    'http://127.0.0.1:18000',
+    'http://127.0.0.1:8001',
+    'http://127.0.0.1:8000',
+  ].filter((u): u is string => Boolean(u));
+
+  for (const baseUrl of urls) {
+    try {
+      const res = await fetch(`${baseUrl.replace(/\/$/, '')}/verify-normalized`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image1_base64: cleanSelfie,
+          image2_base64: cleanDoc,
+          normalize: true,
+        }),
+        signal: AbortSignal.timeout(6000),
+      });
+      if (!res.ok) continue;
+      const body = (await res.json()) as {
+        score?: number;
+        error?: string;
+        faces_detected?: number[];
+      };
+      if (body.error) {
+        return { evaluated: true, score: 0, error: body.error };
+      }
+      if (Array.isArray(body.faces_detected) && (body.faces_detected[0] === 0 || body.faces_detected[1] === 0)) {
+        return { evaluated: true, score: 0, error: 'FACE_NOT_DETECTED' };
+      }
+      if (typeof body.score === 'number' && Number.isFinite(body.score)) {
+        const clamped = Math.max(0, Math.min(0.999, Number(body.score.toFixed(3))));
+        return { evaluated: true, score: clamped };
+      }
+    } catch {
+      // Try next local biometric endpoint
+    }
+  }
+  return { evaluated: false };
+}
 
 const reauthBiometricSchema = z
   .object({
@@ -335,6 +387,14 @@ export function createMobileM4Router(): Router {
       const portraitCipher =
         rawPortrait.length >= 32 ? encryptSensitiveValue(rawPortrait) : null;
 
+      let effectiveFaceMatchScore = parsed.faceMatchScore;
+      if (parsed.selfieBase64 && rawPortrait.length >= 128) {
+        const matchEval = await evaluateInHouseFaceMatch(parsed.selfieBase64, rawPortrait);
+        if (matchEval.evaluated && typeof matchEval.score === 'number') {
+          effectiveFaceMatchScore = matchEval.score;
+        }
+      }
+
       const result = await retryDeadlockedTransaction(async (client) => {
         const q = await client.query<{ result: unknown }>(
           'SELECT ertad.mobile_m4_command($1, $2, $3, $4) AS result',
@@ -347,7 +407,7 @@ export function createMobileM4Router(): Router {
               sodCscaVerified: parsed.sodCscaVerified,
               citizenshipCountry: parsed.citizenshipCountry,
               livenessScore: parsed.livenessScore,
-              faceMatchScore: parsed.faceMatchScore,
+              faceMatchScore: effectiveFaceMatchScore,
               personUniquenessHash,
               biometricTemplateCipher,
               biometricTemplateDigest,

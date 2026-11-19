@@ -30,6 +30,8 @@ export interface MemberVerificationSummary {
   assuranceLevel: string;
   citizenshipCountry: string;
   sodCscaVerified: boolean;
+  livenessScore?: number | null;
+  faceMatchScore?: number | null;
   verifiedAt: string | null;
   portraitDataUrl: string | null;
 }

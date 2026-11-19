@@ -134,7 +134,7 @@ async function run(): Promise<void> {
     });
     assert(readerPropose.status === 403, `Expected 403 for read-only propose, got ${readerPropose.status}`);
 
-    // 2. Proposer proposes -> cannot self-approve -> Approver approves
+    // 2. Proposer proposes -> cannot self-approve -> Approver approves (Sovereign ERTAD providers + flexible 0.40 threshold)
     const propRes = await fetch(`${base}/admin/platform/verification/policy/propose`, {
       method: 'POST',
       headers: proposerHeaders,
@@ -145,10 +145,10 @@ async function run(): Promise<void> {
         requireDeviceAttestation: true,
         requireNfc: true,
         requireGeorgianCitizen: true,
-        livenessProvider: 'facetec',
+        livenessProvider: '3d_face_detector',
         faceMatchProvider: 'custom_biometric_matcher',
-        livenessMinScore: 0.88,
-        faceMatchMinScore: 0.82,
+        livenessMinScore: 0.70,
+        faceMatchMinScore: 0.40,
         retryLimit: 3,
         biometricTtlSeconds: 600,
         apiKey: 'secret-biometric-key-example',
@@ -174,10 +174,11 @@ async function run(): Promise<void> {
 
     // Verify encrypted credential is never returned
     const afterPol = (await (await fetch(`${base}/admin/platform/verification/policy`, { headers: readerHeaders })).json()) as {
-      policy: { version: number; livenessProvider: string; hasCredential: boolean; credentialCipher?: unknown };
+      policy: { version: number; livenessProvider: string; faceMatchMinScore: number; hasCredential: boolean; credentialCipher?: unknown };
     };
     assert(afterPol.policy.version === startVersion + 1, 'Expected version increment');
-    assert(afterPol.policy.livenessProvider === 'facetec', 'Expected updated livenessProvider');
+    assert(afterPol.policy.livenessProvider === '3d_face_detector', 'Expected sovereign livenessProvider');
+    assert(Number(afterPol.policy.faceMatchMinScore) === 0.40, 'Expected flexible 0.40 faceMatchMinScore');
     assert(afterPol.policy.hasCredential === true && !('credentialCipher' in afterPol.policy), 'Secret cipher must never leak');
 
     // 3. Mobile M4 flow: Member login -> isolation check -> challenge/attest -> replay rejected -> Google bind -> eID complete -> duplicate person rejected
@@ -272,9 +273,10 @@ async function run(): Promise<void> {
     });
     assert(bioFail.status === 403, `Expected 403 on low liveness, got ${bioFail.status}`);
 
-    // Valid eID completion succeeds (with encrypted biometric template persistence)
+    // Valid eID completion succeeds (including realistic 54% ArcFace similarity + encrypted biometric template & portrait persistence)
     const sharedPersonKey = `person-key-${randomUUID()}`;
     const sampleTemplate = `ertad-tpl-v1:${randomUUID()}`;
+    const samplePortrait = Buffer.from('synthetic-eid-portrait-jpeg-test-bytes-1234567890').toString('base64');
     const bioOk = await fetch(`${base}/mobile/m4/biometric/complete`, {
       method: 'POST',
       headers: mHeaders,
@@ -283,19 +285,22 @@ async function run(): Promise<void> {
         sodCscaVerified: true,
         citizenshipCountry: 'GE',
         livenessScore: 0.94,
-        faceMatchScore: 0.91,
+        faceMatchScore: 0.54,
         personSubjectKey: sharedPersonKey,
         biometricTemplate: sampleTemplate,
+        docPortraitBase64: samplePortrait,
       }),
     });
     assert(bioOk.status === 200, `Valid eID complete failed: ${bioOk.status}`);
 
-    // Verify /status reports stored encrypted biometric template without leaking cipher
+    // Verify /status reports stored encrypted biometric template & portrait without leaking cipher
     const statusAfterBio = (await (await fetch(`${base}/mobile/m4/status`, { headers: mHeaders })).json()) as {
       hasStoredTemplate?: boolean;
+      hasPortrait?: boolean;
       assuranceLevel?: string;
     };
     assert(statusAfterBio.hasStoredTemplate === true, 'Expected hasStoredTemplate=true after biometric completion');
+    assert(statusAfterBio.hasPortrait === true, 'Expected hasPortrait=true after biometric completion');
     assert(statusAfterBio.assuranceLevel === 'biometric_verified', 'Expected assuranceLevel=biometric_verified');
 
     // Re-authentication against stored encrypted biometric template

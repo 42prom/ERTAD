@@ -66,6 +66,8 @@ export async function memberDirectoryCommand(
             assuranceLevel?: string;
             citizenshipCountry?: string;
             sodCscaVerified?: boolean;
+            livenessScore?: number | null;
+            faceMatchScore?: number | null;
             verifiedAt?: string | null;
             portraitCipher?: string | null;
           } | null;
@@ -95,6 +97,10 @@ export async function memberDirectoryCommand(
             assuranceLevel: raw.assuranceLevel ?? 'google_scoped',
             citizenshipCountry: raw.citizenshipCountry ?? '',
             sodCscaVerified: raw.sodCscaVerified === true,
+            livenessScore:
+              typeof raw.livenessScore === 'number' ? raw.livenessScore : null,
+            faceMatchScore:
+              typeof raw.faceMatchScore === 'number' ? raw.faceMatchScore : null,
             verifiedAt: raw.verifiedAt ?? null,
             portraitDataUrl,
           };
