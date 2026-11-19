@@ -501,41 +501,19 @@ class _NotificationChannelsSection extends StatelessWidget {
     {'channel': 'viber', 'platformEnabled': false, 'enabled': false, 'handleHint': ''},
   ];
 
-  Future<String?> _promptHandle(BuildContext context, String label) async {
-    final controller = TextEditingController();
-    final res = await showDialog<String>(
-      context: context,
-      useRootNavigator: true,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          '$label · ${shellTr(ctx, 'notif_ch_enter_handle', fallback: 'Enter contact')}',
-        ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: shellTr(
-              ctx,
-              'notif_ch_handle_hint',
-              fallback: '@username or +995...',
-            ),
-            border: const OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(shellTr(ctx, 'cancel', fallback: 'Cancel')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: Text(shellTr(ctx, 'save', fallback: 'Save')),
-          ),
-        ],
+  Future<String?> _promptHandle(BuildContext context, String label) {
+    return showErtadTextInputDialog(
+      context,
+      title:
+          '$label · ${shellTr(context, 'notif_ch_enter_handle', fallback: 'Enter contact')}',
+      hintText: shellTr(
+        context,
+        'notif_ch_handle_hint',
+        fallback: '@username or +995...',
       ),
+      cancelLabel: shellTr(context, 'cancel', fallback: 'Cancel'),
+      confirmLabel: shellTr(context, 'save', fallback: 'Save'),
     );
-    controller.dispose();
-    return res;
   }
 
   @override

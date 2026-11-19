@@ -98,13 +98,9 @@ class _ProfileCreationScreenState extends State<ProfileCreationScreen> {
     final result = await showModalBottomSheet<Region>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => FractionallySizedBox(
-        heightFactor: 0.85,
-        child: RegionSelectionSheet(
-          apiService: _api,
-          selectedCode: _selectedRegion?.code,
-        ),
+      useSafeArea: true,
+      builder: (ctx) => RegionSelectionSheet(
+        selectedCode: _selectedRegion?.code,
       ),
     );
 

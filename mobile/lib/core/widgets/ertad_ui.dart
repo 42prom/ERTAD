@@ -1100,3 +1100,113 @@ class ErtadTabScrollView extends StatelessWidget {
     );
   }
 }
+
+/// Safe text-input dialog whose [TextEditingController] lives inside a [StatefulWidget]
+/// so it is never disposed while the dialog exit animation is still running.
+Future<String?> showErtadTextInputDialog(
+  BuildContext context, {
+  required String title,
+  required String hintText,
+  required String cancelLabel,
+  required String confirmLabel,
+  String? destructiveLabel,
+  String? destructiveValue,
+  TextInputType keyboardType = TextInputType.text,
+  TextCapitalization textCapitalization = TextCapitalization.none,
+  bool uppercaseResult = false,
+}) {
+  return showDialog<String>(
+    context: context,
+    useRootNavigator: true,
+    builder: (_) => _ErtadTextInputDialog(
+      title: title,
+      hintText: hintText,
+      cancelLabel: cancelLabel,
+      confirmLabel: confirmLabel,
+      destructiveLabel: destructiveLabel,
+      destructiveValue: destructiveValue,
+      keyboardType: keyboardType,
+      textCapitalization: textCapitalization,
+      uppercaseResult: uppercaseResult,
+    ),
+  );
+}
+
+class _ErtadTextInputDialog extends StatefulWidget {
+  final String title;
+  final String hintText;
+  final String cancelLabel;
+  final String confirmLabel;
+  final String? destructiveLabel;
+  final String? destructiveValue;
+  final TextInputType keyboardType;
+  final TextCapitalization textCapitalization;
+  final bool uppercaseResult;
+
+  const _ErtadTextInputDialog({
+    required this.title,
+    required this.hintText,
+    required this.cancelLabel,
+    required this.confirmLabel,
+    this.destructiveLabel,
+    this.destructiveValue,
+    required this.keyboardType,
+    required this.textCapitalization,
+    required this.uppercaseResult,
+  });
+
+  @override
+  State<_ErtadTextInputDialog> createState() => _ErtadTextInputDialogState();
+}
+
+class _ErtadTextInputDialogState extends State<_ErtadTextInputDialog> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final raw = _controller.text.trim();
+    Navigator.of(context).pop(widget.uppercaseResult ? raw.toUpperCase() : raw);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        keyboardType: widget.keyboardType,
+        textCapitalization: widget.textCapitalization,
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => _submit(),
+        decoration: InputDecoration(
+          hintText: widget.hintText,
+          border: const OutlineInputBorder(),
+        ),
+      ),
+      actions: [
+        if (widget.destructiveLabel != null && widget.destructiveValue != null)
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(widget.destructiveValue),
+            child: Text(
+              widget.destructiveLabel!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(widget.cancelLabel),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: Text(widget.confirmLabel),
+        ),
+      ],
+    );
+  }
+}

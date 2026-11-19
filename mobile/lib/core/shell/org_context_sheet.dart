@@ -5,7 +5,6 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../models/verification_models.dart';
 import '../../screens/enrollment/intro_screen.dart';
-import '../../services/service_locator.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/region_selection_sheet.dart';
 import '../feedback/ertad_feedback.dart';
@@ -77,13 +76,9 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => FractionallySizedBox(
-        heightFactor: 0.85,
-        child: RegionSelectionSheet(
-          apiService: ServiceLocator.apiService,
-          selectedCode: _localRegionCode,
-        ),
+      useSafeArea: true,
+      builder: (_) => RegionSelectionSheet(
+        selectedCode: _localRegionCode,
       ),
     );
     if (selected != null) {
@@ -95,48 +90,21 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
   }
 
   Future<void> _editPhoneDialog({required bool hasPhone}) async {
-    final controller = TextEditingController();
-    final action = await showDialog<String>(
-      context: context,
-      useRootNavigator: true,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          shellTr(ctx, 'profile_phone_title', fallback: 'Phone Number'),
-        ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          keyboardType: TextInputType.phone,
-          decoration: InputDecoration(
-            hintText: shellTr(
-              ctx,
-              'profile_phone_hint',
-              fallback: '+995 5XX XX XX XX',
-            ),
-            border: const OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          if (hasPhone)
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop('__CLEAR__'),
-              child: Text(
-                shellTr(ctx, 'delete', fallback: 'Remove'),
-                style: TextStyle(color: Theme.of(ctx).colorScheme.error),
-              ),
-            ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(shellTr(ctx, 'cancel', fallback: 'Cancel')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: Text(shellTr(ctx, 'save', fallback: 'Save')),
-          ),
-        ],
+    final action = await showErtadTextInputDialog(
+      context,
+      title: shellTr(context, 'profile_phone_title', fallback: 'Phone Number'),
+      hintText: shellTr(
+        context,
+        'profile_phone_hint',
+        fallback: '+995 5XX XX XX XX',
       ),
+      cancelLabel: shellTr(context, 'cancel', fallback: 'Cancel'),
+      confirmLabel: shellTr(context, 'save', fallback: 'Save'),
+      destructiveLabel:
+          hasPhone ? shellTr(context, 'delete', fallback: 'Remove') : null,
+      destructiveValue: hasPhone ? '__CLEAR__' : null,
+      keyboardType: TextInputType.phone,
     );
-    controller.dispose();
     if (!mounted || action == null) return;
     try {
       if (action == '__CLEAR__') {
@@ -165,6 +133,14 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
                 fallback: 'Phone number saved',
               ),
             );
+      } else {
+        ref.read(ertadFeedbackProvider.notifier).showWarning(
+              shellTr(
+                context,
+                'profile_phone_error',
+                fallback: 'Please enter a valid phone number',
+              ),
+            );
       }
     } catch (_) {
       if (!mounted) return;
@@ -179,41 +155,19 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
   }
 
   Future<void> _enterReferralDialog() async {
-    final controller = TextEditingController();
-    final code = await showDialog<String>(
-      context: context,
-      useRootNavigator: true,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          shellTr(ctx, 'ref_enter_code_title', fallback: 'Referrer code'),
-        ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textCapitalization: TextCapitalization.characters,
-          decoration: InputDecoration(
-            hintText: shellTr(
-              ctx,
-              'ref_enter_code_hint',
-              fallback: 'ERTAD-P-XXXX-XXXX',
-            ),
-            border: const OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(shellTr(ctx, 'cancel', fallback: 'Cancel')),
-          ),
-          FilledButton(
-            onPressed: () =>
-                Navigator.of(ctx).pop(controller.text.trim().toUpperCase()),
-            child: Text(shellTr(ctx, 'ref_apply_code', fallback: 'Apply')),
-          ),
-        ],
+    final code = await showErtadTextInputDialog(
+      context,
+      title: shellTr(context, 'ref_enter_code_title', fallback: 'Referrer code'),
+      hintText: shellTr(
+        context,
+        'ref_enter_code_hint',
+        fallback: 'ERTAD-P-XXXX-XXXX',
       ),
+      cancelLabel: shellTr(context, 'cancel', fallback: 'Cancel'),
+      confirmLabel: shellTr(context, 'ref_apply_code', fallback: 'Apply'),
+      textCapitalization: TextCapitalization.characters,
+      uppercaseResult: true,
     );
-    controller.dispose();
     if (!mounted || code == null || code.isEmpty) return;
     try {
       await ref.read(shellSessionProvider.notifier).redeemReferralCode(code);
