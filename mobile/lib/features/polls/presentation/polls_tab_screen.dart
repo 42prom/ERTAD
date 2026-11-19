@@ -166,15 +166,15 @@ class _PollsTabScreenState extends ConsumerState<PollsTabScreen> {
 
     final segmentItems = <ErtadCategoryItem>[
       ErtadCategoryItem(
-        label: shellTr(context, 'polls_tab_active', fallback: 'Active'),
+        label: shellTr(context, 'polls_tab_active', fallback: 'New'),
         badgeCount: session.openDecisionsCount,
       ),
       ErtadCategoryItem(
-        label: shellTr(context, 'polls_tab_submitted', fallback: 'Submitted'),
+        label: shellTr(context, 'polls_tab_submitted', fallback: 'In progress'),
         badgeCount: submittedActive.length,
       ),
       ErtadCategoryItem(
-        label: shellTr(context, 'polls_tab_history', fallback: 'History'),
+        label: shellTr(context, 'polls_tab_history', fallback: 'Completed'),
       ),
     ];
 

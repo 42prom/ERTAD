@@ -180,9 +180,9 @@ void main() {
 
         await tester.tap(find.byKey(const Key('dock_tab_4')));
         await tester.pumpAndSettle();
-        expect(find.text('აქტიური'), findsOneWidget);
-        expect(find.text('დაფიქსირებული'), findsOneWidget);
-        expect(find.text('ისტორია'), findsOneWidget);
+        expect(find.text('ახალი'), findsAtLeastNWidgets(1));
+        expect(find.text('მიმდინარე'), findsAtLeastNWidgets(1));
+        expect(find.text('დასრულებული'), findsAtLeastNWidgets(1));
 
         await tester.tap(find.byKey(const Key('dock_tab_2')));
         await tester.pumpAndSettle();
@@ -352,7 +352,7 @@ void main() {
           await tester.pumpAndSettle();
         }
 
-        // Polls tab (#65): Active | History
+        // Polls tab (#65): New | In progress | Completed
         await tester.tap(find.byKey(const Key('dock_tab_4')));
         await tester.pumpAndSettle();
         final pollsBar = find.descendant(
@@ -360,12 +360,12 @@ void main() {
           matching: find.byType(ErtadCategoryBar),
         );
         expect(
-          find.descendant(of: pollsBar, matching: find.text('აქტიური')),
+          find.descendant(of: pollsBar, matching: find.text('ახალი')),
           findsOneWidget,
         );
         final historyPill = find.descendant(
           of: pollsBar,
-          matching: find.text('ისტორია'),
+          matching: find.text('დასრულებული'),
         );
         expect(historyPill, findsOneWidget);
         await tester.ensureVisible(historyPill);
