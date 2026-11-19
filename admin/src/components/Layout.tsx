@@ -468,9 +468,12 @@ export default function Layout() {
         className="w-64 bg-white border-r border-gray-200 flex flex-col"
       >
         <Link to="/dashboard" className="console-brand" aria-label="ERTAD">
-          <span className="console-brand-mark" aria-hidden="true">
-            E
-          </span>
+          <img
+            src="/ertad-icon.png"
+            alt=""
+            aria-hidden="true"
+            className="console-brand-mark-img"
+          />
           <span>
             <strong>ERTAD</strong>
             <small>

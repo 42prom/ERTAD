@@ -78,7 +78,12 @@ export default function Login({ onLogin }: LoginProps) {
   return (
     <div className="demo-login min-h-screen flex items-center justify-center bg-gray-900 p-4">
       <div className="max-w-md w-full space-y-8 p-8 bg-gray-800 rounded-lg shadow-lg">
-        <div>
+        <div className="text-center">
+          <img
+            src="/ertad-logo-dark.png"
+            alt="ERTAD"
+            className="mx-auto h-20 w-auto object-contain mb-3"
+          />
           <h2 className="text-center text-3xl font-bold text-white">ERTAD</h2>
           <p className="mt-2 text-center text-sm text-gray-400">
             Secure administrative access

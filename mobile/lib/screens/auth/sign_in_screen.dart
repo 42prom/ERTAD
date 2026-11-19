@@ -135,7 +135,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Image.asset(
-                    'assets/images/splash_logo.png',
+                    p.isDark
+                        ? 'assets/images/splash_logo_dark.png'
+                        : 'assets/images/splash_logo.png',
                     width: logoWidth,
                     fit: BoxFit.contain,
                   ),

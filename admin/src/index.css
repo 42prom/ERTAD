@@ -114,6 +114,7 @@
 .ertad-console > aside { width:256px; border-color:var(--border); }
 .console-brand { display:flex; align-items:center; gap:12px; padding:28px 22px; text-decoration:none; }
 .console-brand-mark { display:grid; place-items:center; width:38px; height:38px; border-radius:10px; background:var(--primary); color:var(--onPrimary); font-size:23px; font-weight:800; }
+.console-brand-mark-img { width:40px; height:40px; border-radius:10px; object-fit:cover; flex-shrink:0; border:1px solid var(--border); }
 .console-brand strong { display:block; font-size:20px; letter-spacing:.08em; }
 .console-brand small { display:block; margin-top:2px; color:var(--muted); font-size:11px; }
 .console-nav { flex:1; overflow-y:auto; padding:16px 12px; }
