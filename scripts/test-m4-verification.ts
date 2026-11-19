@@ -457,6 +457,23 @@ async function run(): Promise<void> {
     const tgCh = chBody.channels.find((c) => c.channel === 'telegram');
     assert(tgCh?.platformEnabled === true && tgCh.enabled === true && tgCh.handleHint.includes('***'), 'Expected enabled Telegram channel with masked handle hint');
 
+    // 7. Member Profile & Encrypted Phone Number
+    const phoneSave = await fetch(`${base}/mobile/m4/profile/phone`, {
+      method: 'POST',
+      headers: mHeaders,
+      body: JSON.stringify({ phone: '+995 599 12 34 56' }),
+    });
+    assert(phoneSave.status === 200, `Profile phone save failed: ${phoneSave.status}`);
+    const profBody = (await phoneSave.json()) as { hasPhone: boolean; phoneHint: string; citizenshipCountry: string };
+    assert(profBody.hasPhone === true && profBody.phoneHint.includes('***') && !profBody.phoneHint.includes('599123456'), 'Expected masked phone hint');
+
+    const phoneClear = await fetch(`${base}/mobile/m4/profile/phone`, {
+      method: 'POST',
+      headers: mHeaders,
+      body: JSON.stringify({ clear: true }),
+    });
+    assert(phoneClear.status === 200, `Profile phone clear failed: ${phoneClear.status}`);
+
     await fetch(`${base}/mobile/dev/logout`, { method: 'POST', headers: mHeaders });
     await fetch(`${base}/mobile/dev/logout`, { method: 'POST', headers: gHeaders });
 

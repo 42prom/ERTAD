@@ -73,6 +73,22 @@ const notificationChannelUpdateSchema = z
   })
   .strict();
 
+const memberPhoneUpdateSchema = z
+  .object({
+    phone: z.string().trim().regex(/^\+?[0-9\s\-()]{7,24}$/).optional(),
+    clear: z.boolean().optional(),
+  })
+  .strict()
+  .refine((v) => v.clear === true || Boolean(v.phone), {
+    message: 'phone or clear required',
+  });
+
+function maskPhone(raw: string): string {
+  const digits = raw.replace(/[^0-9+]/g, '');
+  if (digits.length <= 5) return '****';
+  return `${digits.slice(0, 5)}***${digits.slice(-2)}`;
+}
+
 function maskChannelHandle(raw?: string): string {
   const clean = (raw ?? '').trim();
   if (!clean) return '';
@@ -444,6 +460,51 @@ export function createMobileM4Router(): Router {
               enabled: parsed.enabled,
               handleCipher,
               handleHint,
+            }),
+          ]
+        );
+        return q.rows[0]?.result;
+      });
+      res.set('Cache-Control', 'no-store').json(result);
+    } catch (error) {
+      mapM4Error(error, next);
+    }
+  });
+
+  router.get('/profile', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const session = req.adminSession!;
+      const result = await retryDeadlockedTransaction(async (client) => {
+        const q = await client.query<{ result: unknown }>(
+          'SELECT ertad.mobile_profile_command($1, $2, $3, $4) AS result',
+          [session.sessionId, session.sessionTokenHash, 'get', JSON.stringify({})]
+        );
+        return q.rows[0]?.result;
+      });
+      res.set('Cache-Control', 'no-store').json(result);
+    } catch (error) {
+      mapM4Error(error, next);
+    }
+  });
+
+  router.post('/profile/phone', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const session = req.adminSession!;
+      const parsed = memberPhoneUpdateSchema.parse(req.body);
+      const isClear = parsed.clear === true;
+      const phoneCipher = !isClear && parsed.phone ? encryptSensitiveValue(parsed.phone) : null;
+      const phoneHint = !isClear && parsed.phone ? maskPhone(parsed.phone) : '';
+      const result = await retryDeadlockedTransaction(async (client) => {
+        const q = await client.query<{ result: unknown }>(
+          'SELECT ertad.mobile_profile_command($1, $2, $3, $4) AS result',
+          [
+            session.sessionId,
+            session.sessionTokenHash,
+            'set_phone',
+            JSON.stringify({
+              clear: isClear,
+              phoneCipher,
+              phoneHint,
             }),
           ]
         );

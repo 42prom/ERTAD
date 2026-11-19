@@ -68,6 +68,7 @@ class ShellSessionState {
   final bool m4RequireDeviceAttestation;
   final Map<String, dynamic>? referralSummary;
   final List<Map<String, dynamic>> notificationChannels;
+  final Map<String, dynamic>? memberProfile;
 
   const ShellSessionState({
     required this.organizations,
@@ -104,6 +105,7 @@ class ShellSessionState {
     this.m4RequireDeviceAttestation = true,
     this.referralSummary,
     this.notificationChannels = const [],
+    this.memberProfile,
   });
 
   OrgContextSummary get activeOrg => organizations.firstWhere(
@@ -149,6 +151,7 @@ class ShellSessionState {
     bool? m4RequireDeviceAttestation,
     Map<String, dynamic>? referralSummary,
     List<Map<String, dynamic>>? notificationChannels,
+    Map<String, dynamic>? memberProfile,
   }) {
     return ShellSessionState(
       organizations: organizations ?? this.organizations,
@@ -188,6 +191,7 @@ class ShellSessionState {
           m4RequireDeviceAttestation ?? this.m4RequireDeviceAttestation,
       referralSummary: referralSummary ?? this.referralSummary,
       notificationChannels: notificationChannels ?? this.notificationChannels,
+      memberProfile: memberProfile ?? this.memberProfile,
     );
   }
 }
@@ -549,6 +553,12 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
         } catch (_) {
           // Notification channel enrichment is non-blocking.
         }
+        try {
+          final prof = await _api.fetchMemberProfile();
+          state = state.copyWith(memberProfile: prof);
+        } catch (_) {
+          // Profile enrichment is non-blocking.
+        }
       }
       await OfflineActionQueue().flush(_api);
       await _persistOfflineSnapshot(orgId);
@@ -703,6 +713,11 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
       handle: handle,
     );
     state = state.copyWith(notificationChannels: updated);
+  }
+
+  Future<void> updateMemberPhone({String? phone, bool clear = false}) async {
+    final updated = await _api.updateMemberPhone(phone: phone, clear: clear);
+    state = state.copyWith(memberProfile: updated);
   }
 
   void updateCounts({int? inbox, int? messages, int? pendingActions}) {

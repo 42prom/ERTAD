@@ -1104,5 +1104,33 @@ class MobileApiClient {
       _rethrow(e);
     }
   }
+
+  /// Fetches member's own verified eID metadata & masked phone number (`/mobile/m4/profile`).
+  Future<Map<String, dynamic>> fetchMemberProfile() async {
+    try {
+      final res = await _dio.get<Map<String, dynamic>>('/mobile/m4/profile');
+      return Map<String, dynamic>.from(res.data ?? const {});
+    } catch (e) {
+      _rethrow(e);
+    }
+  }
+
+  /// Stores or clears the member's own phone number (AES-256-GCM encrypted on server).
+  Future<Map<String, dynamic>> updateMemberPhone({
+    String? phone,
+    bool clear = false,
+  }) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/mobile/m4/profile/phone',
+        data: clear
+            ? <String, dynamic>{'clear': true}
+            : <String, dynamic>{'phone': phone?.trim() ?? ''},
+      );
+      return Map<String, dynamic>.from(res.data ?? const {});
+    } catch (e) {
+      _rethrow(e);
+    }
+  }
 }
 
