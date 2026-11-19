@@ -20,6 +20,10 @@ class ProfileCreationScreen extends StatefulWidget {
   final DateTime birthDate;
   final String? docPortraitBase64;
   final String? livenessNonce;
+  final bool m4Mode;
+  final String? m4PersonSubjectKey;
+  final String m4CitizenshipCountry;
+  final bool m4SodCscaVerified;
 
   const ProfileCreationScreen({
     super.key,
@@ -31,6 +35,10 @@ class ProfileCreationScreen extends StatefulWidget {
     required this.birthDate,
     this.docPortraitBase64,
     this.livenessNonce,
+    this.m4Mode = false,
+    this.m4PersonSubjectKey,
+    this.m4CitizenshipCountry = 'GE',
+    this.m4SodCscaVerified = true,
   });
 
   @override
@@ -100,10 +108,13 @@ class _ProfileCreationScreenState extends State<ProfileCreationScreen> {
       ),
     );
 
-    if (result != null) {
+    if (result != null && mounted) {
+      final loc = Provider.of<LocalizationService>(context, listen: false);
       setState(() {
         _selectedRegion = result;
-        _regionController.text = result.nameEn;
+        _regionController.text = loc.currentLanguage == AppLanguage.georgian
+            ? result.nameKa
+            : result.nameEn;
       });
     }
   }
@@ -125,14 +136,16 @@ class _ProfileCreationScreenState extends State<ProfileCreationScreen> {
     setState(() => _isSubmitting = true);
 
     try {
-      await _api.updateProfile(
-        enrollmentSessionId: widget.enrollmentSessionId,
-        firstName: widget.firstName,
-        lastName: widget.lastName,
-        regionCodes: [_selectedRegion!.code],
-      );
+      if (!widget.m4Mode) {
+        await _api.updateProfile(
+          enrollmentSessionId: widget.enrollmentSessionId,
+          firstName: widget.firstName,
+          lastName: widget.lastName,
+          regionCodes: [_selectedRegion!.code],
+        );
+      }
 
-      // Save profile info locally
+      // Save verified profile & selected Georgian region strictly on-device
       final storage = StorageService();
       await storage.saveName(widget.firstName, widget.lastName);
       await storage.saveBirthDate(widget.birthDate);
@@ -151,6 +164,10 @@ class _ProfileCreationScreenState extends State<ProfileCreationScreen> {
             lastName: widget.lastName,
             docPortraitBase64: widget.docPortraitBase64 ?? '',
             livenessNonce: widget.livenessNonce,
+            m4Mode: widget.m4Mode,
+            m4PersonSubjectKey: widget.m4PersonSubjectKey,
+            m4CitizenshipCountry: widget.m4CitizenshipCountry,
+            m4SodCscaVerified: widget.m4SodCscaVerified,
           ),
         ),
       );

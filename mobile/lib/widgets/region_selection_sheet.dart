@@ -4,6 +4,41 @@ import '../models/verification_models.dart';
 import '../services/interfaces/i_api_service.dart';
 import '../config/theme.dart';
 
+/// Canonical Georgian regions fallback (ISO 3166-2:GE) for offline/M4 selection.
+final List<Region> kGeorgianRegions = <Region>[
+  Region(id: 'GE-TB', code: 'GE-TB', nameEn: 'Tbilisi', nameKa: 'თბილისი'),
+  Region(id: 'GE-AJ', code: 'GE-AJ', nameEn: 'Adjara', nameKa: 'აჭარა'),
+  Region(id: 'GE-IM', code: 'GE-IM', nameEn: 'Imereti', nameKa: 'იმერეთი'),
+  Region(id: 'GE-KA', code: 'GE-KA', nameEn: 'Kakheti', nameKa: 'კახეთი'),
+  Region(id: 'GE-KK', code: 'GE-KK', nameEn: 'Kvemo Kartli', nameKa: 'ქვემო ქართლი'),
+  Region(id: 'GE-SK', code: 'GE-SK', nameEn: 'Shida Kartli', nameKa: 'შიდა ქართლი'),
+  Region(
+    id: 'GE-SZ',
+    code: 'GE-SZ',
+    nameEn: 'Samegrelo-Zemo Svaneti',
+    nameKa: 'სამეგრელო-ზემო სვანეთი',
+  ),
+  Region(id: 'GE-GU', code: 'GE-GU', nameEn: 'Guria', nameKa: 'გურია'),
+  Region(id: 'GE-SJ', code: 'GE-SJ', nameEn: 'Samtskhe-Javakheti', nameKa: 'სამცხე-ჯავახეთი'),
+  Region(id: 'GE-MM', code: 'GE-MM', nameEn: 'Mtskheta-Mtianeti', nameKa: 'მცხეთა-მთიანეთი'),
+  Region(
+    id: 'GE-RL',
+    code: 'GE-RL',
+    nameEn: 'Racha-Lechkhumi & Kvemo Svaneti',
+    nameKa: 'რაჭა-ლეჩხუმი და ქვემო სვანეთი',
+  ),
+  Region(id: 'GE-AB', code: 'GE-AB', nameEn: 'Abkhazia', nameKa: 'აფხაზეთი'),
+];
+
+String resolveGeorgianRegionLabel(String code, {bool georgian = true}) {
+  for (final r in kGeorgianRegions) {
+    if (r.code.toUpperCase() == code.toUpperCase()) {
+      return georgian ? r.nameKa : r.nameEn;
+    }
+  }
+  return code;
+}
+
 class RegionSelectionSheet extends StatefulWidget {
   final IApiService apiService;
   final String? selectedCode; // Pre-selection support
@@ -59,17 +94,19 @@ class _RegionSelectionSheetState extends State<RegionSelectionSheet> {
   Future<void> _loadRegions() async {
     try {
       final list = await widget.apiService.getRegions();
+      final effective = list.isNotEmpty ? list : kGeorgianRegions;
       if (mounted) {
         setState(() {
-          _regions = list;
-          _filteredRegions = list;
+          _regions = effective;
+          _filteredRegions = effective;
           _isLoading = false;
         });
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         setState(() {
-          _error = e.toString();
+          _regions = kGeorgianRegions;
+          _filteredRegions = kGeorgianRegions;
           _isLoading = false;
         });
       }

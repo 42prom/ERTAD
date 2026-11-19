@@ -3,8 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../models/verification_models.dart';
 import '../../screens/enrollment/intro_screen.dart';
+import '../../services/service_locator.dart';
 import '../../services/storage_service.dart';
+import '../../widgets/region_selection_sheet.dart';
 import '../feedback/ertad_feedback.dart';
 import '../state/shell_providers.dart';
 import '../theme/ertad_theme.dart';
@@ -32,6 +35,7 @@ class OrgContextSheet extends ConsumerStatefulWidget {
 class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
   String? _localFullName;
   String? _localBirthDate;
+  String? _localRegionCode;
 
   @override
   void initState() {
@@ -45,6 +49,7 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
       final first = (await storage.getFirstName() ?? '').trim();
       final last = (await storage.getLastName() ?? '').trim();
       final dob = await storage.getBirthDate();
+      final regions = await storage.getRegionCodes();
       if (!mounted) return;
       final fullName = [first, last].where((s) => s.isNotEmpty).join(' ');
       String? dobFormatted;
@@ -53,14 +58,39 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
         final mm = dob.month.toString().padLeft(2, '0');
         dobFormatted = '$dd.$mm.${dob.year}';
       }
-      if (fullName.isNotEmpty || dobFormatted != null) {
+      final regionCode = regions.isNotEmpty ? regions.first : null;
+      if (fullName.isNotEmpty || dobFormatted != null || regionCode != null) {
         setState(() {
           _localFullName = fullName.isNotEmpty ? fullName : null;
           _localBirthDate = dobFormatted;
+          _localRegionCode = regionCode;
         });
       }
     } catch (_) {
       // Local on-device identity enrichment is best-effort only.
+    }
+  }
+
+  Future<void> _pickRegion() async {
+    HapticFeedback.selectionClick();
+    final selected = await showModalBottomSheet<Region>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => FractionallySizedBox(
+        heightFactor: 0.85,
+        child: RegionSelectionSheet(
+          apiService: ServiceLocator.apiService,
+          selectedCode: _localRegionCode,
+        ),
+      ),
+    );
+    if (selected != null) {
+      await StorageService().saveRegionCodes([selected.code]);
+      if (!mounted) return;
+      HapticFeedback.lightImpact();
+      setState(() => _localRegionCode = selected.code);
     }
   }
 
@@ -455,14 +485,35 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
                         ),
                         Divider(height: 16, color: p.hairline),
                       ],
-                      _ProfileInfoRow(
-                        icon: Icons.location_on_outlined,
-                        label: shellTr(
-                          context,
-                          'profile_region_group',
-                          fallback: 'Region / Group',
+                      InkWell(
+                        borderRadius: BorderRadius.circular(10),
+                        onTap: _pickRegion,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: _ProfileInfoRow(
+                                  icon: Icons.location_on_outlined,
+                                  label: shellTr(
+                                    context,
+                                    'profile_region_group',
+                                    fallback: 'Region / Group',
+                                  ),
+                                  value: _localRegionCode != null
+                                      ? '${resolveGeorgianRegionLabel(_localRegionCode!)} · ${session.activeOrg.unitName}'
+                                      : session.activeOrg.unitName,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.edit_outlined,
+                                size: 15,
+                                color: p.muted,
+                              ),
+                            ],
+                          ),
                         ),
-                        value: session.activeOrg.unitName,
                       ),
                       if (_localFullName != null || _localBirthDate != null) ...[
                         const SizedBox(height: 8),

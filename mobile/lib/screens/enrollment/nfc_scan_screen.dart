@@ -332,14 +332,17 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
         if (!mounted) return;
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) => LivenessScreen(
+            builder: (_) => ProfileCreationScreen(
               policy: widget.policy,
               enrollmentSessionId:
-                  widget.enrollmentSessionId ?? 'm4_${DateTime.now().millisecondsSinceEpoch}',
-              docPortraitBase64:
-                  nfcPortraitBase64 ?? widget.docPortraitBase64 ?? '',
+                  widget.enrollmentSessionId ??
+                  'm4_${DateTime.now().millisecondsSinceEpoch}',
               firstName: chipMrz?.firstName ?? '',
               lastName: chipMrz?.lastName ?? '',
+              gender: chipMrz?.gender ?? _currentMrz.sex,
+              birthDate: effectiveDob,
+              docPortraitBase64:
+                  nfcPortraitBase64 ?? widget.docPortraitBase64 ?? '',
               m4Mode: true,
               m4PersonSubjectKey: subjectKey,
               m4CitizenshipCountry: country,

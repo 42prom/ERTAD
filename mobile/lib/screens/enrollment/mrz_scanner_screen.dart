@@ -239,13 +239,17 @@ class _MrzScannerScreenState extends State<MrzScannerScreen>
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            _buildSwitchOption(
-                              DocumentType.passport,
-                              loc.translate('passport'),
+                            Flexible(
+                              child: _buildSwitchOption(
+                                DocumentType.passport,
+                                loc.translate('passport'),
+                              ),
                             ),
-                            _buildSwitchOption(
-                              DocumentType.idCard,
-                              loc.translate('id_card'),
+                            Flexible(
+                              child: _buildSwitchOption(
+                                DocumentType.idCard,
+                                loc.translate('id_card'),
+                              ),
                             ),
                           ],
                         ),
@@ -277,7 +281,7 @@ class _MrzScannerScreenState extends State<MrzScannerScreen>
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeInOut,
-        padding: const EdgeInsets.symmetric(horizontal: 24),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         margin: const EdgeInsets.all(4),
         alignment: Alignment.center,
         decoration: BoxDecoration(
@@ -293,12 +297,16 @@ class _MrzScannerScreenState extends State<MrzScannerScreen>
                 ]
               : null,
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.black : Colors.white,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            fontSize: 14,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            maxLines: 1,
+            style: TextStyle(
+              color: isSelected ? Colors.black : Colors.white,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              fontSize: 14,
+            ),
           ),
         ),
       ),

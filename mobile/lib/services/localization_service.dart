@@ -869,7 +869,7 @@ class LocalizationService extends ChangeNotifier {
     // Enrollment - MRZ Scanner
     'align_document_frame': 'გაასწორეთ დოკუმენტის კოდი ჩარჩოში',
     'passport': 'პასპორტი',
-    'id_card': 'პირადობის მოწმობა',
+    'id_card': 'პირადობა',
     'document_expired': 'დოკუმენტს ვადა გაუვიდა',
     'document_expired_msg':
         'დასკანირებულ დოკუმენტს ვადა გაუვიდა. გთხოვთ გამოიყენოთ მოქმედი დოკუმენტი.',
