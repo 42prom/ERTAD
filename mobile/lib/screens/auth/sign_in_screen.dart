@@ -1,8 +1,11 @@
-import 'package:flutter/foundation.dart' show kReleaseMode;
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../core/feedback/ertad_feedback.dart';
 import '../../core/shell/shell_l10n.dart';
@@ -29,11 +32,46 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     setState(() => _busy = true);
     try {
       final notifier = ref.read(shellSessionProvider.notifier);
-      await notifier.connectDevSession();
-      final api = ref.read(mobileApiClientProvider);
       if (!kReleaseMode) {
-        final sub = 'dev-google-sub:${DateTime.now().millisecondsSinceEpoch}';
-        await api.bindGoogleIdentity(sub);
+        await notifier.connectDevSession();
+      }
+      final api = ref.read(mobileApiClientProvider);
+
+      String? serverClientId;
+      bool oidcEnabled = false;
+      try {
+        final cfg = await api.fetchGoogleOidcConfig();
+        oidcEnabled = cfg['enabled'] == true;
+        final androidId = cfg['androidClientId']?.toString().trim() ?? '';
+        final iosId = cfg['iosClientId']?.toString().trim() ?? '';
+        serverClientId = (!kIsWeb && Platform.isIOS && iosId.isNotEmpty)
+            ? iosId
+            : (androidId.isNotEmpty ? androidId : null);
+      } catch (_) {
+        // Non-blocking in offline/dev preview.
+      }
+
+      String? idToken;
+      if (oidcEnabled || kReleaseMode) {
+        final googleSignIn = GoogleSignIn(
+          scopes: const ['email', 'openid'],
+          serverClientId: serverClientId,
+        );
+        final account = await googleSignIn.signIn();
+        if (account == null) {
+          return; // User cancelled Google picker
+        }
+        final auth = await account.authentication;
+        idToken = auth.idToken;
+        if (idToken == null || idToken.isEmpty) {
+          throw Exception('Google ID token unavailable — check OAuth Client ID.');
+        }
+      } else if (!kReleaseMode) {
+        idToken = 'dev-google-sub:${DateTime.now().millisecondsSinceEpoch}';
+      }
+
+      if (idToken != null && idToken.isNotEmpty) {
+        await api.bindGoogleIdentity(idToken);
       }
       await notifier.refreshWorkspace();
       if (!mounted) return;

@@ -213,6 +213,27 @@ export function createMobileM4Router(): Router {
     }
   });
 
+  router.get('/google/config', async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const q = await retryDeadlockedTransaction(async (client) => {
+        const r = await client.query<{
+          cfg: { enabled?: boolean; publicConfig?: Record<string, string> };
+        }>('SELECT ertad.get_google_oidc_runtime_config() AS cfg');
+        return r.rows[0]?.cfg;
+      });
+      const envClientId = process.env.GOOGLE_OIDC_CLIENT_ID?.trim() ?? '';
+      const androidClientId = q?.publicConfig?.androidClientId?.trim() || envClientId;
+      const iosClientId = q?.publicConfig?.iosClientId?.trim() || envClientId;
+      res.set('Cache-Control', 'no-store').json({
+        enabled: Boolean(q?.enabled || envClientId),
+        androidClientId,
+        iosClientId,
+      });
+    } catch (error) {
+      mapM4Error(error, next);
+    }
+  });
+
   router.post('/google/bind', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = req.adminSession!;
@@ -224,8 +245,20 @@ export function createMobileM4Router(): Router {
       if (process.env.NODE_ENV !== 'production' && parsed.idToken.startsWith('dev-google-sub:')) {
         subject = parsed.idToken;
       } else {
-        const clientId = process.env.GOOGLE_OIDC_CLIENT_ID?.trim();
-        if (!clientId) {
+        const runtimeCfg = await retryDeadlockedTransaction(async (client) => {
+          const r = await client.query<{
+            cfg: { enabled?: boolean; publicConfig?: Record<string, string> };
+          }>('SELECT ertad.get_google_oidc_runtime_config() AS cfg');
+          return r.rows[0]?.cfg;
+        });
+        const allowedClientIds = new Set(
+          [
+            process.env.GOOGLE_OIDC_CLIENT_ID?.trim() ?? '',
+            runtimeCfg?.publicConfig?.androidClientId?.trim() ?? '',
+            runtimeCfg?.publicConfig?.iosClientId?.trim() ?? '',
+          ].filter(Boolean)
+        );
+        if (allowedClientIds.size === 0) {
           throw new ReviewError(503, 'GOOGLE_OIDC_NOT_CONFIGURED');
         }
         const infoRes = await fetch(
@@ -236,7 +269,7 @@ export function createMobileM4Router(): Router {
           throw new ReviewError(401, 'INVALID_GOOGLE_TOKEN');
         }
         const info = (await infoRes.json()) as { aud?: string; sub?: string; email_verified?: string };
-        if (info.aud !== clientId || !info.sub || info.email_verified !== 'true') {
+        if (!info.aud || !allowedClientIds.has(info.aud) || !info.sub || info.email_verified !== 'true') {
           throw new ReviewError(401, 'INVALID_GOOGLE_TOKEN');
         }
         subject = info.sub;

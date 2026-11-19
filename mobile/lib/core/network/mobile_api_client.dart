@@ -963,6 +963,18 @@ class MobileApiClient {
     }
   }
 
+  /// Fetches public Google OIDC client IDs configured by technical operators (`/mobile/m4/google/config`).
+  Future<Map<String, dynamic>> fetchGoogleOidcConfig() async {
+    try {
+      final res = await _dio.get<Map<String, dynamic>>(
+        '/mobile/m4/google/config',
+      );
+      return Map<String, dynamic>.from(res.data ?? const {});
+    } catch (e) {
+      _rethrow(e);
+    }
+  }
+
   /// Binds a verified Google OIDC ID token to the caller's hybrid session (`/mobile/m4/google/bind`).
   Future<Map<String, dynamic>> bindGoogleIdentity(String idToken) async {
     try {

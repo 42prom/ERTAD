@@ -6,6 +6,7 @@ import { createApp } from './app.js';
 import { readConfig } from './config.js';
 import { createNetworkControl } from './modules/security/networkControl.js';
 import { startSecurityMailWorker } from './modules/identity/mailDelivery.js';
+import { startNotificationDispatcher } from './services/notificationDispatcher.js';
 import { attachRealtimeRedis, REALTIME_REDIS_CHANNEL } from './modules/communication/realtime.js';
 
 const config = readConfig();
@@ -55,10 +56,12 @@ const server = app.listen(config.port, config.host, (error?: Error) => {
   logger.info({ port: config.port }, 'ERTAD foundation listening');
 });
 const stopMail=localAdmin?startSecurityMailWorker(()=>logger.warn('Security mail processing unavailable')):async()=>{};
+const stopDispatcher=localAdmin?startNotificationDispatcher(15_000):()=>{};
 let stopping = false;
 const shutdown = () => {
   if (stopping) return;
   stopping = true;
+  stopDispatcher();
   const deadline = setTimeout(() => process.exit(1), 10_000).unref();
   server.close(() => {
     void Promise.allSettled([
