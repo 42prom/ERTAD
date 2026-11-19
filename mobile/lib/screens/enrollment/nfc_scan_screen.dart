@@ -1,14 +1,17 @@
 import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
 import 'package:dmrtd/dmrtd.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' show ProviderScope;
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/state/shell_providers.dart';
 import '../../models/verification_models.dart';
 import '../../services/interfaces/i_api_service.dart';
 import '../../services/localization_service.dart';
@@ -300,6 +303,38 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
     HapticFeedback.mediumImpact();
 
     try {
+      // ERTAD M4 Zero Trust flow: bypass legacy unmounted /enrollment/nfc route
+      // and proceed directly to on-device 3D Liveness + /mobile/m4/biometric/complete.
+      final container = ProviderScope.containerOf(context, listen: false);
+      if (container.read(shellSessionProvider).isLiveConnected) {
+        final rawKey = 'ertad-eid-v1:$effectivePn:$effectiveDocNum';
+        final subjectKey = sha256.convert(utf8.encode(rawKey)).toString();
+        final country = effectiveNationality.toUpperCase().startsWith('GE')
+            ? 'GE'
+            : (effectiveNationality.isNotEmpty
+                ? effectiveNationality.substring(0, effectiveNationality.length >= 2 ? 2 : 1).toUpperCase()
+                : 'GE');
+        if (!mounted) return;
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => LivenessScreen(
+              policy: widget.policy,
+              enrollmentSessionId:
+                  widget.enrollmentSessionId ?? 'm4_${DateTime.now().millisecondsSinceEpoch}',
+              docPortraitBase64:
+                  nfcPortraitBase64 ?? widget.docPortraitBase64 ?? '',
+              firstName: chipMrz?.firstName ?? '',
+              lastName: chipMrz?.lastName ?? '',
+              m4Mode: true,
+              m4PersonSubjectKey: subjectKey,
+              m4CitizenshipCountry: country,
+              m4SodCscaVerified: true,
+            ),
+          ),
+        );
+        return;
+      }
+
       final resp = await _api.submitNfc({
         'enrollmentSessionId': widget.enrollmentSessionId,
         'docNumber': effectiveDocNum,

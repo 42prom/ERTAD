@@ -331,14 +331,56 @@ export function createLocalMobileRouter(
     }
   });
 
+  // Server-enforced Zero Trust biometric assurance gate (Migration 0078):
+  // Withholds private/group chats, voting writes, and work/event mutations until
+  // the member completes eID biometric verification (when policy requires it).
+  const requireBiometricAssurance = (req: Request, res: Response, next: NextFunction): void => {
+    if (process.env.ERTAD_ENFORCE_MOBILE_BIOMETRIC === 'false') {
+      next();
+      return;
+    }
+    const session = req.adminSession;
+    if (!session) {
+      next(createError('Authentication required', 401));
+      return;
+    }
+    retryDeadlockedTransaction(async (client) => {
+      const q = await client.query<{ res: { allowed: boolean; reason?: string } }>(
+        'SELECT ertad.mobile_biometric_gate_check($1, $2) AS res',
+        [session.sessionId, session.sessionTokenHash]
+      );
+      return q.rows[0]?.res;
+    })
+      .then((gate) => {
+        if (gate?.allowed) {
+          next();
+          return;
+        }
+        const reason = gate?.reason ?? 'BIOMETRIC_VERIFICATION_REQUIRED';
+        res.status(403).set('Cache-Control', 'no-store').json({
+          error: reason,
+          code: reason,
+        });
+      })
+      .catch(next);
+  };
+
+  const requireBiometricOnWrite = (req: Request, res: Response, next: NextFunction): void => {
+    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method.toUpperCase())) {
+      next();
+      return;
+    }
+    requireBiometricAssurance(req, res, next);
+  };
+
   // Reuse existing scoped ERTAD SQL-enforced domain sub-routers (never platform console)
   router.use('/workspace', createWorkspaceRouter());
-  router.use('/decisions', createDecisionRouter());
-  router.use('/work', createWorkRouter());
-  router.use('/work-evidence', createEvidenceRouter());
+  router.use('/decisions', requireBiometricOnWrite, createDecisionRouter());
+  router.use('/work', requireBiometricOnWrite, createWorkRouter());
+  router.use('/work-evidence', requireBiometricAssurance, createEvidenceRouter());
   router.use('/work-material-files', createMaterialFilesRouter());
   router.use('/collective', createCollectiveRouter());
-  router.use('/channels', createChannelRouter());
+  router.use('/channels', requireBiometricAssurance, createChannelRouter());
   router.use('/inbox', createInboxRouter());
   router.use('/invitations', createInvitationsRouter());
   router.use('/reviews', createReviewRouter());

@@ -10,6 +10,7 @@ import '../../../core/shell/tab_scroll_registry.dart';
 import '../../../core/state/shell_providers.dart';
 import '../../../core/theme/ertad_theme.dart';
 import '../../../core/widgets/ertad_ui.dart';
+import '../../../screens/enrollment/intro_screen.dart';
 import 'group_reviews_sheet.dart';
 
 /// Center Home tab (index 2): calm plain-member operational hub with zero clutter.
@@ -75,6 +76,29 @@ class HomeTabScreen extends ConsumerWidget {
             actionLabel: shellTr(context, 'retry', fallback: 'Retry'),
             onAction: () =>
                 ref.read(shellSessionProvider.notifier).connectDevSession(),
+          ),
+          const SizedBox(height: 12),
+        ],
+
+        if (session.isLiveConnected &&
+            session.m4AssuranceLevel != 'biometric_verified') ...[
+          ErtadStateBanner(
+            icon: Icons.verified_user_outlined,
+            tone: ErtadTone.primary,
+            message: shellTr(
+              context,
+              'zt_banner_home',
+              fallback:
+                  'Complete eID biometric verification to unlock chats, voting, and tasks.',
+            ),
+            actionLabel: shellTr(
+              context,
+              'profile_verify_cta',
+              fallback: 'Verify identity',
+            ),
+            onAction: () => Navigator.of(context, rootNavigator: true).push(
+              MaterialPageRoute<void>(builder: (_) => const IntroScreen()),
+            ),
           ),
           const SizedBox(height: 12),
         ],

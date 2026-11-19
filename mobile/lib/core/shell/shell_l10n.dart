@@ -83,6 +83,11 @@ const Map<String, String> _kaShellExtras = <String, String>{
   'profile_phone_saved': 'ტელეფონის ნომერი შეინახა',
   'profile_phone_cleared': 'ტელეფონის ნომერი წაიშალა',
   'profile_phone_error': 'შეიყვანეთ სწორი ტელეფონის ნომერი',
+  'zt_banner_home':
+      'გაიარე eID ბიომეტრიული ვერიფიკაცია ჩათების, კენჭისყრისა და დავალებების გასახსნელად.',
+  'zt_chats_locked_title': 'ჩათები დაცულია eID ბიომეტრიით',
+  'zt_chats_locked_body':
+      'Zero Trust უსაფრთხოებით, სერვერი ჯგუფისა და პირადი ჩათების მონაცემებს გასცემს მხოლოდ ბიომეტრიული ვერიფიკაციის შემდეგ.',
   'profile_share_invite': 'გაზიარება',
   'profile_open_privacy': 'კონფიდენციალურობა და პროფილის რედაქტირება',
   'profile_groups_section': 'ორგანიზაცია და ჯგუფი',
@@ -354,6 +359,11 @@ const Map<String, String> _enShellExtras = <String, String>{
   'profile_phone_saved': 'Phone number saved',
   'profile_phone_cleared': 'Phone number removed',
   'profile_phone_error': 'Please enter a valid phone number',
+  'zt_banner_home':
+      'Complete eID biometric verification to unlock chats, voting, and tasks.',
+  'zt_chats_locked_title': 'Chats protected by eID biometrics',
+  'zt_chats_locked_body':
+      'Under Zero Trust, the server only delivers group and private chat data after biometric verification.',
   'profile_share_invite': 'Share',
   'profile_open_privacy': 'Privacy & profile settings',
   'profile_groups_section': 'Organization & Group',

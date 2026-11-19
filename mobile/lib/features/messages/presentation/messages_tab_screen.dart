@@ -8,6 +8,7 @@ import '../../../core/shell/tab_scroll_registry.dart';
 import '../../../core/state/shell_providers.dart';
 import '../../../core/theme/ertad_theme.dart';
 import '../../../core/widgets/ertad_ui.dart';
+import '../../../screens/enrollment/intro_screen.dart';
 import 'channel_thread_screen.dart';
 import 'direct_peers_sheet.dart';
 
@@ -138,6 +139,63 @@ class _MessagesTabScreenState extends ConsumerState<MessagesTabScreen> {
             )
           else
             ...session.liveInboxItems.map((item) => InboxEntryCard(item: item)),
+        ] else if (session.isLiveConnected &&
+            session.m4AssuranceLevel != 'biometric_verified') ...[
+          ErtadSurfaceCard(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                const ErtadIconCircle(
+                  icon: Icons.verified_user_outlined,
+                  tone: ErtadTone.primary,
+                  size: 52,
+                  iconSize: 26,
+                  radius: 16,
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  shellTr(
+                    context,
+                    'zt_chats_locked_title',
+                    fallback: 'Chats protected by eID biometrics',
+                  ),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  shellTr(
+                    context,
+                    'zt_chats_locked_body',
+                    fallback:
+                        'Under Zero Trust, the server only delivers group and private chat data after biometric verification.',
+                  ),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () =>
+                        Navigator.of(context, rootNavigator: true).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const IntroScreen(),
+                          ),
+                        ),
+                    icon: const Icon(Icons.fingerprint_rounded, size: 18),
+                    label: Text(
+                      shellTr(
+                        context,
+                        'profile_verify_cta',
+                        fallback: 'Verify identity',
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ] else ...[
           if (_selectedCategory == 2 &&
               session.isLiveConnected &&

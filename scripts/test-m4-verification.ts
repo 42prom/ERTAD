@@ -182,9 +182,11 @@ async function run(): Promise<void> {
 
     // 3. Mobile M4 flow: Member login -> isolation check -> challenge/attest -> replay rejected -> Google bind -> eID complete -> duplicate person rejected
     const personasRes = await fetch(`${base}/mobile/dev/personas`);
-    const personasBody = (await personasRes.json()) as { personas: Array<{ id: string; roleKind: string }> };
+    const personasBody = (await personasRes.json()) as { personas: Array<{ id: string; memberId: string; roleKind: string }> };
     const member = personasBody.personas.find((p) => p.roleKind === 'member')!;
     const manager = personasBody.personas.find((p) => p.roleKind === 'group_manager')!;
+    // Ensure dev member starts unverified so Zero Trust gate & biometric flow are tested cleanly
+    await ownerPool.query('DELETE FROM ertad.member_identity_proofs WHERE member_id = $1', [member.memberId]);
 
     const mLogin = (await (await fetch(`${base}/mobile/dev/login`, {
       method: 'POST',
@@ -203,6 +205,16 @@ async function run(): Promise<void> {
 
     const m4Status = await fetch(`${base}/mobile/m4/status`, { headers: mHeaders });
     assert(m4Status.status === 200, `M4 status failed: ${m4Status.status}`);
+
+    // Zero Trust Gate: unverified member is blocked from chats (403 BIOMETRIC_VERIFICATION_REQUIRED)
+    const orgRowEarly = await ownerPool.query<{ id: string }>('SELECT id FROM ertad.organizations LIMIT 1');
+    const orgIdEarly = orgRowEarly.rows[0]?.id;
+    if (orgIdEarly) {
+      const blockedChats = await fetch(`${base}/mobile/channels/list?organizationId=${orgIdEarly}`, { headers: mHeaders });
+      assert(blockedChats.status === 403, `Expected 403 for unverified member on /mobile/channels/list, got ${blockedChats.status}`);
+      const blockedBody = (await blockedChats.json()) as { code?: string };
+      assert(blockedBody.code === 'BIOMETRIC_VERIFICATION_REQUIRED', `Expected BIOMETRIC_VERIFICATION_REQUIRED, got ${blockedBody.code}`);
+    }
 
     const chalRes = await fetch(`${base}/mobile/m4/attestation/challenge`, {
       method: 'POST',
@@ -483,9 +495,9 @@ async function run(): Promise<void> {
     await ownerPool.query('DELETE FROM ertad.platform_integration_proposals WHERE proposer_id = ANY($1::uuid[])', [createdAdmins]).catch(() => {});
     await ownerPool.query(
       `DELETE FROM ertad.member_identity_proofs WHERE member_id IN (
-        SELECT member_user_id FROM ertad.admin_member_links WHERE admin_user_id IN (
-          SELECT id FROM ertad.admin_users WHERE email LIKE '%@mobile.ertad.local'
-        )
+        SELECT aml.user_id FROM ertad.admin_member_links aml
+        JOIN ertad.admin_users au ON au.id = aml.admin_user_id
+        WHERE au.email LIKE '%@mobile.ertad.local'
       )`
     ).catch(() => {});
     await ownerPool.query(

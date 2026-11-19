@@ -7,6 +7,7 @@ import { createClient } from 'redis';
 loadEnvFile('.env');
 process.env.NODE_ENV = 'test';
 process.env.ERTAD_LOCAL_ADMIN = 'true';
+process.env.ERTAD_ENFORCE_MOBILE_BIOMETRIC = 'false';
 
 const pgPort = Number(process.env.ERTAD_POSTGRES_PORT ?? 15432);
 const redisPort = Number(process.env.ERTAD_REDIS_PORT ?? 16379);
