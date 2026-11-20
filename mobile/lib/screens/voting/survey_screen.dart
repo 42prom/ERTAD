@@ -9,6 +9,7 @@ import '../../core/widgets/ertad_ui.dart';
 import '../../models/poll.dart';
 import '../../widgets/decision_unavailable_notice.dart';
 import '../../services/localization_service.dart';
+import 'decision_results_card.dart';
 
 class SurveyScreen extends StatefulWidget {
   final Poll poll;
@@ -98,7 +99,8 @@ class _SurveyScreenState extends State<SurveyScreen> {
     }
     setState(() => _submitting = true);
     try {
-      await runWithStepUpConfirmation(
+      String? usedKey;
+      final res = await runWithStepUpConfirmation(
         context,
         api,
         actionTitle: shellTr(
@@ -116,23 +118,32 @@ class _SurveyScreenState extends State<SurveyScreen> {
           'stepup_confirm',
           fallback: 'Confirm',
         ),
-        run: (key) => api.voteDecision(
-          organizationId: session.activeOrgId,
-          decisionId: widget.poll.id,
-          answers: _encodeSurveyAnswers(),
-          idempotencyKey: key,
-        ),
+        run: (key) {
+          usedKey = key;
+          return api.voteDecision(
+            organizationId: session.activeOrgId,
+            decisionId: widget.poll.id,
+            answers: _encodeSurveyAnswers(),
+            idempotencyKey: key,
+          );
+        },
+      );
+      final receiptCode = await VoteReceiptStore.saveReceipt(
+        decisionId: widget.poll.id,
+        response: res,
+        idempotencyKey: usedKey,
       );
       if (!mounted) return;
-      container.read(ertadFeedbackProvider.notifier).showSuccess(
-        shellTr(
-          context,
-          'polls_vote_recorded',
-          fallback: 'Your vote was securely recorded!',
-        ),
-      );
       container.read(shellSessionProvider.notifier).refreshWorkspace();
-      Navigator.of(context, rootNavigator: true).pop();
+      final nav = Navigator.of(context, rootNavigator: true);
+      nav.pop();
+      if (nav.context.mounted) {
+        await showVoteReceiptModal(
+          nav.context,
+          pollTitle: widget.poll.title,
+          receiptCode: receiptCode,
+        );
+      }
     } on ErtadCancelledException {
       if (!mounted) return;
       setState(() => _submitting = false);
@@ -253,61 +264,8 @@ class _SurveyScreenState extends State<SurveyScreen> {
                   ),
               ],
             ),
-            const SizedBox(height: 10),
-            ErtadStateBanner(
-              icon: Icons.verified_user_outlined,
-              tone: ErtadTone.primary,
-              message: shellTr(
-                context,
-                'decision_readonly_notice',
-                fallback:
-                    'Your participation is recorded — options are shown read-only to protect ballot privacy.',
-              ),
-            ),
-            const SizedBox(height: 14),
-            ..._questions.asMap().entries.map((entry) {
-              final idx = entry.key + 1;
-              final q = entry.value;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: ErtadSurfaceCard(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '$idx. ${q.questionText}',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      if (q.options.isNotEmpty)
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: q.options
-                              .map(
-                                (o) => ErtadStatusPill(
-                                  label: o.optionText,
-                                  tone: ErtadTone.neutral,
-                                ),
-                              )
-                              .toList(),
-                        )
-                      else
-                        ErtadStatusPill(
-                          icon: Icons.short_text_rounded,
-                          label: shellTr(
-                            context,
-                            'decision_open_text_hint',
-                            fallback: 'Open text response',
-                          ),
-                          tone: ErtadTone.neutral,
-                        ),
-                    ],
-                  ),
-                ),
-              );
-            }),
+            const SizedBox(height: 12),
+            DecisionResultsCard(poll: widget.poll, isClosed: _isClosed),
           ],
         ),
       );

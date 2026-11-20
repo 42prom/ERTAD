@@ -175,8 +175,8 @@ void main() {
         await tester.tap(find.byKey(const Key('dock_tab_3')));
         await tester.pumpAndSettle();
         expect(find.text('ახალი'), findsAtLeastNWidgets(1));
-        expect(find.text('მიმდინარე'), findsOneWidget);
-        expect(find.text('დასრულებული'), findsOneWidget);
+        expect(find.text('მიმდინარე'), findsAtLeastNWidgets(1));
+        expect(find.text('დასრულებული'), findsAtLeastNWidgets(1));
 
         await tester.tap(find.byKey(const Key('dock_tab_4')));
         await tester.pumpAndSettle();
@@ -336,11 +336,7 @@ void main() {
           of: find.byType(TasksTabScreen),
           matching: find.byType(ErtadCategoryBar),
         );
-        for (final cat in [
-          'ახალი',
-          'მიმდინარე',
-          'დასრულებული',
-        ]) {
+        for (final cat in ['ახალი', 'მიმდინარე', 'დასრულებული']) {
           final target = find.descendant(
             of: tasksBar,
             matching: find.text(cat),

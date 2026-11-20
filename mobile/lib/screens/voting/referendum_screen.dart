@@ -121,119 +121,113 @@ class _ReferendumScreenState extends State<ReferendumScreen> {
               ],
             ),
             if (isReadOnly) ...[
-              const SizedBox(height: 12),
-              DecisionResultsCard(poll: widget.poll, isClosed: isClosed),
-              const SizedBox(height: 12),
-              ErtadStateBanner(
-                icon: Icons.verified_user_outlined,
-                tone: ErtadTone.primary,
-                message: shellTr(
-                  context,
-                  'decision_readonly_notice',
-                  fallback:
-                      'Your participation is recorded — options are shown read-only to protect ballot privacy.',
+              const SizedBox(height: 16),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: DecisionResultsCard(
+                    poll: widget.poll,
+                    isClosed: isClosed,
+                  ),
                 ),
               ),
-            ],
-            const SizedBox(height: 16),
-            ErtadSurfaceCard(
-              backgroundColor: p.secondarySoft,
-              borderColor: p.secondary.withValues(alpha: 0.35),
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  const ErtadIconCircle(
-                    icon: Icons.how_to_vote_rounded,
-                    tone: ErtadTone.secondary,
-                    size: 48,
-                    iconSize: 25,
-                    radius: 15,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    widget.poll.title,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: p.text,
+            ] else ...[
+              const SizedBox(height: 16),
+              ErtadSurfaceCard(
+                backgroundColor: p.secondarySoft,
+                borderColor: p.secondary.withValues(alpha: 0.35),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    const ErtadIconCircle(
+                      icon: Icons.how_to_vote_rounded,
+                      tone: ErtadTone.secondary,
+                      size: 48,
+                      iconSize: 25,
+                      radius: 15,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    Text(
+                      widget.poll.title,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(color: p.text),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: widget.poll.options.isEmpty
-                  ? Center(
-                      child: ErtadEmptyState(
-                        icon: Icons.how_to_vote_outlined,
-                        tone: ErtadTone.secondary,
-                        title: widget.poll.title,
-                        body: shellTr(
-                          context,
-                          'poll_no_options',
-                          fallback:
-                              'No ballot options are currently available for this decision.',
-                        ),
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: widget.poll.options.length,
-                      itemBuilder: (context, index) {
-                        final option = widget.poll.options[index];
-                        final isSelected = _selectedOptionId == option.id;
-                        final (tone, icon) = _optionVisual(index);
-                        final accent = ertadToneColor(p, tone);
-
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: ErtadSurfaceCard(
-                            onTap: isReadOnly
-                                ? null
-                                : () => setState(
-                                    () => _selectedOptionId = option.id,
-                                  ),
-                            backgroundColor: isSelected
-                                ? ertadToneSoftColor(p, tone)
-                                : p.surface,
-                            borderColor: isSelected ? accent : p.hairline,
-                            padding: const EdgeInsets.all(18),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  isSelected
-                                      ? icon
-                                      : Icons.radio_button_off_rounded,
-                                  color: isSelected ? accent : p.muted,
-                                  size: 28,
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Text(
-                                    option.text,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(
-                                          color: isSelected ? accent : p.text,
-                                          fontWeight: isSelected
-                                              ? FontWeight.w700
-                                              : FontWeight.w500,
-                                        ),
-                                  ),
-                                ),
-                                if (isSelected)
-                                  Icon(
-                                    Icons.check_rounded,
-                                    color: accent,
-                                    size: 22,
-                                  ),
-                              ],
-                            ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: widget.poll.options.isEmpty
+                    ? Center(
+                        child: ErtadEmptyState(
+                          icon: Icons.how_to_vote_outlined,
+                          tone: ErtadTone.secondary,
+                          title: widget.poll.title,
+                          body: shellTr(
+                            context,
+                            'poll_no_options',
+                            fallback:
+                                'No ballot options are currently available for this decision.',
                           ),
-                        );
-                      },
-                    ),
-            ),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: widget.poll.options.length,
+                        itemBuilder: (context, index) {
+                          final option = widget.poll.options[index];
+                          final isSelected = _selectedOptionId == option.id;
+                          final (tone, icon) = _optionVisual(index);
+                          final accent = ertadToneColor(p, tone);
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: ErtadSurfaceCard(
+                              onTap: () => setState(
+                                () => _selectedOptionId = option.id,
+                              ),
+                              backgroundColor: isSelected
+                                  ? ertadToneSoftColor(p, tone)
+                                  : p.surface,
+                              borderColor: isSelected ? accent : p.hairline,
+                              padding: const EdgeInsets.all(18),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    isSelected
+                                        ? icon
+                                        : Icons.radio_button_off_rounded,
+                                    color: isSelected ? accent : p.muted,
+                                    size: 28,
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Text(
+                                      option.text,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                            color: isSelected ? accent : p.text,
+                                            fontWeight: isSelected
+                                                ? FontWeight.w700
+                                                : FontWeight.w500,
+                                          ),
+                                    ),
+                                  ),
+                                  if (isSelected)
+                                    Icon(
+                                      Icons.check_rounded,
+                                      color: accent,
+                                      size: 22,
+                                    ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
           ],
         ),
       ),

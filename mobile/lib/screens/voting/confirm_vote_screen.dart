@@ -10,6 +10,7 @@ import '../../core/widgets/ertad_ui.dart';
 import '../../models/poll.dart';
 import '../../services/localization_service.dart';
 import '../../widgets/decision_unavailable_notice.dart';
+import 'decision_results_card.dart';
 
 /// Ballot confirmation screen: casts real server vote when live-connected,
 /// and stays fail-closed ([DecisionUnavailableNotice]) offline/standalone.
@@ -48,7 +49,8 @@ class _ConfirmVoteScreenState extends State<ConfirmVoteScreen> {
 
     setState(() => _submitting = true);
     try {
-      await runWithStepUpConfirmation(
+      String? usedKey;
+      final res = await runWithStepUpConfirmation(
         context,
         api,
         actionTitle: shellTr(
@@ -66,25 +68,33 @@ class _ConfirmVoteScreenState extends State<ConfirmVoteScreen> {
           'stepup_confirm',
           fallback: 'Confirm',
         ),
-        run: (key) => api.voteDecision(
-          organizationId: session.activeOrgId,
-          decisionId: widget.poll.id,
-          choice: widget.selectedOption.displayOrder,
-          idempotencyKey: key,
-        ),
+        run: (key) {
+          usedKey = key;
+          return api.voteDecision(
+            organizationId: session.activeOrgId,
+            decisionId: widget.poll.id,
+            choice: widget.selectedOption.displayOrder,
+            idempotencyKey: key,
+          );
+        },
+      );
+      final receiptCode = await VoteReceiptStore.saveReceipt(
+        decisionId: widget.poll.id,
+        response: res,
+        idempotencyKey: usedKey,
       );
       if (!mounted) return;
-      container.read(ertadFeedbackProvider.notifier).showSuccess(
-        shellTr(
-          context,
-          'polls_vote_recorded',
-          fallback: 'Your vote was securely recorded!',
-        ),
-      );
       container.read(shellSessionProvider.notifier).refreshWorkspace();
       final nav = Navigator.of(context, rootNavigator: true);
       nav.pop();
       if (nav.canPop()) nav.pop();
+      if (nav.context.mounted) {
+        await showVoteReceiptModal(
+          nav.context,
+          pollTitle: widget.poll.title,
+          receiptCode: receiptCode,
+        );
+      }
     } on ErtadCancelledException {
       if (!mounted) return;
       setState(() => _submitting = false);

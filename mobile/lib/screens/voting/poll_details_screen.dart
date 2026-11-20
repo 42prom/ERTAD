@@ -134,110 +134,104 @@ class _PollDetailsScreenState extends State<PollDetailsScreen> {
               ],
             ),
             if (isReadOnly) ...[
-              const SizedBox(height: 12),
-              DecisionResultsCard(poll: widget.poll, isClosed: isClosed),
-              const SizedBox(height: 12),
-              ErtadStateBanner(
-                icon: Icons.verified_user_outlined,
-                tone: ErtadTone.primary,
-                message: shellTr(
-                  context,
-                  'decision_readonly_notice',
-                  fallback:
-                      'Your participation is recorded — options are shown read-only to protect ballot privacy.',
+              const SizedBox(height: 16),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: DecisionResultsCard(
+                    poll: widget.poll,
+                    isClosed: isClosed,
+                  ),
                 ),
               ),
-            ],
-            const SizedBox(height: 14),
-            ErtadSurfaceCard(
-              backgroundColor: p.primarySoft,
-              borderColor: p.primary.withValues(alpha: 0.35),
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  const ErtadIconCircle(
-                    icon: Icons.how_to_vote_rounded,
-                    tone: ErtadTone.primary,
-                    size: 48,
-                    iconSize: 25,
-                    radius: 15,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    widget.poll.title,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: p.text,
+            ] else ...[
+              const SizedBox(height: 14),
+              ErtadSurfaceCard(
+                backgroundColor: p.primarySoft,
+                borderColor: p.primary.withValues(alpha: 0.35),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    const ErtadIconCircle(
+                      icon: Icons.how_to_vote_rounded,
+                      tone: ErtadTone.primary,
+                      size: 48,
+                      iconSize: 25,
+                      radius: 15,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    Text(
+                      widget.poll.title,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(color: p.text),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 18),
-            Expanded(
-              child: widget.poll.options.isEmpty
-                  ? Center(
-                      child: ErtadEmptyState(
-                        icon: Icons.how_to_vote_outlined,
-                        tone: ErtadTone.primary,
-                        title: widget.poll.title,
-                        body: shellTr(
-                          context,
-                          'poll_no_options',
-                          fallback:
-                              'No ballot options are currently available for this decision.',
-                        ),
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: widget.poll.options.length,
-                      itemBuilder: (context, index) {
-                        final option = widget.poll.options[index];
-                        final isSelected = _selectedOptionId == option.id;
-
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: ErtadSurfaceCard(
-                            onTap: isReadOnly
-                                ? null
-                                : () => setState(
-                                    () => _selectedOptionId = option.id,
-                                  ),
-                            backgroundColor: isSelected
-                                ? p.primarySoft
-                                : p.surface,
-                            borderColor: isSelected ? p.primary : p.hairline,
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  isSelected
-                                      ? Icons.radio_button_checked_rounded
-                                      : Icons.radio_button_off_rounded,
-                                  color: isSelected ? p.primary : p.muted,
-                                  size: 24,
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Text(
-                                    option.text,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(
-                                          color: isSelected
-                                              ? p.primary
-                                              : p.text,
-                                        ),
-                                  ),
-                                ),
-                              ],
-                            ),
+              const SizedBox(height: 18),
+              Expanded(
+                child: widget.poll.options.isEmpty
+                    ? Center(
+                        child: ErtadEmptyState(
+                          icon: Icons.how_to_vote_outlined,
+                          tone: ErtadTone.primary,
+                          title: widget.poll.title,
+                          body: shellTr(
+                            context,
+                            'poll_no_options',
+                            fallback:
+                                'No ballot options are currently available for this decision.',
                           ),
-                        );
-                      },
-                    ),
-            ),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: widget.poll.options.length,
+                        itemBuilder: (context, index) {
+                          final option = widget.poll.options[index];
+                          final isSelected = _selectedOptionId == option.id;
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: ErtadSurfaceCard(
+                              onTap: () => setState(
+                                () => _selectedOptionId = option.id,
+                              ),
+                              backgroundColor: isSelected
+                                  ? p.primarySoft
+                                  : p.surface,
+                              borderColor: isSelected ? p.primary : p.hairline,
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    isSelected
+                                        ? Icons.radio_button_checked_rounded
+                                        : Icons.radio_button_off_rounded,
+                                    color: isSelected ? p.primary : p.muted,
+                                    size: 24,
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Text(
+                                      option.text,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                            color: isSelected
+                                                ? p.primary
+                                                : p.text,
+                                          ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
           ],
         ),
       ),

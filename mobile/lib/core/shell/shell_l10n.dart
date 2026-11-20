@@ -165,9 +165,17 @@ const Map<String, String> _kaShellExtras = <String, String>{
   'tasks_tab_completed': 'დასრულებული',
   'polls_tab_submitted': 'მიმდინარე',
   'decision_results_title': 'შედეგები',
-  'decision_results_pending': 'შედეგები გამოქვეყნდება დასრულების შემდეგ',
+  'decision_results_pending':
+      'შედეგები გამოქვეყნდება კენჭისყრის დასრულებისთანავე. ამ კოდით შეძლებთ თქვენი ხმის გადამოწმებას.',
   'decision_results_suppressed': 'შედეგები დაფარულია ანონიმურობის დასაცავად',
   'decision_votes_count': 'ხმა',
+  'vote_receipt_title': 'ხმა მიღებულია',
+  'vote_receipt_code_label': 'ხმის უნიკალური კოდი',
+  'vote_receipt_copied': 'ხმის კოდი დაკოპირდა',
+  'vote_receipt_verified_in_tally':
+      'თქვენი ხმის კოდი დადასტურებულია საბოლოო შედეგებში',
+  'vote_receipt_verify_hint': 'კოდის გადამოწმება შედეგებში',
+  'vote_receipt_not_found': 'კოდი ამ კენჭისყრის სიაში ვერ მოიძებნა',
   'privacy_confirm_title': 'კონფიდენციალურობის შეცვლა',
   'privacy_confirm_public':
       'თქვენი სახელი გამოჩნდება ჯგუფებსა და ჩათებში. გსურთ გადართვა?',
@@ -467,9 +475,17 @@ const Map<String, String> _enShellExtras = <String, String>{
   'tasks_tab_completed': 'Completed',
   'polls_tab_submitted': 'In progress',
   'decision_results_title': 'Results',
-  'decision_results_pending': 'Results will be published after closing',
+  'decision_results_pending':
+      'Results will be published once voting closes. Use this code to verify your vote in the final tally.',
   'decision_results_suppressed': 'Results are hidden to protect anonymity',
   'decision_votes_count': 'votes',
+  'vote_receipt_title': 'Vote Recorded',
+  'vote_receipt_code_label': 'Unique vote verification code',
+  'vote_receipt_copied': 'Verification code copied',
+  'vote_receipt_verified_in_tally':
+      'Your vote code is verified in the final tally',
+  'vote_receipt_verify_hint': 'Verify code in tally',
+  'vote_receipt_not_found': 'Code not found in this decision tally',
   'privacy_confirm_title': 'Change privacy mode',
   'privacy_confirm_public':
       'Your name will be visible in groups and chats. Switch to public?',
