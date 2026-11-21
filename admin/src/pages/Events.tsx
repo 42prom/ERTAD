@@ -14,6 +14,7 @@ import { REALTIME_EVENT, type RealtimeSignal } from "../api/realtime";
 import { workApi, type WorkUnit, type WorkWrite } from "../api/work";
 import { demoApi } from "../api/demo";
 import { useConsolePreferences } from "../components/useConsolePreferences";
+import { useInboxTarget } from "../components/useInboxTarget";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
@@ -45,6 +46,7 @@ export default function Events() {
     [page, setPage] = useState(1),
     [search, setSearch] = useState(""),
     [filter, setFilter] = useState("");
+  useInboxTarget("event", org, setSelected);
   const [accessLoading, setAccessLoading] = useState(true),
     [error, setError] = useState(""),
     [saved, setSaved] = useState(false),

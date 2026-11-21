@@ -39,6 +39,7 @@ class ShellSessionState {
   final PrivacyDisclosureLevel privacyLevel;
   final String? optInDisplayName;
   final DevPersona devPersona;
+  final bool hasManagerAuthority;
   final List<MobileDevPersonaInfo> devPersonas;
   final int unreadInboxCount;
   final int unreadMessagesCount;
@@ -76,6 +77,7 @@ class ShellSessionState {
     this.privacyLevel = PrivacyDisclosureLevel.privateHidden,
     this.optInDisplayName,
     this.devPersona = DevPersona.member,
+    this.hasManagerAuthority = false,
     this.devPersonas = const [],
     this.unreadInboxCount = 0,
     this.unreadMessagesCount = 0,
@@ -113,7 +115,8 @@ class ShellSessionState {
     orElse: () => organizations.first,
   );
 
-  bool get isGroupManager => devPersona == DevPersona.groupManager;
+  bool get isGroupManager =>
+      hasManagerAuthority || devPersona == DevPersona.groupManager;
 
   ShellSessionState copyWith({
     List<OrgContextSummary>? organizations,
@@ -122,6 +125,7 @@ class ShellSessionState {
     String? optInDisplayName,
     bool clearOptInDisplayName = false,
     DevPersona? devPersona,
+    bool? hasManagerAuthority,
     List<MobileDevPersonaInfo>? devPersonas,
     int? unreadInboxCount,
     int? unreadMessagesCount,
@@ -161,6 +165,7 @@ class ShellSessionState {
           ? null
           : (optInDisplayName ?? this.optInDisplayName),
       devPersona: devPersona ?? this.devPersona,
+      hasManagerAuthority: hasManagerAuthority ?? this.hasManagerAuthority,
       devPersonas: devPersonas ?? this.devPersonas,
       unreadInboxCount: unreadInboxCount ?? this.unreadInboxCount,
       unreadMessagesCount: unreadMessagesCount ?? this.unreadMessagesCount,
@@ -355,6 +360,11 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
       final urgent = (summary['urgent'] as List? ?? const [])
           .map((e) => Map<String, dynamic>.from(e as Map))
           .toList();
+      final bool hasServerManager =
+          ((boot['reviews'] as List?)?.isNotEmpty ?? false) ||
+          (((summary['pendingReviews'] as num?)?.toInt() ?? 0) > 0);
+      final bool effectiveManager =
+          hasServerManager || state.devPersona == DevPersona.groupManager;
 
       int unreadCh = 0;
       for (final rawCh in chOrgs) {
@@ -370,10 +380,10 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
       List<Map<String, dynamic>> workItems = state.liveWorkItems;
       List<Map<String, dynamic>> myWork = state.myWorkItems;
       List<Map<String, dynamic>> historyWork = state.historyWorkItems;
-      List<Map<String, dynamic>> reviewWork = state.isGroupManager
+      List<Map<String, dynamic>> reviewWork = effectiveManager
           ? state.reviewWorkItems
           : const [];
-      List<Map<String, dynamic>> reviewsList = state.isGroupManager
+      List<Map<String, dynamic>> reviewsList = effectiveManager
           ? state.pendingReviews
           : const [];
       List<Map<String, dynamic>> events = state.liveEvents;
@@ -410,7 +420,7 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
           _api
               .fetchContributionPoints(organizationId: orgId)
               .catchError((_) => const <String, dynamic>{}),
-          if (state.isGroupManager) ...[
+          if (effectiveManager) ...[
             _api
                 .fetchWorkItems(organizationId: orgId, view: 'needs_review')
                 .catchError((_) => <Map<String, dynamic>>[]),
@@ -432,7 +442,7 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
         myWork = results[6] as List<Map<String, dynamic>>;
         historyWork = results[7] as List<Map<String, dynamic>>;
         final ptsPayload = results[8] as Map<String, dynamic>;
-        if (state.isGroupManager && results.length >= 11) {
+        if (effectiveManager && results.length >= 11) {
           reviewWork = results[9] as List<Map<String, dynamic>>;
           reviewsList = results[10] as List<Map<String, dynamic>>;
         }
@@ -512,6 +522,7 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
         upcomingEvents48h: (summary['upcomingEvents48h'] as num?)?.toInt() ?? 0,
         openDecisionsCount: derivedOpenDecisions,
         pendingReviewsCount: (summary['pendingReviews'] as num?)?.toInt() ?? 0,
+        hasManagerAuthority: hasServerManager,
         urgentItems: filteredUrgent,
         livePolls: polls,
         historyPolls: historyPolls,
@@ -655,6 +666,33 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
         // Keep optimistic UI state; server remains source of truth on next refresh.
       }
     }
+  }
+
+  Future<void> signOut() async {
+    await _api.logout();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      for (final key in prefs.getKeys().toList()) {
+        if (key.startsWith('ertad_offline_cache_') ||
+            key.startsWith('ertad_vote_receipt_')) {
+          await prefs.remove(key);
+        }
+      }
+    } catch (_) {}
+    state = const ShellSessionState(
+      organizations: <OrgContextSummary>[
+        OrgContextSummary(
+          id: 'org-tbilisi-saburtalo',
+          name: 'ERTAD',
+          unitName: 'Saburtalo Group',
+          roleLabel: 'Member',
+        ),
+      ],
+      activeOrgId: 'org-tbilisi-saburtalo',
+      devPersona: DevPersona.member,
+      hasManagerAuthority: false,
+      isLiveConnected: false,
+    );
   }
 
   Future<void> setDevPersona(DevPersona persona) async {

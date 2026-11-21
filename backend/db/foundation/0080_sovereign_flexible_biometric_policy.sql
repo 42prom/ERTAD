@@ -3,6 +3,20 @@
 -- cosine similarity threshold to 0.400 (40%, where 54% real eID match passes comfortably),
 -- and exposes real face_match_score & liveness_score in member_directory_verification_summary.
 
+ALTER TABLE ertad.verification_infrastructure_policies
+  DROP CONSTRAINT IF EXISTS verification_infrastructure_policies_liveness_provider_check,
+  DROP CONSTRAINT IF EXISTS verification_infrastructure_policies_face_match_provider_check,
+  DROP CONSTRAINT IF EXISTS verification_infrastructure_policies_liveness_min_score_check,
+  DROP CONSTRAINT IF EXISTS verification_infrastructure_policies_face_match_min_score_check;
+
+ALTER TABLE ertad.verification_infrastructure_proposals
+  DROP CONSTRAINT IF EXISTS verification_infrastructure_proposals_liveness_provider_check,
+  DROP CONSTRAINT IF EXISTS verification_infrastructure_proposals_face_match_provider_check,
+  DROP CONSTRAINT IF EXISTS verification_infrastructure_proposals_liveness_min_score_check,
+  DROP CONSTRAINT IF EXISTS verification_infrastructure_proposals_face_match_min_score_check,
+  DROP CONSTRAINT IF EXISTS verification_infrastructure_proposal_face_match_min_score_check,
+  DROP CONSTRAINT IF EXISTS verification_infrastructure_proposals_face_match_min_score_chec;
+
 UPDATE ertad.verification_infrastructure_policies
 SET liveness_provider = '3d_face_detector',
     face_match_provider = 'custom_biometric_matcher',
@@ -21,12 +35,6 @@ SET liveness_provider = '3d_face_detector',
     credential_digest = NULL;
 
 ALTER TABLE ertad.verification_infrastructure_policies
-  DROP CONSTRAINT IF EXISTS verification_infrastructure_policies_liveness_provider_check,
-  DROP CONSTRAINT IF EXISTS verification_infrastructure_policies_face_match_provider_check,
-  DROP CONSTRAINT IF EXISTS verification_infrastructure_policies_liveness_min_score_check,
-  DROP CONSTRAINT IF EXISTS verification_infrastructure_policies_face_match_min_score_check;
-
-ALTER TABLE ertad.verification_infrastructure_policies
   ALTER COLUMN liveness_min_score SET DEFAULT 0.700,
   ALTER COLUMN face_match_min_score SET DEFAULT 0.400,
   ADD CONSTRAINT verification_infrastructure_policies_liveness_provider_check
@@ -37,14 +45,6 @@ ALTER TABLE ertad.verification_infrastructure_policies
     CHECK (liveness_min_score >= 0.300 AND liveness_min_score <= 0.990),
   ADD CONSTRAINT verification_infrastructure_policies_face_match_min_score_check
     CHECK (face_match_min_score >= 0.150 AND face_match_min_score <= 0.990);
-
-ALTER TABLE ertad.verification_infrastructure_proposals
-  DROP CONSTRAINT IF EXISTS verification_infrastructure_proposals_liveness_provider_check,
-  DROP CONSTRAINT IF EXISTS verification_infrastructure_proposals_face_match_provider_check,
-  DROP CONSTRAINT IF EXISTS verification_infrastructure_proposals_liveness_min_score_check,
-  DROP CONSTRAINT IF EXISTS verification_infrastructure_proposals_face_match_min_score_check,
-  DROP CONSTRAINT IF EXISTS verification_infrastructure_proposal_face_match_min_score_check,
-  DROP CONSTRAINT IF EXISTS verification_infrastructure_proposals_face_match_min_score_chec;
 
 ALTER TABLE ertad.verification_infrastructure_proposals
   ADD CONSTRAINT verification_infrastructure_proposals_liveness_provider_check

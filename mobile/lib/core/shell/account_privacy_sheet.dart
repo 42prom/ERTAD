@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../screens/auth/sign_in_screen.dart';
 import '../../screens/settings/help_screen.dart';
@@ -452,12 +453,25 @@ class AccountPrivacySheet extends ConsumerWidget {
                                 context,
                                 rootNavigator: true,
                               );
-                              nav.pop();
-                              nav.push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => const SignInScreen(),
-                                ),
-                              );
+                              final hostContext = nav.context;
+                              final router = GoRouter.maybeOf(hostContext);
+                              await ref
+                                  .read(shellSessionProvider.notifier)
+                                  .signOut();
+                              if (!context.mounted) return;
+                              if (nav.canPop()) {
+                                nav.pop();
+                              }
+                              if (router != null) {
+                                router.go('/sign-in');
+                              } else {
+                                nav.pushAndRemoveUntil(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => const SignInScreen(),
+                                  ),
+                                  (_) => false,
+                                );
+                              }
                             }
                           },
                           icon: const Icon(Icons.logout_rounded, size: 19),

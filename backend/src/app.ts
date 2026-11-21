@@ -39,7 +39,7 @@ export function createApp(checks: DependencyChecks, logger: Logger, origin: stri
     res.setHeader('Cache-Control', 'no-store');
     const started = performance.now();
     res.on('finish', () => logger.info({
-      requestId, method: req.method, route: req.route?.path ?? 'unmatched',
+      requestId, method: req.method, route: req.route?.path ? `${req.baseUrl}${req.route.path}` : 'unmatched',
       status: res.statusCode, durationMs: Math.round(performance.now() - started),
     }, 'request'));
     next();
@@ -65,7 +65,10 @@ export function createApp(checks: DependencyChecks, logger: Logger, origin: stri
   if (network) app.use('/api/v1', network.guard);
   app.use('/api/v1', loadSecurityLimits(limitsReader), createApiLimits());
   if (localAdmin) app.use('/api/v1/admin', express.json({ limit: '16kb' }), localAdmin);
-  if (localMobile) app.use('/api/v1/mobile', express.json({ limit: '16kb' }), localMobile);
+  if (localMobile) {
+    app.use('/api/v1/mobile/m4/biometric/complete', express.json({ limit: '3mb' }));
+    app.use('/api/v1/mobile', express.json({ limit: '16kb' }), localMobile);
+  }
   app.use('/api/v1', (_req, res) => res.status(401).json({
     error: { code: 'AUTHENTICATION_REQUIRED' }, requestId: res.locals.requestId,
   }));

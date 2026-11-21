@@ -373,6 +373,40 @@ describe("Decision interactions", () => {
     expect(vi.mocked(decisionApi.write).mock.calls[1][0]).toEqual(first);
     expect(screen.queryByText("Action saved.")).not.toBeInTheDocument();
   });
+  it("normalizes uppercase hyphenated receipt codes and renders receipt verification for anonymous closed surveys", async () => {
+    vi.mocked(decisionApi.detail).mockResolvedValue({
+      ...row,
+      status: "closed",
+      kind: "survey",
+      privacy: "anonymous",
+      options: [],
+      participation: 3,
+      electorate: 5,
+      resultsSuppressed: false,
+      receiptDigests: ["a1b2c3d4e5f60718"],
+      surveyResults: [
+        {
+          id: "q1",
+          title: "Favorite format",
+          type: "single_choice",
+          answered: 3,
+          results: [{ label: "Online", votes: 3 }],
+        },
+      ],
+    });
+    mount();
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Open: Synthetic poll",
+        exact: true,
+      }),
+    );
+    const receiptInput = await screen.findByLabelText("16-char receipt digest");
+    fireEvent.change(receiptInput, { target: { value: "A1B2-C3D4-E5F6-0718" } });
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Verified: receipt included in final tallied ballots.",
+    );
+  });
   it("requires explicit vote intent, discloses named storage and respects denied management", async () => {
     vi.mocked(decisionApi.detail).mockResolvedValue({
       ...row,

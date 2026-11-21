@@ -36,6 +36,11 @@ export default function PlatformVerification({
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+  const [pendingDeviceAction, setPendingDeviceAction] = useState<{
+    op: "hold" | "revoke" | "purge_biometrics";
+    bindingId?: string;
+    label: string;
+  } | null>(null);
 
   const [draft, setDraft] = useState<VerificationPolicyValues>({
     authProfile: "google_hybrid",
@@ -49,6 +54,10 @@ export default function PlatformVerification({
     retryLimit: 3,
     biometricTtlSeconds: 900,
   });
+  const [ttlInput, setTtlInput] = useState("900");
+  const [livenessInput, setLivenessInput] = useState("0.7");
+  const [faceMatchInput, setFaceMatchInput] = useState("0.4");
+  const [retryInput, setRetryInput] = useState("3");
   const [reason, setReason] = useState<"security_tightening" | "provider_change" | "recovery">(
     "security_tightening",
   );
@@ -57,6 +66,8 @@ export default function PlatformVerification({
     (pol: VerificationPolicyResponse, devs: MobileDevicesResponse) => {
       setPolicyData(pol);
       setDevicesData(devs);
+      const livenessScore = Number(pol.policy.livenessMinScore);
+      const faceScore = Number(pol.policy.faceMatchMinScore);
       setDraft({
         authProfile: pol.policy.authProfile,
         requireDeviceAttestation: pol.policy.requireDeviceAttestation,
@@ -64,11 +75,15 @@ export default function PlatformVerification({
         requireGeorgianCitizen: pol.policy.requireGeorgianCitizen,
         livenessProvider: "3d_face_detector",
         faceMatchProvider: "custom_biometric_matcher",
-        livenessMinScore: Number(pol.policy.livenessMinScore),
-        faceMatchMinScore: Number(pol.policy.faceMatchMinScore),
+        livenessMinScore: livenessScore,
+        faceMatchMinScore: faceScore,
         retryLimit: pol.policy.retryLimit,
         biometricTtlSeconds: pol.policy.biometricTtlSeconds,
       });
+      setTtlInput(String(pol.policy.biometricTtlSeconds));
+      setLivenessInput(String(livenessScore));
+      setFaceMatchInput(String(faceScore));
+      setRetryInput(String(pol.policy.retryLimit));
     },
     [],
   );
@@ -121,6 +136,32 @@ export default function PlatformVerification({
 
   const handlePropose = async () => {
     if (!policyData || !canPropose) return;
+    const ttl = Number(ttlInput);
+    const livenessScore = Number(livenessInput);
+    const faceScore = Number(faceMatchInput);
+    const retryLimit = Number(retryInput);
+    if (
+      !Number.isInteger(ttl) ||
+      ttl < 60 ||
+      ttl > 86400 ||
+      Number.isNaN(livenessScore) ||
+      livenessScore < 0.3 ||
+      livenessScore > 0.99 ||
+      Number.isNaN(faceScore) ||
+      faceScore < 0.15 ||
+      faceScore > 0.99 ||
+      !Number.isInteger(retryLimit) ||
+      retryLimit < 1 ||
+      retryLimit > 10
+    ) {
+      setError(
+        t(
+          "შეამოწმეთ ზღვრები: TTL 60–86400, Liveness 0.30–0.99, სახის თანხვედრა 0.15–0.99, მცდელობა 1–10.",
+          "Invalid bounds: TTL 60–86400, Liveness 0.30–0.99, Face-Match 0.15–0.99, Retries 1–10.",
+        ),
+      );
+      return;
+    }
     setBusy(true);
     setError("");
     setNotice("");
@@ -129,6 +170,10 @@ export default function PlatformVerification({
         requestId: crypto.randomUUID(),
         expectedVersion: policyData.policy.version,
         ...draft,
+        livenessMinScore: livenessScore,
+        faceMatchMinScore: faceScore,
+        retryLimit,
+        biometricTtlSeconds: ttl,
         livenessProvider: "3d_face_detector",
         faceMatchProvider: "custom_biometric_matcher",
         reason,
@@ -222,7 +267,7 @@ export default function PlatformVerification({
   if (loading && !policyData) {
     return (
       <Card>
-        <p className="text-sm text-[var(--color-text-muted)]">
+        <p className="text-sm text-[var(--muted)]">
           {t("იტვირთება ბიომეტრიისა და მოწყობილობების პოლიტიკა...", "Loading verification policy...")}
         </p>
       </Card>
@@ -236,12 +281,12 @@ export default function PlatformVerification({
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-[var(--color-primary)]" />
+            <ShieldCheck className="h-5 w-5 text-[var(--primary)]" />
             <h2 className="text-lg font-semibold">
               {t("eID ბიომეტრია და მობილური ვერიფიკაცია", "eID Biometrics & Mobile Verification")}
             </h2>
           </div>
-          <span className="rounded-full bg-[var(--color-surface-muted)] px-3 py-1 text-xs font-medium">
+          <span className="rounded-full bg-[var(--elevated)] px-3 py-1 text-xs font-medium">
             {readOnly
               ? t("მხოლოდ წაკითხვა (Read-only)", "Read-only access")
               : t("მართვადი კონტროლი (Two-Person)", "Governed control (Two-Person)")}
@@ -249,46 +294,87 @@ export default function PlatformVerification({
         </div>
 
         {error && (
-          <div className="mt-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div
+            role="alert"
+            className="mt-3 rounded-lg border border-[var(--danger)] bg-[var(--elevated)] px-3 py-2 text-sm text-[var(--danger)]"
+          >
             {error}
           </div>
         )}
         {notice && (
-          <div className="mt-3 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          <div
+            role="status"
+            className="mt-3 rounded-lg border border-[var(--success)] bg-[var(--elevated)] px-3 py-2 text-sm text-[var(--success)]"
+          >
             {notice}
+          </div>
+        )}
+
+        {pendingDeviceAction && (
+          <div
+            role="alertdialog"
+            aria-modal="false"
+            className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--danger)] bg-[var(--elevated)] p-3 text-sm"
+          >
+            <span>
+              {t("დაადასტურეთ მოქმედება:", "Confirm action:")}{" "}
+              <strong>{pendingDeviceAction.label}</strong>
+            </span>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="danger"
+                disabled={busy}
+                onClick={() => {
+                  const action = pendingDeviceAction;
+                  setPendingDeviceAction(null);
+                  void handleDeviceControl(action.op, action.bindingId);
+                }}
+              >
+                {t("დადასტურება", "Confirm action")}
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={busy}
+                onClick={() => setPendingDeviceAction(null)}
+              >
+                {t("გაუქმება", "Cancel")}
+              </Button>
+            </div>
           </div>
         )}
 
         {policyData && (
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="rounded-lg border border-[var(--color-border)] p-3">
-              <div className="text-xs text-[var(--color-text-muted)]">
+            <div className="rounded-lg border border-[var(--border)] p-3">
+              <div className="text-xs text-[var(--muted)]">
                 {t("აქტიური ვერსია / პროფილი", "Active version / profile")}
               </div>
               <div className="mt-1 text-base font-semibold">
                 v{policyData.policy.version} · {policyData.policy.authProfile}
               </div>
-              <div className="mt-1 text-xs text-[var(--color-text-muted)]">
+              <div className="mt-1 text-xs text-[var(--muted)]">
                 {t(
                   "ERTAD-ის საკუთარი სუვერენული ბიომეტრიული ძრავა (გარე პროვაიდერების გარეშე)",
                   "ERTAD sovereign in-house biometric engine (no third-party providers)",
                 )}
               </div>
             </div>
-            <div className="rounded-lg border border-[var(--color-border)] p-3">
-              <div className="text-xs text-[var(--color-text-muted)]">
+            <div className="rounded-lg border border-[var(--border)] p-3">
+              <div className="text-xs text-[var(--muted)]">
                 {t("ბიომეტრიული TTL ჯანმრთელობა", "Biometric TTL purge health")}
               </div>
               <div className="mt-1 text-base font-semibold">
                 {policyData.policy.biometricTtlSeconds}s TTL
               </div>
-              <div className="mt-1 text-xs text-[var(--color-text-muted)]">
+              <div className="mt-1 text-xs text-[var(--muted)]">
                 {t("აქტიური სესიები", "Active sessions")}: {policyData.ttlHealth.activeBiometricSessions} ·{" "}
                 {t("გაწმენდილი", "Purged")}: {policyData.ttlHealth.purgedOnRead}
               </div>
             </div>
-            <div className="rounded-lg border border-[var(--color-border)] p-3">
-              <div className="text-xs text-[var(--color-text-muted)]">
+            <div className="rounded-lg border border-[var(--border)] p-3">
+              <div className="text-xs text-[var(--muted)]">
                 {t("მობილური მოწყობილობები (Zero-PII)", "Mobile device bindings (Zero-PII)")}
               </div>
               <div className="mt-1 text-base font-semibold">
@@ -301,7 +387,15 @@ export default function PlatformVerification({
                   variant="secondary"
                   className="mt-2"
                   disabled={busy}
-                  onClick={() => void handleDeviceControl("purge_biometrics")}
+                  onClick={() =>
+                    setPendingDeviceAction({
+                      op: "purge_biometrics",
+                      label: t(
+                        "ვადაგასული ბიომეტრიული სესიების წაშლა",
+                        "Purge expired biometric sessions",
+                      ),
+                    })
+                  }
                 >
                   <Trash2 className="mr-1.5 h-3.5 w-3.5" />
                   {t("ვადაგასული ბიომეტრიის წაშლა", "Purge expired biometrics")}
@@ -333,14 +427,9 @@ export default function PlatformVerification({
             type="number"
             min={60}
             max={86400}
-            value={String(draft.biometricTtlSeconds)}
+            value={ttlInput}
             disabled={!canPropose || busy}
-            onChange={(e) =>
-              setDraft((d) => ({
-                ...d,
-                biometricTtlSeconds: Number(e.target.value) || 900,
-              }))
-            }
+            onChange={(e) => setTtlInput(e.target.value)}
           />
 
           <Input
@@ -349,14 +438,9 @@ export default function PlatformVerification({
             step="0.01"
             min={0.3}
             max={0.99}
-            value={String(draft.livenessMinScore)}
+            value={livenessInput}
             disabled={!canPropose || busy}
-            onChange={(e) =>
-              setDraft((d) => ({
-                ...d,
-                livenessMinScore: Number(e.target.value) || 0.7,
-              }))
-            }
+            onChange={(e) => setLivenessInput(e.target.value)}
           />
 
           <div>
@@ -369,22 +453,27 @@ export default function PlatformVerification({
               step="0.01"
               min={0.15}
               max={0.99}
-              value={String(draft.faceMatchMinScore)}
+              value={faceMatchInput}
               disabled={!canPropose || busy}
-              onChange={(e) =>
-                setDraft((d) => ({
-                  ...d,
-                  faceMatchMinScore: Number(e.target.value) || 0.4,
-                }))
-              }
+              onChange={(e) => setFaceMatchInput(e.target.value)}
             />
-            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+            <p className="mt-1 text-xs text-[var(--muted)]">
               {t(
                 "ArcFace 512-D კოსინუსური მსგავსება: პირადობის ჩიპის ფოტოსთან ერთი და იგივე ადამიანი იღებს ~0.38–0.65 (38%–65%). 0.40 (40%) უზრუნველყოფს 54%-იანი რეალური თანხვედრის უპრობლემო გატარებას.",
                 "ArcFace 512-D cosine similarity: same person against an eID chip photo scores ~0.38–0.65 (38%–65%). 0.40 (40%) comfortably passes a 54% real match.",
               )}
             </p>
           </div>
+
+          <Input
+            label={t("მცდელობების ლიმიტი (1–10)", "Retry limit (1–10)")}
+            type="number"
+            min={1}
+            max={10}
+            value={retryInput}
+            disabled={!canPropose || busy}
+            onChange={(e) => setRetryInput(e.target.value)}
+          />
         </div>
 
         <div className="mt-4 flex flex-wrap gap-6 text-sm">
@@ -422,7 +511,7 @@ export default function PlatformVerification({
         </div>
 
         {canPropose && (
-          <div className="mt-5 grid grid-cols-1 gap-4 border-t border-[var(--color-border)] pt-4 md:grid-cols-2">
+          <div className="mt-5 grid grid-cols-1 gap-4 border-t border-[var(--border)] pt-4 md:grid-cols-2">
             <Select
               label={t("ცვლილების მიზეზი", "Change reason")}
               value={reason}
@@ -460,15 +549,24 @@ export default function PlatformVerification({
             {policyData.pendingProposals.map((prop) => (
               <div
                 key={prop.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--color-border)] p-3 text-sm"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border)] p-3 text-sm"
               >
                 <div>
                   <div className="font-medium">
-                    {prop.authProfile} · {prop.livenessProvider} / {prop.faceMatchProvider} · TTL{" "}
+                    {prop.authProfile} · Liveness {prop.livenessMinScore} ·{" "}
+                    {t("სახე", "Face")} {prop.faceMatchMinScore} ·{" "}
+                    {t("მცდელობა", "Retries")} {prop.retryLimit} · TTL{" "}
                     {prop.biometricTtlSeconds}s
                   </div>
-                  <div className="text-xs text-[var(--color-text-muted)]">
-                    v{prop.expectedVersion} → v{prop.expectedVersion + 1} · {prop.reason}
+                  <div className="text-xs text-[var(--muted)]">
+                    v{prop.expectedVersion} → v{prop.expectedVersion + 1} · {prop.reason} ·{" "}
+                    {[
+                      prop.requireDeviceAttestation && t("Attestation", "Attestation"),
+                      prop.requireNfc && "NFC",
+                      prop.requireGeorgianCitizen && "GE",
+                    ]
+                      .filter(Boolean)
+                      .join(" + ")}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -512,20 +610,20 @@ export default function PlatformVerification({
 
       <Card>
         <div className="flex items-center gap-2">
-          <Smartphone className="h-5 w-5 text-[var(--color-primary)]" />
+          <Smartphone className="h-5 w-5 text-[var(--primary)]" />
           <h3 className="text-base font-semibold">
             {t("მობილური მოწყობილობების მიბმა (Zero-PII)", "Mobile device bindings (Zero-PII)")}
           </h3>
         </div>
         {!devicesData || devicesData.devices.length === 0 ? (
-          <p className="mt-3 text-sm text-[var(--color-text-muted)]">
+          <p className="mt-3 text-sm text-[var(--muted)]">
             {t("დარეგისტრირებული მოწყობილობები ჯერ არ არის.", "No attested mobile devices yet.")}
           </p>
         ) : (
           <div className="mt-3 overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-[var(--color-border)] text-xs text-[var(--color-text-muted)]">
+                <tr className="border-b border-[var(--border)] text-xs text-[var(--muted)]">
                   <th className="py-2 pr-3">{t("პლატფორმა", "Platform")}</th>
                   <th className="py-2 pr-3">App ID</th>
                   <th className="py-2 pr-3">{t("ვერდიქტი", "Verdict")}</th>
@@ -535,7 +633,7 @@ export default function PlatformVerification({
               </thead>
               <tbody>
                 {devicesData.devices.map((dev) => (
-                  <tr key={dev.id} className="border-b border-[var(--color-border)] last:border-0">
+                  <tr key={dev.id} className="border-b border-[var(--border)] last:border-0">
                     <td className="py-2 pr-3 font-medium uppercase">{dev.platform}</td>
                     <td className="py-2 pr-3 font-mono text-xs">{dev.appId}</td>
                     <td className="py-2 pr-3">{dev.verdict}</td>
@@ -548,7 +646,13 @@ export default function PlatformVerification({
                               size="sm"
                               variant="secondary"
                               disabled={busy}
-                              onClick={() => void handleDeviceControl("hold", dev.id)}
+                              onClick={() =>
+                                setPendingDeviceAction({
+                                  op: "hold",
+                                  bindingId: dev.id,
+                                  label: `${t("მოწყობილობის შეჩერება", "Hold device")} (${dev.platform} · ${dev.appId})`,
+                                })
+                              }
                             >
                               {t("შეჩერება", "Hold")}
                             </Button>
@@ -567,7 +671,13 @@ export default function PlatformVerification({
                               size="sm"
                               variant="ghost"
                               disabled={busy}
-                              onClick={() => void handleDeviceControl("revoke", dev.id)}
+                              onClick={() =>
+                                setPendingDeviceAction({
+                                  op: "revoke",
+                                  bindingId: dev.id,
+                                  label: `${t("მოწყობილობის გაუქმება", "Revoke device")} (${dev.platform} · ${dev.appId})`,
+                                })
+                              }
                             >
                               {t("გაუქმება", "Revoke")}
                             </Button>

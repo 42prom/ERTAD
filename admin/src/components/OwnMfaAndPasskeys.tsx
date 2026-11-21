@@ -39,6 +39,11 @@ export default function OwnMfaAndPasskeys() {
   const [renameId, setRenameId] = useState("");
   const [renameLabel, setRenameLabel] = useState("");
   const [busy, setBusy] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<
+    | { kind: "totp_disable" }
+    | { kind: "passkey_remove"; passkeyId: string; label: string }
+    | null
+  >(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -218,6 +223,44 @@ export default function OwnMfaAndPasskeys() {
     <div className="space-y-4">
       {error && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
+      {confirmAction && (
+        <Card role="alertdialog" aria-modal="false" className="border-[var(--danger)] space-y-3">
+          <p className="font-medium">
+            {confirmAction.kind === "totp_disable"
+              ? t(
+                  "დარწმუნებული ხართ, რომ გსურთ ორფაქტორიანი აუთენტიფიკაციის (TOTP) განულება?",
+                  "Are you sure you want to reset your two-factor authenticator (TOTP) setup?",
+                )
+              : t(
+                  `დარწმუნებული ხართ, რომ გსურთ გასაღების წაშლა: "${confirmAction.label}"?`,
+                  `Are you sure you want to remove passkey "${confirmAction.label}"?`,
+                )}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="danger"
+              disabled={busy}
+              onClick={() => {
+                const action = confirmAction;
+                setConfirmAction(null);
+                if (action.kind === "totp_disable") void disableTotp();
+                else void removePasskey(action.passkeyId);
+              }}
+            >
+              {t("დიახ, დადასტურება", "Yes, confirm")}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={busy}
+              onClick={() => setConfirmAction(null)}
+            >
+              {t("გაუქმება", "Cancel")}
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {recoveryCodes && (
         <Card className="decision-receipt-card">
@@ -293,7 +336,7 @@ export default function OwnMfaAndPasskeys() {
                     type="button"
                     variant="secondary"
                     disabled={busy}
-                    onClick={() => void disableTotp()}
+                    onClick={() => setConfirmAction({ kind: "totp_disable" })}
                   >
                     {t("დაყენების განულება", "Reset TOTP setup")}
                   </Button>
@@ -444,7 +487,13 @@ export default function OwnMfaAndPasskeys() {
                       variant="ghost"
                       disabled={busy}
                       aria-label={`${t("წაშლა", "Remove")} ${pk.label}`}
-                      onClick={() => void removePasskey(pk.id)}
+                      onClick={() =>
+                        setConfirmAction({
+                          kind: "passkey_remove",
+                          passkeyId: pk.id,
+                          label: pk.label,
+                        })
+                      }
                     >
                       <Trash2 size={16} />
                     </Button>

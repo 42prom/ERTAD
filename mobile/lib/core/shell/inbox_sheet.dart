@@ -113,7 +113,12 @@ Future<void> openMemberDomainItem(
 
   if (lower == 'work') {
     Map<String, dynamic>? match;
-    for (final w in session.liveWorkItems) {
+    for (final w in [
+      ...session.liveWorkItems,
+      ...session.myWorkItems,
+      ...session.historyWorkItems,
+      ...session.reviewWorkItems,
+    ]) {
       if (w['id']?.toString() == id) {
         match = w;
         break;

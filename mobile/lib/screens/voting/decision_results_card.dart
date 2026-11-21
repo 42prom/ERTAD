@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/feedback/ertad_feedback.dart';
-import '../../core/network/mobile_api_client.dart';
 import '../../core/shell/shell_l10n.dart';
 import '../../core/state/shell_providers.dart';
 import '../../core/theme/ertad_theme.dart';
@@ -257,12 +256,7 @@ class _DecisionResultsCardState extends ConsumerState<DecisionResultsCard> {
   }
 
   Future<void> _loadData() async {
-    final savedCode = await VoteReceiptStore.getReceipt(widget.poll.id);
-    final effectiveCode =
-        savedCode ??
-        (widget.poll.hasVoted
-            ? VoteReceiptStore.fallbackDeterministicCode(widget.poll.id)
-            : null);
+    final effectiveCode = await VoteReceiptStore.getReceipt(widget.poll.id);
 
     final session = ref.read(shellSessionProvider);
     final orgId = session.activeOrgId;
@@ -276,10 +270,12 @@ class _DecisionResultsCardState extends ConsumerState<DecisionResultsCard> {
       return;
     }
     try {
-      final detail = await MobileApiClient().fetchDecisionDetail(
-        organizationId: orgId,
-        decisionId: widget.poll.id,
-      );
+      final detail = await ref
+          .read(mobileApiClientProvider)
+          .fetchDecisionDetail(
+            organizationId: orgId,
+            decisionId: widget.poll.id,
+          );
       if (!mounted) return;
       final suppressed = detail['resultsSuppressed'] == true;
       final rawResults = detail['results'];
@@ -341,10 +337,10 @@ class _DecisionResultsCardState extends ConsumerState<DecisionResultsCard> {
     final rawClean = rawCode.replaceAll('-', '').toUpperCase();
     final isVerifiedInTally =
         widget.isClosed &&
-        (_talliedReceipts.isEmpty ||
-            _talliedReceipts.any(
-              (r) => r.replaceAll('-', '').toUpperCase() == rawClean,
-            ));
+        _talliedReceipts.isNotEmpty &&
+        _talliedReceipts.any(
+          (r) => r.replaceAll('-', '').toUpperCase() == rawClean,
+        );
 
     return ErtadSurfaceCard(
       padding: const EdgeInsets.all(16),
@@ -650,14 +646,21 @@ class _DecisionResultsCardState extends ConsumerState<DecisionResultsCard> {
                 ..._surveyQuestions.map((q) {
                   final qTitle =
                       q['title']?.toString() ?? q['questionText']?.toString() ?? '';
-                  final opts = (q['options'] as List? ?? const [])
+                  final opts = ((q['results'] ?? q['options']) as List? ?? const [])
                       .whereType<Map>()
                       .map((e) => Map<String, dynamic>.from(e))
+                      .toList();
+                  final answered = (q['answered'] as num?)?.toInt();
+                  final average = q['average'];
+                  final texts = (q['texts'] as List? ?? const [])
+                      .map((e) => e.toString())
+                      .where((s) => s.isNotEmpty)
                       .toList();
                   final qSum = opts.fold<int>(
                     0,
                     (acc, o) => acc + ((o['count'] ?? o['votes'] ?? 0) as num).toInt(),
                   );
+                  final denom = qSum > 0 ? qSum : (answered ?? 0);
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 14),
                     child: Column(
@@ -669,13 +672,27 @@ class _DecisionResultsCardState extends ConsumerState<DecisionResultsCard> {
                             fontWeight: FontWeight.w700,
                           ),
                         ),
+                        if (answered != null || average != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            [
+                              if (answered != null)
+                                '${shellTr(context, 'survey_responses_label', fallback: 'Responses')}: $answered',
+                              if (average != null)
+                                '${shellTr(context, 'survey_average_label', fallback: 'Average')}: $average',
+                            ].join(' · '),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: p.muted,
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 8),
                         ...opts.map((o) {
                           final oLabel =
                               o['label']?.toString() ?? o['text']?.toString() ?? '';
                           final count =
                               ((o['count'] ?? o['votes'] ?? 0) as num).toInt();
-                          final ratio = qSum > 0 ? count / qSum : 0.0;
+                          final ratio = denom > 0 ? count / denom : 0.0;
                           final pct = (ratio * 100).round();
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 8),
@@ -715,6 +732,18 @@ class _DecisionResultsCardState extends ConsumerState<DecisionResultsCard> {
                             ),
                           );
                         }),
+                        if (texts.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          ...texts.map(
+                            (txt) => Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: Text(
+                                '• $txt',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   );

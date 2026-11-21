@@ -37,6 +37,7 @@ export default function Members() {
     [page, setPage] = useState(1),
     [selected, setSelected] = useState(""),
     [detail, setDetail] = useState<MemberDetail | null>(null),
+    [revealedMemberId, setRevealedMemberId] = useState(""),
     [workPage, setWorkPage] = useState(1);
   const [loading, setLoading] = useState(true),
     [error, setError] = useState("");
@@ -163,7 +164,15 @@ export default function Members() {
         }
       })
       .catch((e) => {
-        if (live) setError(failure(e));
+        if (live) {
+          setError(failure(e));
+          if (
+            (e as { response?: { status?: number } }).response?.status === 403 &&
+            selected
+          ) {
+            setDetail(null);
+          }
+        }
       })
       .finally(() => {
         if (live) setLoading(false);
@@ -177,8 +186,6 @@ export default function Members() {
   }, [detail]);
   useEffect(() => {
     const refresh = () => {
-      setRows(null);
-      setDetail(null);
       setRevision((v) => v + 1);
     };
     const timer = window.setInterval(refresh, 60000);
@@ -488,13 +495,31 @@ export default function Members() {
             <>
               <Card>
                 <div className="flex flex-wrap items-start gap-4">
-                  {detail.verification?.portraitDataUrl && (
-                    <img
-                      src={detail.verification.portraitDataUrl}
-                      alt={name(detail)}
-                      className="h-20 w-20 rounded-xl border border-[var(--border)] object-cover"
-                    />
-                  )}
+                  {detail.verification?.portraitDataUrl && (() => {
+                    const revealPortrait = revealedMemberId === detail.id;
+                    return (
+                      <div className="flex flex-col items-start gap-1.5">
+                        <img
+                          src={detail.verification.portraitDataUrl}
+                          alt={name(detail)}
+                          className={`h-20 w-20 rounded-xl border border-[var(--border)] object-cover transition ${revealPortrait ? "" : "blur-md"}`}
+                        />
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() =>
+                            setRevealedMemberId((id) =>
+                              id === detail.id ? "" : detail.id,
+                            )
+                          }
+                        >
+                          {revealPortrait
+                            ? t("ფოტოს დამალვა", "Hide photo")
+                            : t("ფოტოს ჩვენება", "Show photo")}
+                        </Button>
+                      </div>
+                    );
+                  })()}
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2
@@ -539,15 +564,24 @@ export default function Members() {
                         {typeof detail.verification.livenessScore ===
                           "number" && (
                           <>
-                            Liveness:{" "}
+                            {t("სიცოცხლისუნარიანობა", "Liveness")}:{" "}
                             <strong>
                               {Math.round(
                                 detail.verification.livenessScore * 100,
                               )}
                               %
                             </strong>
+                            {" · "}
                           </>
                         )}
+                        {detail.verification.sodCscaVerified
+                          ? t("NFC SOD/CSCA: დადასტურებული", "NFC SOD/CSCA: verified")
+                          : t("NFC SOD/CSCA: არ არის", "NFC SOD/CSCA: unverified")}
+                        {detail.verification.verifiedAt
+                          ? ` · ${new Date(detail.verification.verifiedAt).toLocaleDateString(
+                              language === "ka" ? "ka-GE" : "en-GB",
+                            )}`
+                          : ""}
                       </p>
                     )}
                   </div>

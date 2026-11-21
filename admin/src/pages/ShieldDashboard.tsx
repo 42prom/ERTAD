@@ -207,7 +207,7 @@ export default function ShieldDashboard({
                     <Tooltip />
                     <Bar
                       dataKey="total"
-                      fill="var(--accent, #2563eb)"
+                      fill="var(--primary)"
                       radius={[4, 4, 0, 0]}
                     />
                   </BarChart>

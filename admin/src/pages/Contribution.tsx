@@ -563,7 +563,7 @@ export default function Contribution() {
                     <Tooltip />
                     <Bar
                       dataKey="points"
-                      fill="var(--accent, #2563eb)"
+                      fill="var(--primary)"
                       radius={[4, 4, 0, 0]}
                     />
                   </BarChart>

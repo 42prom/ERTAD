@@ -231,6 +231,15 @@ export function createLocalMobileRouter(
   // Protected member/group-manager mobile API surface
   router.use(requireMobileBearer);
 
+  router.post('/logout', async (req, res, next) => {
+    try {
+      await revokeAdminSession(req.adminSession!.sessionId);
+      res.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   router.post('/dev/logout', async (req, res, next) => {
     try {
       await revokeAdminSession(req.adminSession!.sessionId);
@@ -251,7 +260,7 @@ export function createLocalMobileRouter(
       const persona = fixture?.personas.find((p) => p.id === req.adminUser?.id);
       if (!persona) throw createError('Forbidden', 403);
       await pool.query(
-        "UPDATE admin_sessions SET step_up_expires_at = clock_timestamp() + interval '5 minutes' WHERE id = $1 AND revoked_at IS NULL",
+        "UPDATE admin_sessions SET step_up_expires_at = LEAST(absolute_expires_at, clock_timestamp() + interval '5 minutes') WHERE id = $1 AND revoked_at IS NULL",
         [req.adminSession!.sessionId]
       );
       res.json({ ok: true });
@@ -358,7 +367,7 @@ export function createLocalMobileRouter(
         }
         const reason = gate?.reason ?? 'BIOMETRIC_VERIFICATION_REQUIRED';
         res.status(403).set('Cache-Control', 'no-store').json({
-          error: reason,
+          error: { code: reason, message: 'Biometric verification required' },
           code: reason,
         });
       })

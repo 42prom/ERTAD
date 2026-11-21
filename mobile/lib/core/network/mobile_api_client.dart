@@ -96,6 +96,13 @@ class MobileApiClient {
           handler.next(options);
         },
         onError: (error, handler) {
+          if (error.response?.statusCode == 401) {
+            final reqPath = error.requestOptions.path;
+            if (!reqPath.endsWith('/mobile/dev/login') &&
+                !reqPath.contains('/mobile/m4/')) {
+              clearStoredSession().ignore();
+            }
+          }
           handler.next(error);
         },
       ),
@@ -187,6 +194,18 @@ class MobileApiClient {
       return Map<String, dynamic>.from(body['persona'] as Map? ?? const {});
     } catch (e) {
       _rethrow(e);
+    }
+  }
+
+  Future<void> logout() async {
+    try {
+      if (await hasStoredSession()) {
+        await _dio.post<void>('/mobile/logout');
+      }
+    } catch (_) {
+      // Clear local session credentials regardless of transport failure.
+    } finally {
+      await clearStoredSession();
     }
   }
 

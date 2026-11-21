@@ -1037,7 +1037,7 @@ export default function Decisions() {
                     <Tooltip />
                     <Bar
                       dataKey="votes"
-                      fill="var(--accent, #2563eb)"
+                      fill="var(--primary)"
                       radius={[0, 4, 4, 0]}
                     />
                   </BarChart>
@@ -1070,50 +1070,6 @@ export default function Decisions() {
                     r.votes ===
                     Math.max(...detail.results!.map((v) => v.votes)),
                 ).length > 1 && <p>{t("შედეგი: ფრე", "Result: tie")}</p>}
-              {detail.privacy === "anonymous" &&
-                detail.receiptDigests &&
-                detail.receiptDigests.length > 0 && (
-                  <Card className="decision-receipt-verify">
-                    <h4>
-                      {t(
-                        "ანონიმური ბიულეტენის გადამოწმება",
-                        "Verify ballot receipt",
-                      )}{" "}
-                      ({detail.receiptDigests.length})
-                    </h4>
-                    <Input
-                      label={t("ქვითრის 16-ნიშნა კოდი", "16-char receipt digest")}
-                      placeholder="e.g. a1b2c3d4e5f60718"
-                      value={verifyDigest}
-                      onChange={(e) => setVerifyDigest(e.target.value)}
-                    />
-                    {verifyDigest.trim().length > 0 && (
-                      <p role="status">
-                        {detail.receiptDigests.includes(
-                          verifyDigest.trim().toLowerCase(),
-                        )
-                          ? t(
-                              "დადასტურებულია: ქვითარი ჩართულია დათვლილ ანონიმურ ბიულეტენებში.",
-                              "Verified: receipt included in final tallied ballots.",
-                            )
-                          : t(
-                              "ქვითარი ვერ მოიძებნა დათვლილ ბიულეტენებში.",
-                              "Receipt digest not found in tallied ballots.",
-                            )}
-                      </p>
-                    )}
-                    <details>
-                      <summary>
-                        {t("დათვლილი ქვითრების სია", "Tallied receipt digests")}
-                      </summary>
-                      <div className="decision-receipt-list">
-                        {detail.receiptDigests.map((digest) => (
-                          <code key={digest}>{digest}</code>
-                        ))}
-                      </div>
-                    </details>
-                  </Card>
-                )}
             </>
           ) : (
             <p>
@@ -1133,6 +1089,54 @@ export default function Decisions() {
                     )}
             </p>
           )}
+          {!detail.resultsSuppressed &&
+            (detail.surveyResults || detail.results) &&
+            detail.privacy === "anonymous" &&
+            detail.receiptDigests &&
+            detail.receiptDigests.length > 0 && (
+              <Card className="decision-receipt-verify">
+                <h4>
+                  {t(
+                    "ანონიმური ბიულეტენის გადამოწმება",
+                    "Verify ballot receipt",
+                  )}{" "}
+                  ({detail.receiptDigests.length})
+                </h4>
+                <Input
+                  label={t("ქვითრის 16-ნიშნა კოდი", "16-char receipt digest")}
+                  placeholder="e.g. a1b2-c3d4-e5f6-0718"
+                  value={verifyDigest}
+                  onChange={(e) => setVerifyDigest(e.target.value)}
+                />
+                {verifyDigest.replace(/[-\s]/g, "").length > 0 && (
+                  <p role="status">
+                    {detail.receiptDigests.some(
+                      (digest) =>
+                        digest.replace(/[-\s]/g, "").toLowerCase() ===
+                        verifyDigest.replace(/[-\s]/g, "").toLowerCase(),
+                    )
+                      ? t(
+                          "დადასტურებულია: ქვითარი ჩართულია დათვლილ ანონიმურ ბიულეტენებში.",
+                          "Verified: receipt included in final tallied ballots.",
+                        )
+                      : t(
+                          "ქვითარი ვერ მოიძებნა დათვლილ ბიულეტენებში.",
+                          "Receipt digest not found in tallied ballots.",
+                        )}
+                  </p>
+                )}
+                <details>
+                  <summary>
+                    {t("დათვლილი ქვითრების სია", "Tallied receipt digests")}
+                  </summary>
+                  <div className="decision-receipt-list">
+                    {detail.receiptDigests.map((digest) => (
+                      <code key={digest}>{digest}</code>
+                    ))}
+                  </div>
+                </details>
+              </Card>
+            )}
           {detail.canVote && detail.kind === "survey" && (
             <SurveyResponse
               questions={detail.questions ?? []}

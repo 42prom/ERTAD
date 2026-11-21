@@ -146,9 +146,9 @@ export async function createAdminSession(
     await client.query(
       `INSERT INTO admin_sessions
          (admin_user_id, token_hash, csrf_token_hash, idle_expires_at,
-          absolute_expires_at, csrf_token_encrypted, policy_idle_seconds, policy_version, client_label)
+          absolute_expires_at, csrf_token_encrypted, policy_idle_seconds, policy_version, client_label, session_kind)
        VALUES ($1, $2, $3, NOW() + ($4 * INTERVAL '1 second'),
-               NOW() + ($5 * INTERVAL '1 second'), $6, $4, $7, $8)`,
+               NOW() + ($5 * INTERVAL '1 second'), $6, $4, $7, $8, 'web')`,
       [
         adminUserId,
         tokenHash,
@@ -226,9 +226,9 @@ export async function createMobileBearerSession(
     await client.query(
       `INSERT INTO admin_sessions
          (admin_user_id, token_hash, csrf_token_hash, idle_expires_at,
-          absolute_expires_at, csrf_token_encrypted, policy_idle_seconds, policy_version, client_label)
+          absolute_expires_at, csrf_token_encrypted, policy_idle_seconds, policy_version, client_label, session_kind)
        VALUES ($1, $2, $3, NOW() + ($4 * INTERVAL '1 second'),
-               NOW() + ($5 * INTERVAL '1 second'), $6, $4, $7, $8)`,
+               NOW() + ($5 * INTERVAL '1 second'), $6, $4, $7, $8, 'mobile')`,
       [
         adminUserId,
         tokenHash,
@@ -275,6 +275,7 @@ export async function authenticateMobileBearerSession(
        FROM admin_users AS u
        JOIN member_users AS mu ON mu.web_account_id = u.id
       WHERE s.token_hash = $1
+        AND s.session_kind = 'mobile'
         AND s.admin_user_id = u.id
         AND s.revoked_at IS NULL
         AND s.idle_expires_at > NOW()
@@ -317,6 +318,7 @@ export async function authenticateAdminSession(req: Request): Promise<AdminSessi
             )
        FROM admin_users AS u
       WHERE s.token_hash = $1
+        AND s.session_kind = 'web'
         AND s.admin_user_id = u.id
         AND s.revoked_at IS NULL
         AND s.idle_expires_at > NOW()

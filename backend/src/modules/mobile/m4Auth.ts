@@ -58,8 +58,6 @@ async function evaluateInHouseFaceMatch(
   const urls = [
     process.env.BIOMETRIC_SERVICE_URL?.trim(),
     'http://127.0.0.1:18000',
-    'http://127.0.0.1:8001',
-    'http://127.0.0.1:8000',
   ].filter((u): u is string => Boolean(u));
 
   for (const baseUrl of urls) {
@@ -199,7 +197,7 @@ export function createMobileM4Router(): Router {
     try {
       const session = req.adminSession!;
       const parsed = challengeSchema.parse(req.body);
-      const nonce = randomBytes(24).toString('hex');
+      const nonce = randomBytes(32).toString('hex');
       const result = await retryDeadlockedTransaction(async (client) => {
         const q = await client.query<{ result: unknown }>(
           'SELECT ertad.mobile_m4_command($1, $2, $3, $4) AS result',
@@ -246,7 +244,7 @@ export function createMobileM4Router(): Router {
           throw new ReviewError(403, 'ATTESTATION_FAILED');
         }
         mappedVerdict =
-          att.verdict === 'MEETS_STRONG'
+          att.verdict === 'MEETS_STRONG' || att.verdict === 'HARDWARE_BACKED'
             ? 'strong'
             : att.verdict === 'MEETS_BASIC'
               ? 'basic'
@@ -390,8 +388,17 @@ export function createMobileM4Router(): Router {
       let effectiveFaceMatchScore = parsed.faceMatchScore;
       if (parsed.selfieBase64 && rawPortrait.length >= 128) {
         const matchEval = await evaluateInHouseFaceMatch(parsed.selfieBase64, rawPortrait);
-        if (matchEval.evaluated && typeof matchEval.score === 'number') {
-          effectiveFaceMatchScore = matchEval.score;
+        if (matchEval.evaluated) {
+          effectiveFaceMatchScore = matchEval.error
+            ? 0
+            : typeof matchEval.score === 'number'
+              ? matchEval.score
+              : 0;
+        } else if (
+          process.env.NODE_ENV === 'production' ||
+          process.env.ERTAD_REQUIRE_INHOUSE_BIOMETRIC === 'true'
+        ) {
+          throw new ReviewError(503, 'BIOMETRIC_SERVICE_UNAVAILABLE');
         }
       }
 

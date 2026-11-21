@@ -88,6 +88,10 @@ export async function memberDirectoryCommand(
               const dec = decryptSensitiveValue(raw.portraitCipher);
               if (dec && dec.length >= 16) {
                 portraitDataUrl = `data:image/jpeg;base64,${dec}`;
+                await SecurityService.logAuditEventInTransaction(client, 'MEMBER_PORTRAIT_VIEWED', {
+                  organizationId: args.organizationId,
+                  targetMemberId: args.memberId,
+                });
               }
             } catch {
               portraitDataUrl = null;

@@ -132,7 +132,11 @@ try {
         .get(base + "/platform/overview")
         .expect("Cache-Control", "no-store")
         .expect(200);
-      assert.equal(response.body.migrations, 69);
+      const { readdirSync } = await import("node:fs");
+      const expectedMigrations = readdirSync("backend/db/foundation").filter((f) =>
+        /^\d{4}_[a-z0-9_]+\.sql$/.test(f),
+      ).length;
+      assert.equal(response.body.migrations, expectedMigrations);
       assert.equal(response.body.ownActiveSessions, 1);
       assert.equal(response.body.productionEnabled, false);
       assert.equal(response.body.dependencies.postgres, "ready");

@@ -778,26 +778,41 @@ class _ChannelThreadScreenState extends ConsumerState<ChannelThreadScreen> {
                           )
                         : Theme.of(context).textTheme.bodyMedium,
                   ),
-                  if (!removed &&
-                      (msg['attachmentId']?.toString().isNotEmpty ??
-                          false)) ...[
-                    const SizedBox(height: 8),
-                    ActionChip(
-                      avatar: Icon(
-                        Icons.image_outlined,
-                        size: 16,
-                        color: p.primary,
-                      ),
-                      label: Text(
-                        shellTr(
-                          context,
-                          'msg_view_attachment',
-                          fallback: 'View attachment',
-                        ),
-                      ),
-                      onPressed: () => _previewAttachment(
-                        msg['attachmentId']!.toString(),
-                      ),
+                  if (!removed) ...[
+                    Builder(
+                      builder: (context) {
+                        final attMap = msg['attachment'] is Map
+                            ? msg['attachment'] as Map
+                            : null;
+                        final attId =
+                            attMap?['id']?.toString() ??
+                            msg['attachmentId']?.toString() ??
+                            '';
+                        if (attId.isEmpty) return const SizedBox.shrink();
+                        final mediaType =
+                            attMap?['mediaType']?.toString() ?? '';
+                        final bytes = (attMap?['bytes'] as num?)?.toInt();
+                        final isPdf = mediaType == 'application/pdf';
+                        final sizeText = bytes != null
+                            ? ' (${(bytes / 1024).ceil()} KB)'
+                            : '';
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: ActionChip(
+                            avatar: Icon(
+                              isPdf
+                                  ? Icons.picture_as_pdf_outlined
+                                  : Icons.image_outlined,
+                              size: 16,
+                              color: p.primary,
+                            ),
+                            label: Text(
+                              '${shellTr(context, 'msg_view_attachment', fallback: isPdf ? 'PDF' : 'View attachment')}$sizeText',
+                            ),
+                            onPressed: () => _previewAttachment(attId),
+                          ),
+                        );
+                      },
                     ),
                   ],
                   if (reactions.isNotEmpty && !removed) ...[

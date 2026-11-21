@@ -81,7 +81,7 @@ function mapSqlError(error: unknown, next: NextFunction): void {
     next(new ReviewError(428, 'ADMIN_STEP_UP_REQUIRED'));
     return;
   }
-  if (code === '40001' || code === '23505') {
+  if (code === '40001' || code === '23505' || code === 'P0409') {
     next(new ReviewError(409, 'POLICY_CONFLICT'));
     return;
   }
@@ -219,7 +219,7 @@ export function createVerificationGovernanceRouter(): Router {
       const session = req.adminSession!;
       const result = await retryDeadlockedTransaction(async (client) => {
         const q = await client.query<{ result: unknown }>(
-          'SELECT ertad.platform_integration_command($1, $2, $3, $4) AS result',
+          'SELECT ertad.platform_external_integration_command($1, $2, $3, $4) AS result',
           [session.sessionId, session.sessionTokenHash, 'read', JSON.stringify({})]
         );
         return q.rows[0]?.result;
@@ -237,7 +237,7 @@ export function createVerificationGovernanceRouter(): Router {
       const secretCipher = parsed.secret ? encryptSensitiveValue(parsed.secret) : null;
       const result = await retryDeadlockedTransaction(async (client) => {
         const q = await client.query<{ result: unknown }>(
-          'SELECT ertad.platform_integration_command($1, $2, $3, $4) AS result',
+          'SELECT ertad.platform_external_integration_command($1, $2, $3, $4) AS result',
           [
             session.sessionId,
             session.sessionTokenHash,
@@ -276,7 +276,7 @@ export function createVerificationGovernanceRouter(): Router {
       const parsed = integrationReviewSchema.parse(req.body);
       const result = await retryDeadlockedTransaction(async (client) => {
         const q = await client.query<{ result: unknown }>(
-          'SELECT ertad.platform_integration_command($1, $2, $3, $4) AS result',
+          'SELECT ertad.platform_external_integration_command($1, $2, $3, $4) AS result',
           [session.sessionId, session.sessionTokenHash, 'review', JSON.stringify(parsed)]
         );
         await SecurityService.logAuditEventInTransaction(client, 'PLATFORM_INTEGRATION_REVIEW', {

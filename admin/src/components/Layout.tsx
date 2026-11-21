@@ -293,14 +293,26 @@ export default function Layout() {
     }
   };
 
-  const cancelStepUp = () => {
+  const cancelStepUp = useCallback(() => {
     stepUpRequest?.reject(
       new Error("Administrator cancelled re-authentication"),
     );
     setStepUpRequest(null);
     setStepUpPassword("");
     setStepUpError("");
-  };
+  }, [stepUpRequest]);
+
+  useEffect(() => {
+    if (!stepUpRequest) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        cancelStepUp();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [stepUpRequest, cancelStepUp]);
 
   const getBreadcrumbs = () => {
     const paths = location.pathname.split("/").filter(Boolean);
@@ -648,18 +660,33 @@ export default function Layout() {
               className="review-page"
               role={reviewError ? "alert" : "status"}
             >
-              {reviewError
-                ? language === "ka"
-                  ? "წვდომა ვერ შემოწმდა. განაახლეთ გვერდი."
-                  : "Could not check access. Refresh the page."
-                : language === "ka"
-                  ? "წვდომა მოწმდება…"
-                  : "Checking access…"}
+              <p>
+                {reviewError
+                  ? language === "ka"
+                    ? "წვდომა ვერ შემოწმდა. განაახლეთ გვერდი."
+                    : "Could not check access. Refresh the page."
+                  : language === "ka"
+                    ? "წვდომა მოწმდება…"
+                    : "Checking access…"}
+              </p>
+              {reviewError && (
+                <p>
+                  <Link className="subtle-link" to="/account">
+                    {language === "ka"
+                      ? "პირად ანგარიშზე და უსაფრთხოებაზე გადასვლა"
+                      : "Open my account and security"}
+                  </Link>
+                </p>
+              )}
             </div>
           ) : platformAccess.technicalAccount &&
             location.pathname !== "/platform" &&
             !location.pathname.startsWith("/platform/") ? (
             <Navigate to="/platform" replace />
+          ) : !platformAccess.technicalAccount &&
+            (location.pathname === "/platform" ||
+              location.pathname.startsWith("/platform/")) ? (
+            <Navigate to="/dashboard" replace />
           ) : (
             <Outlet
               context={{
@@ -701,28 +728,31 @@ export default function Layout() {
         >
           <form
             onSubmit={submitStepUp}
-            className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl"
+            className="w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 text-[var(--text)] shadow-2xl"
           >
             <h2
               id="step-up-title"
-              className="text-lg font-semibold text-gray-900"
+              className="text-lg font-semibold text-[var(--text)]"
             >
               {language === "ka"
                 ? "მოქმედების დადასტურება"
                 : "Confirm sensitive operation"}
             </h2>
-            <p className="mt-2 text-sm text-gray-600">
+            <p className="mt-2 text-sm text-[var(--muted)]">
               {language === "ka"
                 ? "ხელახლა შეიყვანე პაროლი. დადასტურება მოქმედებს ხუთი წუთით."
                 : "Re-enter your password. Approval remains valid for five minutes."}
             </p>
             {stepUpError && (
-              <div className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
+              <div
+                role="alert"
+                className="mt-4 rounded-md border border-[var(--danger)] bg-[var(--elevated)] p-3 text-sm text-[var(--danger)]"
+              >
                 {stepUpError}
               </div>
             )}
             <label
-              className="mt-5 block text-sm font-medium text-gray-700"
+              className="mt-5 block text-sm font-medium text-[var(--text)]"
               htmlFor="step-up-password"
             >
               {language === "ka" ? "პაროლი" : "Password"}
@@ -735,14 +765,14 @@ export default function Layout() {
               required
               value={stepUpPassword}
               onChange={(event) => setStepUpPassword(event.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
+              className="mt-1 block w-full rounded-md border border-[var(--border)] bg-[var(--elevated)] px-3 py-2 text-[var(--text)] shadow-sm"
             />
             <div className="mt-6 flex justify-end gap-3">
               <button
                 type="button"
                 onClick={cancelStepUp}
                 disabled={stepUpLoading}
-                className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700"
+                className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--text)]"
               >
                 {language === "ka" ? "გაუქმება" : "Cancel"}
               </button>
@@ -751,7 +781,13 @@ export default function Layout() {
                 disabled={stepUpLoading || !stepUpPassword}
                 className="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
               >
-                {stepUpLoading ? "Verifying…" : "Confirm and continue"}
+                {stepUpLoading
+                  ? language === "ka"
+                    ? "მოწმდება…"
+                    : "Verifying…"
+                  : language === "ka"
+                    ? "დადასტურება და გაგრძელება"
+                    : "Confirm and continue"}
               </button>
             </div>
           </form>

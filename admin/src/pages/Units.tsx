@@ -373,10 +373,19 @@ export default function Units() {
                 )}
               </h2>
               <p>
-                {label(
-                  "Find the region or parent group below and select Create group here. Enter a name and reason; a different authorized administrator must approve the request.",
-                  "ქვემოთ მოძებნე რეგიონი ან ზედა ჯგუფი და აირჩიე „აქ ჯგუფის შექმნა“. მიუთითე სახელი და მიზეზი; მოთხოვნა სხვა უფლებამოსილმა ადმინისტრატორმა უნდა დაამტკიცოს.",
-                )}
+                {!loading &&
+                data &&
+                !(data.items as UnitRow[]).some(
+                  (u) => "canPropose" in u && u.canPropose,
+                )
+                  ? label(
+                      "You do not have permission to propose a new group in this organization.",
+                      "ამ ორგანიზაციაში ახალი ჯგუფის შეთავაზების უფლება არ გაქვთ.",
+                    )
+                  : label(
+                      "Find the region or parent group below and select Create group here. Enter a name and reason; a different authorized administrator must approve the request.",
+                      "ქვემოთ მოძებნე რეგიონი ან ზედა ჯგუფი და აირჩიე „აქ ჯგუფის შექმნა“. მიუთითე სახელი და მიზეზი; მოთხოვნა სხვა უფლებამოსილმა ადმინისტრატორმა უნდა დაამტკიცოს.",
+                    )}
               </p>
             </Card>
           )}

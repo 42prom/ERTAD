@@ -71,7 +71,9 @@ try {
   };
   assert(personasBody.enabled, 'Expected mobile personas enabled');
   const memberPersona = personasBody.personas.find((p) => p.roleKind === 'member');
-  const managerPersona = personasBody.personas.find((p) => p.roleKind === 'group_manager');
+  const managerPersona = personasBody.personas.find((p) => p.roleKind === 'group_manager') as
+    | { id: string; unitId: string; roleKind: string; label: string }
+    | undefined;
   assert(memberPersona && managerPersona, 'Expected member & group_manager personas');
 
   // 3. Log in as Member
@@ -92,12 +94,50 @@ try {
   };
 
   // 4. Member workspace bootstrap succeeds with real seeded counts
-  const bootRes = await fetch(`${base}/workspace/bootstrap`, { headers: memberHeaders });
+  let bootRes = await fetch(`${base}/workspace/bootstrap`, { headers: memberHeaders });
   assert(bootRes.status === 200, `Bootstrap failed: ${bootRes.status}`);
-  const boot = (await bootRes.json()) as {
+  let boot = (await bootRes.json()) as {
     summary: { openDecisions: number; openWork: number; upcomingEvents48h: number };
     channels: Array<{ id: string }>;
   };
+  if (boot.summary.upcomingEvents48h < 1) {
+    const seedMgrRes = await fetch(`${base}/dev/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ personaId: managerPersona.id }),
+    });
+    assert(seedMgrRes.status === 200, `Manager bootstrap event login failed: ${seedMgrRes.status}`);
+    const seedMgr = (await seedMgrRes.json()) as { sessionToken: string; csrfToken: string };
+    const seedHeaders = {
+      Authorization: `Bearer ${seedMgr.sessionToken}`,
+      'X-Mobile-CSRF': seedMgr.csrfToken,
+      'Content-Type': 'application/json',
+    };
+    await fetch(`${base}/dev/step-up`, { method: 'POST', headers: seedHeaders, body: '{}' });
+    const startAt = new Date(Date.now() + 12 * 3600_000).toISOString();
+    const endAt = new Date(Date.now() + 15 * 3600_000).toISOString();
+    const createEvRes = await fetch(`${base}/work/event_create`, {
+      method: 'POST',
+      headers: seedHeaders,
+      body: JSON.stringify({
+        key: randomUUID(),
+        organizationId: personasBody.organizationId,
+        unitId: managerPersona.unitId,
+        title: 'ჯგუფის ღია სამუშაო შეხვედრა',
+        description: 'საორგანიზაციო შეხვედრა და QR check-in.',
+        location: 'საბურთალოს სივრცე · პეკინის 24',
+        startsAt: startAt,
+        endsAt: endAt,
+        capacityLimit: 25,
+        contributionRuleId: null,
+      }),
+    });
+    assert(createEvRes.status === 200, `Seed upcoming event failed: ${createEvRes.status}`);
+    await fetch(`${base}/dev/logout`, { method: 'POST', headers: seedHeaders });
+    bootRes = await fetch(`${base}/workspace/bootstrap`, { headers: memberHeaders });
+    assert(bootRes.status === 200, `Bootstrap retry failed: ${bootRes.status}`);
+    boot = (await bootRes.json()) as typeof boot;
+  }
   assert(boot.summary.openDecisions >= 3, 'Expected >=3 open seeded decisions');
   assert(boot.summary.openWork >= 1, 'Expected >=1 open seeded work item');
   assert(boot.summary.upcomingEvents48h >= 1, 'Expected >=1 upcoming event');

@@ -19,6 +19,10 @@ class SecureStorageService {
   static const _legacyCredentialSecretKey = 'credential_secret';
   static const _userIdKey = 'user_id';
   static const _installationIdKey = 'installation_id';
+  static const _firstNameKey = 'profile_first_name';
+  static const _lastNameKey = 'profile_last_name';
+  static const _birthDateKey = 'profile_birth_date';
+  static const _genderKey = 'profile_gender';
 
   // --- Credential (session JWT / attestation token) ---
 
@@ -62,6 +66,24 @@ class SecureStorageService {
   Future<void> saveInstallationId(String installationId) async {
     await _storage.write(key: _installationIdKey, value: installationId);
   }
+
+  // --- Protected profile PII ---
+
+  Future<String?> getFirstName() => _storage.read(key: _firstNameKey);
+  Future<void> saveFirstName(String value) =>
+      _storage.write(key: _firstNameKey, value: value);
+
+  Future<String?> getLastName() => _storage.read(key: _lastNameKey);
+  Future<void> saveLastName(String value) =>
+      _storage.write(key: _lastNameKey, value: value);
+
+  Future<String?> getBirthDateIso() => _storage.read(key: _birthDateKey);
+  Future<void> saveBirthDateIso(String iso) =>
+      _storage.write(key: _birthDateKey, value: iso);
+
+  Future<String?> getGender() => _storage.read(key: _genderKey);
+  Future<void> saveGender(String value) =>
+      _storage.write(key: _genderKey, value: value);
 
   // --- Bulk operations ---
 

@@ -58,8 +58,12 @@ describe('Multi-Channel Notification Outbox Dispatcher', () => {
     }
 
     expect(captured).toHaveLength(4);
+    expect(captured.every((req) => !req.body.includes(base.title))).toBe(true);
     expect(captured[0].url).toBe('https://api.telegram.org/bottg-bot-secret-123/sendMessage');
-    expect(JSON.parse(captured[0].body)).toMatchObject({ chat_id: '987654321' });
+    expect(JSON.parse(captured[0].body)).toMatchObject({
+      chat_id: '987654321',
+      text: 'You have a new notification in ERTAD.',
+    });
 
     expect(captured[1].url).toBe('https://graph.facebook.com/v20.0/1029384756/messages');
     expect(captured[1].headers.Authorization).toBe('Bearer wa-meta-token-456');

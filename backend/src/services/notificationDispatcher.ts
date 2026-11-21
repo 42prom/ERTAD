@@ -59,7 +59,8 @@ export function buildChannelRequest(
   handle: string
 ): HttpDispatchRequest | null {
   const cfg = item.publicConfig ?? {};
-  const text = `ERTAD · ${item.title}`;
+  // I14 mandatory third-party notification privacy: never transmit domain titles externally by default.
+  const text = 'You have a new notification in ERTAD.';
 
   switch (item.channel) {
     case 'telegram': {
@@ -122,7 +123,7 @@ export function buildChannelRequest(
             token: handle,
             notification: {
               title: 'ERTAD',
-              body: item.title,
+              body: text,
             },
             data: {
               kind: item.kind,

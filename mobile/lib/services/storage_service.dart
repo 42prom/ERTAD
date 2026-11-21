@@ -81,43 +81,78 @@ class StorageService {
     return installationId;
   }
 
-  // --- Non-sensitive: display name (SharedPreferences) ---
+  // --- Sensitive: display name, birth date & gender (SecureStorage + legacy SharedPreferences migration) ---
+
+  Future<String?> _readWithMigration(
+    String legacyPrefKey,
+    Future<String?> Function() secureReader,
+    Future<void> Function(String) secureWriter,
+  ) async {
+    final fromSecure = await secureReader();
+    if (fromSecure != null && fromSecure.isNotEmpty) {
+      return fromSecure;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    final legacy = prefs.getString(legacyPrefKey);
+    if (legacy != null && legacy.isNotEmpty) {
+      await secureWriter(legacy);
+      await prefs.remove(legacyPrefKey);
+      return legacy;
+    }
+    return null;
+  }
 
   Future<String?> getFirstName() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_firstNameKey);
+    return _readWithMigration(
+      _firstNameKey,
+      _secure.getFirstName,
+      _secure.saveFirstName,
+    );
   }
 
   Future<String?> getLastName() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_lastNameKey);
+    return _readWithMigration(
+      _lastNameKey,
+      _secure.getLastName,
+      _secure.saveLastName,
+    );
   }
 
   Future<DateTime?> getBirthDate() async {
-    final prefs = await SharedPreferences.getInstance();
-    final iso = prefs.getString(_birthDateKey);
+    final iso = await _readWithMigration(
+      _birthDateKey,
+      _secure.getBirthDateIso,
+      _secure.saveBirthDateIso,
+    );
     return iso != null ? DateTime.tryParse(iso) : null;
   }
 
   Future<void> saveName(String firstName, String lastName) async {
+    await _secure.saveFirstName(firstName);
+    await _secure.saveLastName(lastName);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_firstNameKey, firstName);
-    await prefs.setString(_lastNameKey, lastName);
+    await prefs.remove(_firstNameKey);
+    await prefs.remove(_lastNameKey);
   }
 
   Future<void> saveBirthDate(DateTime birthDate) async {
+    await _secure.saveBirthDateIso(birthDate.toIso8601String());
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_birthDateKey, birthDate.toIso8601String());
+    await prefs.remove(_birthDateKey);
   }
 
   Future<String?> getGender() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_genderKey);
+    return _readWithMigration(
+      _genderKey,
+      _secure.getGender,
+      _secure.saveGender,
+    );
   }
 
   Future<void> saveGender(String gender) async {
+    await _secure.saveGender(gender);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_genderKey, gender);
+    await prefs.remove(_genderKey);
   }
 
   Future<List<String>> getRegionCodes() async {

@@ -343,7 +343,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                   ),
                                 ),
                         ),
-                      if (ref.watch(shellSessionProvider).isGroupManager) ...[
+                      if (_event['canManage'] == true ||
+                          ref.watch(shellSessionProvider).isGroupManager) ...[
                         const SizedBox(height: 16),
                         ErtadSurfaceCard(
                           child: Column(

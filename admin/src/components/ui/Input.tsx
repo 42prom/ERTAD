@@ -30,7 +30,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             error
               ? 'border-red-300 bg-red-50'
               : 'border-gray-300 bg-white hover:border-gray-400',
-            'disabled:bg-gray-100 disabled:cursor-not-allowed',
+            'disabled:opacity-60 disabled:bg-[var(--elevated)] disabled:cursor-not-allowed',
             className
           )}
           {...props}

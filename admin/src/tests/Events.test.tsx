@@ -220,3 +220,39 @@ it("requires reason when cancelling an event together with open unverified linke
     cancelLinkedTasks: true,
   });
 });
+it("opens an inbox event destination directly without auto-mutating", async () => {
+  const inboxEventId = "01234567-1234-4321-8123-012345678902";
+  vi.mocked(eventsApi.list).mockResolvedValue({
+    items: [],
+    total: 0,
+    page: 1,
+    pageSize: 25,
+  });
+  vi.mocked(eventsApi.detail).mockResolvedValue({
+    ...row,
+    id: inboxEventId,
+    title: "Inbox linked event",
+    status: "completed",
+  });
+  render(
+    <MemoryRouter
+      initialEntries={[
+        {
+          pathname: "/events",
+          state: {
+            inbox: {
+              source: "event",
+              organizationId: "org",
+              id: inboxEventId,
+            },
+          },
+        },
+      ]}
+    >
+      <Events />
+    </MemoryRouter>,
+  );
+  await screen.findByRole("heading", { name: "Inbox linked event", exact: true });
+  expect(eventsApi.detail).toHaveBeenCalledWith("org", inboxEventId);
+  expect(eventsApi.write).not.toHaveBeenCalled();
+});

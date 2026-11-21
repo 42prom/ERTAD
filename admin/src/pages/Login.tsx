@@ -1,4 +1,5 @@
 import { apiErrorMessage } from "../api/errors";
+import { isAxiosError } from "axios";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authApi } from "../api/client";
@@ -16,8 +17,12 @@ interface LoginProps {
 
 export default function Login({ onLogin }: LoginProps) {
   const { language } = useConsolePreferences();
+  const ka = language === "ka";
+  const t = (ge: string, en: string) => (ka ? ge : en);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [totpCode, setTotpCode] = useState("");
+  const [showMfaField, setShowMfaField] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -36,11 +41,34 @@ export default function Login({ onLogin }: LoginProps) {
 
     // Real authentication
     try {
-      const response = await authApi.login({ email, password });
+      const code = totpCode.trim();
+      const response = await authApi.login({
+        email,
+        password,
+        ...(code ? { totpCode: code } : {}),
+      });
 
       completeLogin(response);
     } catch (err: unknown) {
-      setError(apiErrorMessage(err, "Invalid credentials"));
+      const errCode = isAxiosError<{ error?: { code?: string } }>(err)
+        ? err.response?.data?.error?.code
+        : undefined;
+      if (errCode === "MFA_ENROLLMENT_REQUIRED") {
+        setError(
+          t(
+            "ამ ანგარიშზე შესვლამდე სავალდებულოა ორფაქტორიანი დაცვის (MFA/TOTP) ჩართვა. დაუკავშირდით ადმინისტრატორს.",
+            "MFA enrollment is required for this account before sign-in. Contact your administrator.",
+          ),
+        );
+      } else {
+        setShowMfaField(true);
+        setError(
+          apiErrorMessage(
+            err,
+            t("ელფოსტა, პაროლი ან MFA კოდი არასწორია.", "Invalid credentials"),
+          ),
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -86,7 +114,7 @@ export default function Login({ onLogin }: LoginProps) {
           />
           <h2 className="text-center text-3xl font-bold text-white">ERTAD</h2>
           <p className="mt-2 text-center text-sm text-gray-400">
-            Secure administrative access
+            {t("დაცული ადმინისტრაციული წვდომა", "Secure administrative access")}
           </p>
         </div>
         <DemoAccounts onLogin={completeLogin} disabled={loading} />
@@ -105,7 +133,7 @@ export default function Login({ onLogin }: LoginProps) {
                 htmlFor="email"
                 className="block text-sm font-medium text-gray-300"
               >
-                Email
+                {t("ელფოსტა", "Email")}
               </label>
               <input
                 id="email"
@@ -113,7 +141,7 @@ export default function Login({ onLogin }: LoginProps) {
                 type="email"
                 autoComplete="username"
                 required
-                className="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+                className="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 placeholder="admin@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -124,7 +152,7 @@ export default function Login({ onLogin }: LoginProps) {
                 htmlFor="password"
                 className="block text-sm font-medium text-gray-300"
               >
-                Password
+                {t("პაროლი", "Password")}
               </label>
               <input
                 id="password"
@@ -132,20 +160,57 @@ export default function Login({ onLogin }: LoginProps) {
                 type="password"
                 autoComplete="current-password"
                 required
-                className="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-facebook-blue focus:border-transparent"
+                className="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+            </div>
+            <div>
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="totpCode"
+                  className="block text-sm font-medium text-gray-300"
+                >
+                  {t(
+                    "ორფაქტორიანი (TOTP) ან აღდგენის კოდი",
+                    "Authenticator (TOTP) or recovery code",
+                  )}
+                </label>
+                {!showMfaField && (
+                  <button
+                    type="button"
+                    onClick={() => setShowMfaField(true)}
+                    className="text-xs text-primary-400 underline"
+                  >
+                    {t("მაქვს კოდი", "Have a code")}
+                  </button>
+                )}
+              </div>
+              {showMfaField && (
+                <input
+                  id="totpCode"
+                  name="totpCode"
+                  type="text"
+                  autoComplete="one-time-code"
+                  maxLength={16}
+                  className="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="123456 / XXXX-XXXX"
+                  value={totpCode}
+                  onChange={(e) => setTotpCode(e.target.value)}
+                />
+              )}
             </div>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-facebook-blue hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-facebook-blue"
+            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
           >
-            {loading ? "Signing in…" : "Sign in"}
+            {loading
+              ? t("შესვლა…", "Signing in…")
+              : t("შესვლა", "Sign in")}
           </button>
 
           {isWebAuthnSupported() && (
@@ -153,7 +218,7 @@ export default function Login({ onLogin }: LoginProps) {
               type="button"
               disabled={loading}
               onClick={() => void handlePasskeyLogin()}
-              className="w-full flex justify-center py-2 px-4 border border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-200 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-facebook-blue"
+              className="w-full flex justify-center py-2 px-4 border border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-200 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
             >
               {language === "ka" ? "გასაღებით შესვლა (Passkey)" : "Sign in with Passkey"}
             </button>
@@ -163,7 +228,10 @@ export default function Login({ onLogin }: LoginProps) {
             <a href="/recover" className="underline inline-flex min-h-11 items-center">{language === 'ka' ? 'დაგავიწყდათ პაროლი?' : 'Forgot password?'}</a>
           </div>
           <div className="text-xs text-gray-400 text-center">
-            Contact your administrator for credentials
+            {t(
+              "მონაცემების მისაღებად დაუკავშირდით ადმინისტრატორს",
+              "Contact your administrator for credentials",
+            )}
           </div>
         </form>
       </div>

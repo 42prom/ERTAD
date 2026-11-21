@@ -304,7 +304,7 @@ class HomeTabScreen extends ConsumerWidget {
           const SizedBox(height: 10),
           ErtadSurfaceCard(
             onTap: () {
-              ref.read(tasksSegmentRequestProvider.notifier).state = 4;
+              ref.read(tasksSegmentRequestProvider.notifier).state = 3;
               onSwitchTab?.call(3);
             },
             child: Row(

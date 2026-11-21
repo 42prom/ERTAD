@@ -26,6 +26,15 @@ class _SurveyScreenState extends State<SurveyScreen> {
 
   // Stores responses per question
   final Map<String, QuestionResponseData> _responses = {};
+  final Map<String, TextEditingController> _textControllers = {};
+
+  @override
+  void dispose() {
+    for (final c in _textControllers.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
 
   ProviderContainer? _maybeContainer(BuildContext context) {
     try {
@@ -216,13 +225,6 @@ class _SurveyScreenState extends State<SurveyScreen> {
   @override
   Widget build(BuildContext context) {
     final locService = Provider.of<LocalizationService>(context);
-    if (_questions.isEmpty) {
-      return ErtadSubpageScaffold(
-        title: locService.translate('survey_title'),
-        body: Center(child: Text(locService.translate('no_questions'))),
-      );
-    }
-
     if (_isReadOnly) {
       return ErtadSubpageScaffold(
         title: widget.poll.title,
@@ -268,6 +270,13 @@ class _SurveyScreenState extends State<SurveyScreen> {
             DecisionResultsCard(poll: widget.poll, isClosed: _isClosed),
           ],
         ),
+      );
+    }
+
+    if (_questions.isEmpty) {
+      return ErtadSubpageScaffold(
+        title: locService.translate('survey_title'),
+        body: Center(child: Text(locService.translate('no_questions'))),
       );
     }
 
@@ -632,6 +641,10 @@ class _SurveyScreenState extends State<SurveyScreen> {
         _currentQuestion.config['placeholder'] as String? ??
         locService.translate('type_your_answer');
     final currentText = _responses[_currentQuestion.id]?.textResponse ?? '';
+    final controller = _textControllers.putIfAbsent(
+      _currentQuestion.id,
+      () => TextEditingController(text: currentText),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -644,12 +657,7 @@ class _SurveyScreenState extends State<SurveyScreen> {
             border: const OutlineInputBorder(),
             alignLabelWithHint: true,
           ),
-          controller: TextEditingController.fromValue(
-            TextEditingValue(
-              text: currentText,
-              selection: TextSelection.collapsed(offset: currentText.length),
-            ),
-          ),
+          controller: controller,
           onChanged: (value) {
             _responses[_currentQuestion.id] = QuestionResponseData(
               questionId: _currentQuestion.id,

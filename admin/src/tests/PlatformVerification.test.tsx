@@ -125,6 +125,7 @@ describe("PlatformVerification", () => {
     await waitFor(() =>
       expect(screen.getByRole("button", { name: /Propose policy change/i })).toBeInTheDocument(),
     );
+    expect(screen.getByText(/Liveness 0\.88 · Face 0\.82/i)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /Propose policy change/i }));
     await waitFor(() => expect(platformApi.proposeVerificationPolicy).toHaveBeenCalledTimes(1));
 
@@ -132,6 +133,7 @@ describe("PlatformVerification", () => {
     await waitFor(() => expect(platformApi.reviewVerificationPolicy).toHaveBeenCalledTimes(1));
 
     await user.click(screen.getByRole("button", { name: /^Hold$/i }));
+    await user.click(screen.getByRole("button", { name: /Confirm action/i }));
     await waitFor(() =>
       expect(platformApi.controlMobileDevice).toHaveBeenCalledWith({
         op: "hold",

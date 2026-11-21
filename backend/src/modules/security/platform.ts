@@ -495,6 +495,7 @@ export function createPlatformRouter() {
   for (const operation of Object.keys(schemas) as (keyof typeof schemas)[])
     if (
       ![
+        'mailPolicy','proposeMailPolicy','reviewMailPolicy','mailCheck',
         'providerPolicy','proposeProviderPolicy','reviewProviderPolicy',
         'revoke',
         'integrationCheck',

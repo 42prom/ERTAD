@@ -369,13 +369,16 @@ export default function Platform() {
           />
         )}
       {tab === "integrations" &&
-        access?.permissions.includes("platform.integrations.read") && (
+        (access?.permissions.includes("platform.integrations.read") ||
+          access?.permissions.includes("platform.verification.read")) && (
           <div className="space-y-6">
-            <PlatformIntegrations
-              onConfigure={access.permissions.includes("platform.providers.read") ? () => setTab("providers") : undefined}
-              canTest={access.permissions.includes("platform.integrations.test")}
-              refreshRevision={revision}
-            />
+            {access.permissions.includes("platform.integrations.read") && (
+              <PlatformIntegrations
+                onConfigure={access.permissions.includes("platform.providers.read") ? () => setTab("providers") : undefined}
+                canTest={access.permissions.includes("platform.integrations.test")}
+                refreshRevision={revision}
+              />
+            )}
             {access.permissions.includes("platform.verification.read") && (
               <PlatformExternalIntegrations
                 canPropose={access.permissions.includes(
@@ -401,23 +404,28 @@ export default function Platform() {
       {error && <p role="alert">{error}</p>}
       {!loading &&
         access &&
-        !access.permissions.includes(
-          tab==='accounts'?'platform.accounts.read':tab === "providers" || tab === "email"
-            ? "platform.providers.read"
-            : tab === "limits"
-              ? "platform.limits.read"
-              : tab === "network"
-                ? "platform.network.read"
-                : tab === "audit" || tab === "monitoring"
-                  ? "platform.audit.read"
-                  : tab === "policy"
-                    ? "platform.policy.read"
-                    : tab === "sessions"
-                      ? "platform.sessions.read"
-                      : tab === "integrations"
-                        ? "platform.integrations.read"
-                        : "platform.read",
-        ) && (
+        !(tab === "integrations"
+          ? access.permissions.includes("platform.integrations.read") ||
+            access.permissions.includes("platform.verification.read")
+          : access.permissions.includes(
+              tab === "accounts"
+                ? "platform.accounts.read"
+                : tab === "verification"
+                  ? "platform.verification.read"
+                  : tab === "providers" || tab === "email"
+                    ? "platform.providers.read"
+                    : tab === "limits"
+                      ? "platform.limits.read"
+                      : tab === "network"
+                        ? "platform.network.read"
+                        : tab === "audit" || tab === "monitoring"
+                          ? "platform.audit.read"
+                          : tab === "policy"
+                            ? "platform.policy.read"
+                            : tab === "sessions"
+                              ? "platform.sessions.read"
+                              : "platform.read",
+            )) && (
           <Card>
             {t(
               "ამ პანელის ნახვის უფლება არ გაქვთ ან წვდომას ვადა გაუვიდა.",

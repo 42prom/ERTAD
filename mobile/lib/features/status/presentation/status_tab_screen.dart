@@ -258,7 +258,7 @@ class StatusTabScreen extends ConsumerWidget {
                       ),
                 trailingValue: '${session.liveEvents.length}',
                 onTap: () {
-                  ref.read(tasksSegmentRequestProvider.notifier).state = 2;
+                  ref.read(tasksSegmentRequestProvider.notifier).state = 0;
                   if (onSwitchTab != null) {
                     onSwitchTab!(3);
                   } else {

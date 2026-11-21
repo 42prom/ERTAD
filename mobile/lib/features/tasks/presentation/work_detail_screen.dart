@@ -509,7 +509,8 @@ class _WorkDetailScreenState extends ConsumerState<WorkDetailScreen> {
                           ),
                         ),
                       ],
-                      if (ref.watch(shellSessionProvider).isGroupManager &&
+                      if ((_work['canManage'] == true ||
+                              ref.watch(shellSessionProvider).isGroupManager) &&
                           workStatus == 'open') ...[
                         const SizedBox(height: 16),
                         _buildManagerReviewSection(context),

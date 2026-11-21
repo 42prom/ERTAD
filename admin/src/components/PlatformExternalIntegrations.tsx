@@ -235,7 +235,7 @@ export default function PlatformExternalIntegrations({
             "Messenger, Push & Google OIDC Credentials",
           )}
         </h2>
-        <p className="text-sm text-gray-600 mt-1">
+        <p className="text-sm text-[var(--muted)] mt-1">
           {t(
             "ყველა გარე გასაღები ინახება AES-256-GCM დაშიფვრით და არასოდეს ბრუნდება ბრაუზერში. ცვლილება მოითხოვს მეორე ტექნიკური ადმინისტრატორის დადასტურებას.",
             "All external secrets are stored with AES-256-GCM encryption and never returned to the browser. Changes require independent two-person technical approval.",
@@ -255,13 +255,13 @@ export default function PlatformExternalIntegrations({
             return (
               <div
                 key={item.provider}
-                className="border-t pt-3 flex flex-wrap items-center justify-between gap-3"
+                className="border-t border-[var(--border)] pt-3 flex flex-wrap items-center justify-between gap-3"
               >
                 <div>
                   <h3 className="font-semibold">
                     {t(meta.ka, meta.en)} · v{item.version}
                   </h3>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-[var(--muted)]">
                     {item.enabled
                       ? t("ჩართულია", "Enabled")
                       : t("გამორთულია", "Disabled")}{" "}
@@ -354,14 +354,14 @@ export default function PlatformExternalIntegrations({
       )}
 
       {pendingProposals.length > 0 && (
-        <div className="border-t pt-4 space-y-2">
+        <div className="border-t border-[var(--border)] pt-4 space-y-2">
           <h3 className="font-semibold">
             {t("დასადასტურებელი შეთავაზებები", "Pending integration proposals")}
           </h3>
           {pendingProposals.map((p) => (
             <div
               key={p.id}
-              className="border rounded p-3 flex flex-wrap items-center justify-between gap-2"
+              className="border border-[var(--border)] rounded p-3 flex flex-wrap items-center justify-between gap-2"
             >
               <div>
                 <p className="font-medium">
@@ -371,7 +371,7 @@ export default function PlatformExternalIntegrations({
                     ? ` · ${t("ახალი გასაღები", "New secret")}`
                     : ""}
                 </p>
-                <p className="text-sm text-gray-600">{p.reason}</p>
+                <p className="text-sm text-[var(--muted)]">{p.reason}</p>
               </div>
               {canApprove && (
                 <div className="flex gap-2">

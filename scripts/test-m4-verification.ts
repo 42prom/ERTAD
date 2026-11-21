@@ -60,7 +60,7 @@ async function run(): Promise<void> {
     // Seed 3 isolated technical operators with distinct Read / Propose / Approve+Control capabilities
     const pwHash = await bcrypt.hash('M4TestPassword!2026', 10);
     const ops = [
-      { id: readerId, email: `m4-reader-${readerId.slice(0, 8)}@ertad.local`, perms: ['platform.read', 'platform.verification.read'] },
+      { id: readerId, email: `m4-reader-${readerId.slice(0, 8)}@ertad.local`, perms: ['platform.read', 'platform.verification.read', 'platform.integrations.read'] },
       { id: proposerId, email: `m4-proposer-${proposerId.slice(0, 8)}@ertad.local`, perms: ['platform.read', 'platform.verification.read', 'platform.verification.propose'] },
       { id: approverId, email: `m4-approver-${approverId.slice(0, 8)}@ertad.local`, perms: ['platform.read', 'platform.verification.read', 'platform.verification.approve', 'platform.mobile_devices.control'] },
     ];
@@ -200,9 +200,19 @@ async function run(): Promise<void> {
       'Content-Type': 'application/json',
     };
 
-    // Mobile token cannot access admin platform verification endpoints
+    // Mobile token cannot access admin platform verification endpoints or replay as a web session cookie
     const mobAdminTry = await fetch(`${base}/admin/platform/verification/policy`, { headers: mHeaders });
     assert(mobAdminTry.status === 401 || mobAdminTry.status === 403, `Mobile token must be denied on admin platform: ${mobAdminTry.status}`);
+    const mobCookieReplay = await fetch(`${base}/admin/auth/me`, {
+      headers: { Cookie: `ertad_admin_session=${mLogin.sessionToken}` },
+    });
+    assert(mobCookieReplay.status === 401, `Mobile bearer token must NOT authenticate as web cookie: ${mobCookieReplay.status}`);
+
+    // Platform diagnostics (/platform/integrations) & GET CSRF block (/platform/reviewMailPolicy)
+    const diagRes = await fetch(`${base}/admin/platform/integrations`, { headers: readerHeaders });
+    assert(diagRes.status === 200, `Expected 200 on platform/integrations, got ${diagRes.status}`);
+    const csrfGetTry = await fetch(`${base}/admin/platform/reviewMailPolicy`, { headers: approverHeaders });
+    assert(csrfGetTry.status === 403 || csrfGetTry.status === 404, `GET /platform/reviewMailPolicy must not be mounted: ${csrfGetTry.status}`);
 
     const m4Status = await fetch(`${base}/mobile/m4/status`, { headers: mHeaders });
     assert(m4Status.status === 200, `M4 status failed: ${m4Status.status}`);
@@ -213,8 +223,12 @@ async function run(): Promise<void> {
     if (orgIdEarly) {
       const blockedChats = await fetch(`${base}/mobile/channels/list?organizationId=${orgIdEarly}`, { headers: mHeaders });
       assert(blockedChats.status === 403, `Expected 403 for unverified member on /mobile/channels/list, got ${blockedChats.status}`);
-      const blockedBody = (await blockedChats.json()) as { code?: string };
-      assert(blockedBody.code === 'BIOMETRIC_VERIFICATION_REQUIRED', `Expected BIOMETRIC_VERIFICATION_REQUIRED, got ${blockedBody.code}`);
+      const blockedBody = (await blockedChats.json()) as { code?: string; error?: { code?: string } };
+      assert(
+        blockedBody.code === 'BIOMETRIC_VERIFICATION_REQUIRED' &&
+          blockedBody.error?.code === 'BIOMETRIC_VERIFICATION_REQUIRED',
+        `Expected BIOMETRIC_VERIFICATION_REQUIRED, got ${JSON.stringify(blockedBody)}`
+      );
     }
 
     const chalRes = await fetch(`${base}/mobile/m4/attestation/challenge`, {
@@ -224,6 +238,7 @@ async function run(): Promise<void> {
     });
     assert(chalRes.status === 200, `Challenge failed: ${chalRes.status}`);
     const { nonce } = (await chalRes.json()) as { nonce: string };
+    assert(/^[a-f0-9]{64}$/.test(nonce), `Expected 64-hex attestation nonce, got length=${nonce.length}`);
 
     const deviceId = `dev-device-${randomUUID().slice(0, 12)}`;
     const attPayload = {
@@ -273,17 +288,17 @@ async function run(): Promise<void> {
     });
     assert(bioFail.status === 403, `Expected 403 on low liveness, got ${bioFail.status}`);
 
-    // Valid eID completion succeeds (including realistic 54% ArcFace similarity + encrypted biometric template & portrait persistence)
+    // Valid eID completion succeeds (including >16KB portrait payload, ISO-3 'GEO', 54% ArcFace similarity)
     const sharedPersonKey = `person-key-${randomUUID()}`;
     const sampleTemplate = `ertad-tpl-v1:${randomUUID()}`;
-    const samplePortrait = Buffer.from('synthetic-eid-portrait-jpeg-test-bytes-1234567890').toString('base64');
+    const samplePortrait = Buffer.from('synthetic-eid-portrait-jpeg-test-bytes-'.repeat(700)).toString('base64');
     const bioOk = await fetch(`${base}/mobile/m4/biometric/complete`, {
       method: 'POST',
       headers: mHeaders,
       body: JSON.stringify({
         deviceId,
         sodCscaVerified: true,
-        citizenshipCountry: 'GE',
+        citizenshipCountry: 'GEO',
         livenessScore: 0.94,
         faceMatchScore: 0.54,
         personSubjectKey: sharedPersonKey,
@@ -500,8 +515,8 @@ async function run(): Promise<void> {
     await ownerPool.query('DELETE FROM ertad.platform_integration_proposals WHERE proposer_id = ANY($1::uuid[])', [createdAdmins]).catch(() => {});
     await ownerPool.query(
       `DELETE FROM ertad.member_identity_proofs WHERE member_id IN (
-        SELECT aml.user_id FROM ertad.admin_member_links aml
-        JOIN ertad.admin_users au ON au.id = aml.admin_user_id
+        SELECT mu.id FROM ertad.member_users mu
+        JOIN ertad.admin_users au ON au.id = mu.web_account_id
         WHERE au.email LIKE '%@mobile.ertad.local'
       )`
     ).catch(() => {});

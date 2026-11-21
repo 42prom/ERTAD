@@ -169,7 +169,7 @@ export default function Collective() {
       live = false;
     };
   }, []);
-  const readScope1Key = JSON.stringify([org, page, view, selected, revision]);
+  const readScope1Key = JSON.stringify([org, page, view, selected]);
   const [readScope1, setReadScope1] = useState(readScope1Key);
   // Reconcile scope before committing children, so previous-scope records cannot flash.
   if (readScope1 !== readScope1Key) {
@@ -203,14 +203,22 @@ export default function Collective() {
           setDetail(d);
         }
       })
-      .catch(() => {
-        if (live)
+      .catch((e) => {
+        if (live) {
+          if (
+            (e as { response?: { status?: number } })?.response?.status ===
+              403 &&
+            selected
+          ) {
+            setDetail(null);
+          }
           setError(
             t(
               "მონაცემები ვერ ჩაიტვირთა. გადაამოწმეთ წვდომა.",
               "Could not load records. Check your access.",
             ),
           );
+        }
       })
       .finally(() => {
         if (live) setLoading(false);

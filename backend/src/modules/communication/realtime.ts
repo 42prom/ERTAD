@@ -73,7 +73,7 @@ export function createRealtimeRouter(allowedOrigins?: Set<string>): Router {
   const activeStreamsByUser = new Map<string, number>();
 
   router.use(requireAdmin);
-  router.get('/', (req, res) => {
+  router.get('/', async (req, res) => {
     const requestOrigin = req.get('origin');
     if (requestOrigin && allowedOrigins && !allowedOrigins.has(requestOrigin)) {
       res.status(403).json({
@@ -93,6 +93,35 @@ export function createRealtimeRouter(allowedOrigins?: Set<string>): Router {
     }
     activeStreamsByUser.set(userId, currentCount + 1);
 
+    const loadAllowedOrgs = async (): Promise<Set<string>> => {
+      try {
+        const resOrgs = await query<{ organization_id: string }>(
+          `SELECT DISTINCT m.organization_id
+             FROM ertad.member_users mu
+             JOIN ertad.memberships m ON m.user_id = mu.id
+             JOIN ertad.organizations o ON o.id = m.organization_id
+            WHERE mu.web_account_id = $1
+              AND mu.status = 'active'
+              AND o.status = 'active'
+              AND m.status = 'active'
+              AND m.valid_from <= clock_timestamp()
+              AND (m.valid_until IS NULL OR m.valid_until > clock_timestamp())`,
+          [userId]
+        );
+        return new Set(resOrgs.rows.map((r) => r.organization_id));
+      } catch {
+        return new Set();
+      }
+    };
+
+    let allowedOrgIds = await loadAllowedOrgs();
+    if (req.destroyed || res.writableEnded) {
+      const cnt = activeStreamsByUser.get(userId) ?? 1;
+      if (cnt <= 1) activeStreamsByUser.delete(userId);
+      else activeStreamsByUser.set(userId, cnt - 1);
+      return;
+    }
+
     res.status(200);
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, private');
@@ -106,7 +135,11 @@ export function createRealtimeRouter(allowedOrigins?: Set<string>): Router {
       res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
     };
 
-    const onSignal = (signal: RealtimeSignal) => writeFrame('invalidate', signal);
+    const onSignal = (signal: RealtimeSignal) => {
+      // Tenant isolation (I9): never forward another organization's realtime invalidations.
+      if (!signal.organizationId || !allowedOrgIds.has(signal.organizationId)) return;
+      writeFrame('invalidate', signal);
+    };
     bus.on('invalidate', onSignal);
 
     writeFrame('ready', { at: new Date().toISOString() });
@@ -118,22 +151,27 @@ export function createRealtimeRouter(allowedOrigins?: Set<string>): Router {
 
     const sessionTimer = setInterval(() => {
       if (closed) return;
-      void query<{ valid: boolean }>(
-        `SELECT EXISTS (
-           SELECT 1
-           FROM ertad.admin_sessions s
-           JOIN ertad.admin_users a ON a.id = s.admin_user_id
-           WHERE s.id = $1
-             AND s.token_hash = $2
-             AND s.revoked_at IS NULL
-             AND s.idle_expires_at > clock_timestamp()
-             AND s.absolute_expires_at > clock_timestamp()
-             AND a.is_active
-             AND (a.locked_until IS NULL OR a.locked_until <= clock_timestamp())
-         ) AS valid`,
-        [session.sessionId, session.sessionTokenHash]
-      )
-        .then((result) => {
+      void Promise.all([
+        query<{ valid: boolean }>(
+          `SELECT EXISTS (
+             SELECT 1
+             FROM ertad.admin_sessions s
+             JOIN ertad.admin_users a ON a.id = s.admin_user_id
+             WHERE s.id = $1
+               AND s.token_hash = $2
+               AND s.revoked_at IS NULL
+               AND s.idle_expires_at > clock_timestamp()
+               AND s.absolute_expires_at > clock_timestamp()
+               AND a.is_active
+               AND NOT ertad.web_account_held(a.id)
+               AND (a.locked_until IS NULL OR a.locked_until <= clock_timestamp())
+           ) AS valid`,
+          [session.sessionId, session.sessionTokenHash]
+        ),
+        loadAllowedOrgs(),
+      ])
+        .then(([result, refreshedOrgs]) => {
+          allowedOrgIds = refreshedOrgs;
           if (!result.rows[0]?.valid) {
             writeFrame('session_ended', {});
             cleanup();
