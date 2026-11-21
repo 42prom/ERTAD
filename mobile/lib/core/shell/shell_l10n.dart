@@ -27,7 +27,8 @@ const Map<String, String> _kaShellExtras = <String, String>{
   'm4_google_scoped_badge':
       'Google სესია · საჭიროებს eID ბიომეტრიულ დადასტურებას',
   'm4_start_biometric': 'eID ბიომეტრიული ვერიფიკაციის დაწყება',
-  'offline_queued_notice': 'ოფლაინ რეჟიმი — შეტყობინება შეინახა და ქსელის დაბრუნებისას ავტომატურად გაიგზავნება.',
+  'offline_queued_notice':
+      'ოფლაინ რეჟიმი — მოქმედება შეინახა რიგში და ქსელის დაბრუნებისას ავტომატურად გაიგზავნება.',
   'profile_anonymous_member': 'ანონიმური წევრი',
   'profile_verified_status': 'ავტორიზებული · eID ბიომეტრია',
   'profile_unverified_status': 'საჭიროებს ბიომეტრიულ ვერიფიკაციას',
@@ -248,6 +249,12 @@ const Map<String, String> _kaShellExtras = <String, String>{
   'task_note_submit_hint': 'შესრულების შენიშვნა ან ბმული (არასავალდებულო)',
   'tasks_history_empty':
       'დასრულებული ან დაარქივებული დავალებები აქ გამოჩნდება.',
+  'offline_queue_banner_suffix': 'ქმედება ელოდება სინქრონიზაციას.',
+  'offline_queue_sync_now': 'სინქრონიზაცია',
+  'offline_queue_synced_ok': 'სინქრონიზებული ქმედებები',
+  'offline_queue_still_offline': 'კავშირი კვლავ არ არის — რიგი შენახულია.',
+  'survey_responses_label': 'პასუხები',
+  'survey_average_label': 'საშუალო შეფასება',
   'tasks_empty': 'ამ კატეგორიაში დავალებები ჯერ არ არის.',
   'events_empty': 'დაგეგმილი ღონისძიებები ამ ეტაპზე არ არის.',
   'work_status_applied': 'გაგზავნილია',
@@ -618,6 +625,12 @@ const Map<String, String> _enShellExtras = <String, String>{
   'mgr_event_checkin_ok': 'Participant checked in',
   'msg_attach_photo': 'Attach photo',
   'msg_view_attachment': 'View attachment',
+  'offline_queue_banner_suffix': 'queued offline actions pending sync.',
+  'offline_queue_sync_now': 'Sync now',
+  'offline_queue_synced_ok': 'Synced queued actions',
+  'offline_queue_still_offline': 'Still offline — queued actions preserved.',
+  'survey_responses_label': 'Responses',
+  'survey_average_label': 'Average',
 };
 
 /// Reads [LocalizationService] safely whether mounted under [Provider] or standalone.

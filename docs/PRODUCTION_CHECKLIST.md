@@ -46,8 +46,8 @@ Council members hold zero technical/credential authority and configure organizat
 ## 3. Production Infrastructure & Security Gates
 
 - [ ] **Database (PostgreSQL 16+)**
-  - Run all migrations (`0001..0077`) with owner role; runtime API connects strictly as least-privilege `ertad_app`.
-  - Enable automated PITR backups and verify periodic restore drills (`npm run restore:drill` — locally verified: 104 tables, 77 migrations, ACL/RLS/audit checks).
+  - Run all migrations (`0001..0081`) with owner role; runtime API connects strictly as least-privilege `ertad_app`.
+  - Enable automated PITR backups and verify periodic restore drills (`npm run restore:drill` — locally verified: 104 tables, 81 migrations, ACL/RLS/audit checks).
 - [ ] **Secrets & Key Custody**
   - Manage `API_KEY_ENCRYPTION_SECRET`, `JWT_SECRET`, DB credentials, and Redis password via Vault/KMS/HSM (never `.env` files in Git).
 - [ ] **Network & TLS**

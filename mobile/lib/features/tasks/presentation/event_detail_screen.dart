@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/feedback/ertad_feedback.dart';
+import '../../../core/network/mobile_api_client.dart';
 import '../../../core/shell/shell_l10n.dart';
+import '../../../core/state/offline_action_queue.dart';
 import '../../../core/state/shell_providers.dart';
 import '../../../core/theme/ertad_theme.dart';
 import '../../../core/widgets/ertad_ui.dart';
@@ -83,8 +85,9 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   Future<void> _toggleRsvp(String action) async {
     if (_mutating) return;
     setState(() => _mutating = true);
+    final api = ref.read(mobileApiClientProvider);
     try {
-      await ref.read(mobileApiClientProvider).rsvpEvent(
+      await api.rsvpEvent(
         organizationId: widget.organizationId,
         eventId: _eventId,
         action: action,
@@ -96,6 +99,35 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       ref.read(shellSessionProvider.notifier).refreshWorkspace();
     } catch (err) {
       if (!mounted) return;
+      final isNetworkFailure =
+          err is MobileApiException &&
+          (err.statusCode == null || err.statusCode == 0);
+      if (isNetworkFailure) {
+        await OfflineActionQueue().enqueue(
+          OfflineQueuedAction(
+            idempotencyKey: api.newIdempotencyKey(),
+            kind: 'event_rsvp',
+            organizationId: widget.organizationId,
+            payload: <String, dynamic>{
+              'eventId': _eventId,
+              'action': action,
+            },
+            createdAtIso: DateTime.now().toUtc().toIso8601String(),
+          ),
+        );
+        await ref.read(shellSessionProvider.notifier).refreshOfflineQueueCount();
+        if (!mounted) return;
+        setState(() => _mutating = false);
+        ref.read(ertadFeedbackProvider.notifier).showWarning(
+          shellTr(
+            context,
+            'offline_queued_notice',
+            fallback:
+                'Offline — saved to queue and will send automatically once connected.',
+          ),
+        );
+        return;
+      }
       setState(() => _mutating = false);
       ref.read(ertadFeedbackProvider.notifier).showError(err);
     }

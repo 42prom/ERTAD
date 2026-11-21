@@ -1,8 +1,22 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show immutable;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../network/mobile_api_client.dart';
+
+@immutable
+class OfflineFlushResult {
+  final int flushed;
+  final int remaining;
+  final int dropped;
+
+  const OfflineFlushResult({
+    required this.flushed,
+    required this.remaining,
+    required this.dropped,
+  });
+}
 
 /// Durable local queue for non-sensitive offline member actions (channel posts,
 /// event RSVPs) that replays idempotently once connectivity returns.
@@ -65,6 +79,8 @@ class OfflineActionQueue {
     }
   }
 
+  Future<int> count() async => (await list()).length;
+
   Future<int> enqueue(OfflineQueuedAction action) async {
     final current = List<OfflineQueuedAction>.from(await list());
     if (current.any((a) => a.idempotencyKey == action.idempotencyKey)) {
@@ -78,12 +94,15 @@ class OfflineActionQueue {
     return bounded.length;
   }
 
-  Future<int> flush(MobileApiClient api) async {
+  Future<OfflineFlushResult> flushDetailed(MobileApiClient api) async {
     final current = await list();
-    if (current.isEmpty) return 0;
+    if (current.isEmpty) {
+      return const OfflineFlushResult(flushed: 0, remaining: 0, dropped: 0);
+    }
 
     final remaining = <OfflineQueuedAction>[];
     int flushed = 0;
+    int dropped = 0;
 
     for (final item in current) {
       try {
@@ -110,6 +129,8 @@ class OfflineActionQueue {
         final code = e.statusCode ?? 0;
         if (code == 0 || code >= 500 || code == 429) {
           remaining.add(item);
+        } else {
+          dropped++;
         }
       } catch (_) {
         remaining.add(item);
@@ -117,7 +138,16 @@ class OfflineActionQueue {
     }
 
     await _save(remaining);
-    return flushed;
+    return OfflineFlushResult(
+      flushed: flushed,
+      remaining: remaining.length,
+      dropped: dropped,
+    );
+  }
+
+  Future<int> flush(MobileApiClient api) async {
+    final res = await flushDetailed(api);
+    return res.flushed;
   }
 
   Future<void> clear() async {

@@ -70,7 +70,15 @@ export default function CommandPalette({
               : "პული"
           : u.kind,
         run: () => {
-          navigate(u.route);
+          navigate(u.route, {
+            state: {
+              inbox: {
+                source: u.kind === "task" ? "work" : u.kind,
+                organizationId: u.organizationId,
+                id: u.id,
+              },
+            },
+          });
           onClose();
         },
       })),

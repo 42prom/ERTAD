@@ -1,4 +1,5 @@
 import 'package:ertad_mobile/core/network/mobile_api_client.dart';
+import 'package:ertad_mobile/core/state/offline_action_queue.dart';
 import 'package:ertad_mobile/core/state/shell_providers.dart';
 import 'package:ertad_mobile/core/theme/ertad_theme.dart';
 import 'package:ertad_mobile/models/poll.dart';
@@ -128,6 +129,14 @@ class _FakeMobileApiClient extends MobileApiClient {
     required String organizationId,
     required String decisionId,
   }) async => decisionDetailResponse;
+
+  @override
+  Future<Map<String, dynamic>> rsvpEvent({
+    required String organizationId,
+    required String eventId,
+    required String action,
+    String? idempotencyKey,
+  }) async => const <String, dynamic>{'ok': true};
 }
 
 class _LiveConnectedShellNotifier extends ShellSessionNotifier {
@@ -383,6 +392,45 @@ void main() {
       expect(prefs.getString('first_name'), isNull);
       expect(secureMap['profile_first_name'], 'Updated');
       expect(secureMap['profile_last_name'], 'User');
+    },
+  );
+
+  test(
+    'ShellSessionNotifier syncOfflineQueue updates pendingOfflineActionsCount and signOut clears OfflineActionQueue',
+    () async {
+      final queue = OfflineActionQueue();
+      await queue.enqueue(
+        const OfflineQueuedAction(
+          idempotencyKey: 'sync-key-1',
+          kind: 'event_rsvp',
+          organizationId: '11111111-1111-4111-8111-111111111111',
+          payload: {'eventId': 'ev-1', 'action': 'rsvp'},
+          createdAtIso: '2026-11-21T10:00:00Z',
+        ),
+      );
+      final api = _FakeMobileApiClient();
+      final notifier = ShellSessionNotifier(api);
+      await notifier.refreshOfflineQueueCount();
+      expect(notifier.state.pendingOfflineActionsCount, 1);
+
+      final flushRes = await notifier.syncOfflineQueue();
+      expect(flushRes.flushed, 1);
+      expect(flushRes.remaining, 0);
+      expect(notifier.state.pendingOfflineActionsCount, 0);
+
+      await queue.enqueue(
+        const OfflineQueuedAction(
+          idempotencyKey: 'signout-key-1',
+          kind: 'event_rsvp',
+          organizationId: '11111111-1111-4111-8111-111111111111',
+          payload: {'eventId': 'ev-2', 'action': 'cancel'},
+          createdAtIso: '2026-11-21T10:05:00Z',
+        ),
+      );
+      expect(await queue.count(), 1);
+      await notifier.signOut();
+      expect(await queue.count(), 0);
+      expect(notifier.state.pendingOfflineActionsCount, 0);
     },
   );
 }

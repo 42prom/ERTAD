@@ -471,13 +471,13 @@ export default function Layout() {
 
   return (
     <div
-      className="ertad-console flex h-screen bg-gray-50"
+      className="ertad-console flex h-screen bg-[var(--background)] text-[var(--text)]"
       data-nav-open={navOpen}
     >
       {/* Sidebar */}
       <aside
         id="console-navigation"
-        className="w-64 bg-white border-r border-gray-200 flex flex-col"
+        className="w-64 bg-[var(--surface)] border-r border-[var(--border)] flex flex-col"
       >
         <Link to="/dashboard" className="console-brand" aria-label="ERTAD">
           <img
@@ -538,37 +538,41 @@ export default function Layout() {
         <div className="console-sidebar-tools">
           <ConsolePreferences />
           <span className="console-environment">
-            {language === "ka" ? "სატესტო გარემო" : "Demo environment"}
+            {import.meta.env.DEV
+              ? language === "ka"
+                ? "სატესტო გარემო"
+                : "Demo environment"
+              : "ERTAD V1"}
           </span>
         </div>
 
-        <div className="p-4 border-t border-gray-200">
+        <div className="p-4 border-t border-[var(--border)]">
           <Link
             to="/account"
-            className="inline-flex items-center min-h-11 text-sm text-primary-600 underline"
+            className="inline-flex items-center min-h-11 text-sm text-[var(--primary)] underline"
           >
             {language === "ka" ? "ანგარიშის უსაფრთხოება" : "Account security"}
           </Link>
           <div className="console-account">
             <div className="flex items-center">
-              <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                <span className="text-sm font-semibold text-primary-700">
+              <div className="w-8 h-8 bg-[var(--elevated)] border border-[var(--border)] rounded-full flex items-center justify-center">
+                <span className="text-sm font-semibold text-[var(--primary)]">
                   {adminUser?.email?.[0]?.toUpperCase() || "A"}
                 </span>
               </div>
               <div className="console-account-text">
-                <p className="text-sm font-medium text-gray-700">
+                <p className="text-sm font-medium text-[var(--text)]">
                   {adminUser?.fullName ||
                     (language === "ka" ? "ადმინისტრატორი" : "Administrator")}
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-[var(--muted)]">
                   {adminUser?.email || ""}
                 </p>
               </div>
             </div>
             <button
               onClick={handleLogout}
-              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              className="p-2 text-[var(--muted)] hover:text-[var(--danger)] hover:bg-[var(--elevated)] rounded-lg transition-colors"
               title={language === "ka" ? "გასვლა" : "Logout"}
               aria-label={language === "ka" ? "გასვლა" : "Logout"}
             >
@@ -581,7 +585,7 @@ export default function Layout() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <header className="console-topbar bg-white border-b border-gray-200">
+        <header className="console-topbar bg-[var(--surface)] border-b border-[var(--border)]">
           <button
             type="button"
             className="console-menu"
@@ -598,17 +602,17 @@ export default function Layout() {
               {language === "ka" ? "მენიუ" : "Menu"}
             </span>
           </button>
-          <div className="console-breadcrumbs flex items-center text-sm text-gray-600">
+          <div className="console-breadcrumbs flex items-center text-sm text-[var(--muted)]">
             {breadcrumbs.map((crumb, index) => (
               <div key={crumb.path} className="flex items-center">
                 {index > 0 && <ChevronRight className="w-4 h-4 mx-2" />}
                 <Link
                   to={crumb.path}
                   className={clsx(
-                    "hover:text-primary-600",
+                    "hover:text-[var(--primary)]",
                     index === breadcrumbs.length - 1
-                      ? "text-gray-900 font-medium"
-                      : "text-gray-600",
+                      ? "text-[var(--text)] font-medium"
+                      : "text-[var(--muted)]",
                   )}
                 >
                   {crumb.label}

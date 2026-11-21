@@ -292,6 +292,7 @@ class _ChannelThreadScreenState extends ConsumerState<ChannelThreadScreen> {
             createdAtIso: DateTime.now().toUtc().toIso8601String(),
           ),
         );
+        await ref.read(shellSessionProvider.notifier).refreshOfflineQueueCount();
         if (!mounted) return;
         _composer.clear();
         setState(() {

@@ -1,9 +1,14 @@
 import { render, screen, fireEvent } from "@testing-library/react";
-import { MemoryRouter, Outlet, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { describe, it, expect, vi } from "vitest";
 import Workspace from "../pages/Workspace";
 import CommandPalette from "../components/CommandPalette";
 import { ConsolePreferencesContext } from "../components/useConsolePreferences";
+
+function UrgentTargetProbe() {
+  const loc = useLocation();
+  return <div data-testid="urgent-state">{JSON.stringify(loc.state)}</div>;
+}
 
 describe("Wave 1 Workspace & CommandPalette", () => {
   it("renders operational KPI strip, 7-day workload schedule and urgent items", () => {
@@ -86,6 +91,7 @@ describe("Wave 1 Workspace & CommandPalette", () => {
           <Routes>
             <Route element={<Outlet context={context} />}>
               <Route path="/dashboard" element={<Workspace />} />
+              <Route path="/tasks" element={<UrgentTargetProbe />} />
             </Route>
           </Routes>
         </MemoryRouter>
@@ -97,6 +103,18 @@ describe("Wave 1 Workspace & CommandPalette", () => {
     expect(screen.getByText("7-დღიანი ოპერაციული დატვირთვა")).toBeInTheDocument();
     expect(screen.getByText("საარჩევნო დამკვირვებლის ბრიფინგი")).toBeInTheDocument();
     expect(screen.getByText("დავალებების მართვა")).toBeInTheDocument();
+    expect(screen.getByText("წევრობის დადასტურება")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("საარჩევნო დამკვირვებლის ბრიფინგი"));
+    expect(screen.getByTestId("urgent-state")).toHaveTextContent(
+      JSON.stringify({
+        inbox: {
+          source: "work",
+          organizationId: "org-1",
+          id: "task-1",
+        },
+      }),
+    );
   });
 
   it("filters command palette entries, triggers theme toggle and closes on Escape", () => {

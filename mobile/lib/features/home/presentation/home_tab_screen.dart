@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../config/app_config.dart';
 import '../../../core/feedback/ertad_feedback.dart';
 import '../../../core/shell/inbox_sheet.dart';
 import '../../../core/shell/shell_l10n.dart';
@@ -38,8 +40,16 @@ class HomeTabScreen extends ConsumerWidget {
               fallback: 'Connection unavailable. Pull down to retry syncing.',
             ),
             actionLabel: shellTr(context, 'retry', fallback: 'Retry'),
-            onAction: () =>
-                ref.read(shellSessionProvider.notifier).connectDevSession(),
+            onAction: () {
+              final notifier = ref.read(shellSessionProvider.notifier);
+              if (!kReleaseMode &&
+                  !ref.read(shellSessionProvider).isLiveConnected &&
+                  AppConfig.devWorkspace) {
+                notifier.connectDevSession();
+              } else {
+                notifier.refreshWorkspace();
+              }
+            },
           );
         }
       },
@@ -54,8 +64,50 @@ class HomeTabScreen extends ConsumerWidget {
               fallback: 'Connection unavailable. Pull down to retry syncing.',
             ),
             actionLabel: shellTr(context, 'retry', fallback: 'Retry'),
-            onAction: () =>
-                ref.read(shellSessionProvider.notifier).connectDevSession(),
+            onAction: () {
+              final notifier = ref.read(shellSessionProvider.notifier);
+              if (!kReleaseMode &&
+                  !session.isLiveConnected &&
+                  AppConfig.devWorkspace) {
+                notifier.connectDevSession();
+              } else {
+                notifier.refreshWorkspace();
+              }
+            },
+          ),
+          const SizedBox(height: 12),
+        ],
+
+        if (session.pendingOfflineActionsCount > 0) ...[
+          ErtadStateBanner(
+            icon: Icons.cloud_upload_outlined,
+            tone: ErtadTone.primary,
+            message:
+                '${session.pendingOfflineActionsCount} ${shellTr(context, 'offline_queue_banner_suffix', fallback: 'queued offline actions pending sync.')}',
+            actionLabel: shellTr(
+              context,
+              'offline_queue_sync_now',
+              fallback: 'Sync now',
+            ),
+            onAction: () async {
+              final res = await ref
+                  .read(shellSessionProvider.notifier)
+                  .syncOfflineQueue();
+              if (!context.mounted) return;
+              if (res.flushed > 0) {
+                ref.read(ertadFeedbackProvider.notifier).showSuccess(
+                  '${shellTr(context, 'offline_queue_synced_ok', fallback: 'Synced queued actions')}: ${res.flushed}',
+                );
+              } else if (res.remaining > 0) {
+                ref.read(ertadFeedbackProvider.notifier).showWarning(
+                  shellTr(
+                    context,
+                    'offline_queue_still_offline',
+                    fallback: 'Still offline — queued actions preserved.',
+                  ),
+                );
+              }
+            },
           ),
           const SizedBox(height: 12),
         ],

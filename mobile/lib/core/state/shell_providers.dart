@@ -48,6 +48,7 @@ class ShellSessionState {
   final int upcomingEvents48h;
   final int openDecisionsCount;
   final int pendingReviewsCount;
+  final int pendingOfflineActionsCount;
   final List<Map<String, dynamic>> urgentItems;
   final List<Poll> livePolls;
   final List<Poll> historyPolls;
@@ -86,6 +87,7 @@ class ShellSessionState {
     this.upcomingEvents48h = 0,
     this.openDecisionsCount = 0,
     this.pendingReviewsCount = 0,
+    this.pendingOfflineActionsCount = 0,
     this.urgentItems = const [],
     this.livePolls = const [],
     this.historyPolls = const [],
@@ -134,6 +136,7 @@ class ShellSessionState {
     int? upcomingEvents48h,
     int? openDecisionsCount,
     int? pendingReviewsCount,
+    int? pendingOfflineActionsCount,
     List<Map<String, dynamic>>? urgentItems,
     List<Poll>? livePolls,
     List<Poll>? historyPolls,
@@ -174,6 +177,8 @@ class ShellSessionState {
       upcomingEvents48h: upcomingEvents48h ?? this.upcomingEvents48h,
       openDecisionsCount: openDecisionsCount ?? this.openDecisionsCount,
       pendingReviewsCount: pendingReviewsCount ?? this.pendingReviewsCount,
+      pendingOfflineActionsCount:
+          pendingOfflineActionsCount ?? this.pendingOfflineActionsCount,
       urgentItems: urgentItems ?? this.urgentItems,
       livePolls: livePolls ?? this.livePolls,
       historyPolls: historyPolls ?? this.historyPolls,
@@ -571,17 +576,39 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
           // Profile enrichment is non-blocking.
         }
       }
-      await OfflineActionQueue().flush(_api);
+      await OfflineActionQueue().flushDetailed(_api);
+      final qCount = await OfflineActionQueue().count();
+      state = state.copyWith(pendingOfflineActionsCount: qCount);
       await _persistOfflineSnapshot(orgId);
     } catch (_) {
       await _restoreOfflineSnapshotIfEmpty(state.activeOrgId);
+      final qCount = await OfflineActionQueue().count().catchError(
+        (_) => state.pendingOfflineActionsCount,
+      );
       state = state.copyWith(
         isLoading: false,
         isOffline: true,
+        pendingOfflineActionsCount: qCount,
       );
     } finally {
       _refreshing = false;
     }
+  }
+
+  Future<void> refreshOfflineQueueCount() async {
+    try {
+      final count = await OfflineActionQueue().count();
+      state = state.copyWith(pendingOfflineActionsCount: count);
+    } catch (_) {}
+  }
+
+  Future<OfflineFlushResult> syncOfflineQueue() async {
+    final res = await OfflineActionQueue().flushDetailed(_api);
+    state = state.copyWith(pendingOfflineActionsCount: res.remaining);
+    if (res.flushed > 0) {
+      await refreshWorkspace();
+    }
+    return res;
   }
 
   Future<void> _persistOfflineSnapshot(String orgId) async {
@@ -671,6 +698,7 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
   Future<void> signOut() async {
     await _api.logout();
     try {
+      await OfflineActionQueue().clear();
       final prefs = await SharedPreferences.getInstance();
       for (final key in prefs.getKeys().toList()) {
         if (key.startsWith('ertad_offline_cache_') ||

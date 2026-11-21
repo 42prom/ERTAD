@@ -122,7 +122,7 @@ export default function Inbox() {
     setData(null);
     setRevision((v) => v + 1);
   };
-  const readScope1Key = JSON.stringify([view, source, page, revision]);
+  const readScope1Key = JSON.stringify([view, source, page]);
   const [readScope1, setReadScope1] = useState(readScope1Key);
   // Reconcile scope before committing children, so previous-scope records cannot flash.
   if (readScope1 !== readScope1Key) {
@@ -145,9 +145,12 @@ export default function Inbox() {
           : null;
         if (live && seq === generation.current) setData(result);
       })
-      .catch(() => {
+      .catch((e) => {
         if (live && seq === generation.current) {
           setOrg("");
+          if ((e as { response?: { status?: number } })?.response?.status === 403) {
+            setData(null);
+          }
           setError(
             t(
               "შეტყობინებები ვერ ჩაიტვირთა. განაახლეთ გვერდი.",
@@ -166,7 +169,6 @@ export default function Inbox() {
   useEffect(() => {
     const update = () => {
       generation.current++;
-      setData(null);
       setRevision((v) => v + 1);
     };
     const timer = window.setInterval(update, 60000);

@@ -89,6 +89,39 @@ export default function Workspace() {
             : "Units, active operations, and requests available under your current permissions."}
         </p>
       </header>
+      {!loading && !error && (
+        <div
+          className="review-toolbar"
+          style={{ gridColumn: "1 / -1" }}
+          aria-label={ka ? "აქტიური წვდომის ფარგლები" : "Active access scope"}
+        >
+          {(unitContexts[0]?.name || workContexts[0]?.name || decisionContexts[0]?.name || contexts[0]?.name) && (
+            <span className="status-badge" data-status="approved">
+              {unitContexts[0]?.name || workContexts[0]?.name || decisionContexts[0]?.name || contexts[0]?.name}
+            </span>
+          )}
+          {contexts.length > 0 && (
+            <span className="status-badge" data-status="pending">
+              {ka ? "წევრობის დადასტურება" : "Review authority"}
+            </span>
+          )}
+          {unitContexts.length > 0 && (
+            <span className="status-badge">
+              {ka ? "ჯგუფები" : "Units"}
+            </span>
+          )}
+          {workContexts.length > 0 && (
+            <span className="status-badge">
+              {ka ? "დავალებები და ღონისძიებები" : "Tasks & Events"}
+            </span>
+          )}
+          {decisionContexts.length > 0 && (
+            <span className="status-badge">
+              {ka ? "პულები" : "Polls"}
+            </span>
+          )}
+        </div>
+      )}
       {loading ? (
         <div className="workspace-skeleton" role="status">
           <p>{ka ? "იტვირთება…" : "Loading…"}</p>
@@ -234,7 +267,17 @@ export default function Workspace() {
               <ul className="workspace-urgent-list">
                 {workspaceSummary.urgent.map((item) => (
                   <li key={`${item.kind}:${item.id}`}>
-                    <Link to={item.route} className="workspace-urgent-link">
+                    <Link
+                      to={item.route}
+                      state={{
+                        inbox: {
+                          source: item.kind === "task" ? "work" : item.kind,
+                          organizationId: item.organizationId,
+                          id: item.id,
+                        },
+                      }}
+                      className="workspace-urgent-link"
+                    >
                       <div>
                         <span
                           className="status-badge"
@@ -338,9 +381,13 @@ export default function Workspace() {
               </div>
             ) : (
               <p>
-                {ka
-                  ? "ამ ანგარიშს დანიშვნის მოთხოვნებზე წვდომა ჯერ არ აქვს. ლოკალური დემოს სანახავად გამოდი და აირჩიე საბჭოს ან რეგიონის ერთ-ერთი სატესტო ანგარიში."
-                  : "This account has no appointment-review access. To explore the local demo, sign out and choose a council or regional demo account."}
+                {import.meta.env.DEV
+                  ? ka
+                    ? "ამ ანგარიშს დანიშვნის მოთხოვნებზე წვდომა ჯერ არ აქვს. ლოკალური დემოს სანახავად გამოდი და აირჩიე საბჭოს ან რეგიონის ერთ-ერთი სატესტო ანგარიში."
+                    : "This account has no appointment-review access. To explore the local demo, sign out and choose a council or regional demo account."
+                  : ka
+                    ? "ამ ანგარიშს დანიშვნის მოთხოვნების განხილვის უფლება მინიჭებული არ აქვს."
+                    : "This account has no appointment-review access assigned."}
               </p>
             )}
           </Card>

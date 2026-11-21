@@ -2,6 +2,21 @@
 
 > Last updated: 2026-11-21 · Branch: `feat/ertad-development` · Not deployed to production
 
+## Phase B — Web Admin Role UX, OIDC iOS Parity & Mobile Offline Queue Sync (2026-11-21)
+
+- **Web Admin shell & role clarity:**
+  - `admin/src/components/Layout.tsx`: replaced remaining hardcoded light-only shell/topbar/sidebar classes (`bg-gray-50`, `bg-white`, `border-gray-200`, `text-gray-700`/`900`/`500`/`600`, `hover:bg-red-50`) with semantic CSS variables (`--background`, `--surface`, `--border`, `--text`, `--muted`, `--elevated`), and gated demo-environment badge strings on `import.meta.env.DEV` (`ERTAD V1` in production builds).
+  - `admin/src/pages/Workspace.tsx` & `admin/src/components/CommandPalette.tsx`: added the `Active access scope` (`აქტიური წვდომის ფარგლები`) summary strip showing active scope and capability pills, forwarded explicit `{ inbox: { source, organizationId, id } }` location state from workspace/command-palette urgent links, and gated the demo non-reviewer hint on `import.meta.env.DEV`.
+  - `admin/src/pages/Inbox.tsx`: stabilized focus/60s background polling (`readScope1Key` without forcing reload on revision bumps and without clearing loaded data during background refreshes).
+  - `admin/src/components/PlatformExternalIntegrations.tsx` & `admin/src/tests/PlatformExternalIntegrations.test.tsx`: exposed paired Android (`configKey: clientId`) and iOS (`secondaryConfigKey: iosClientId`) OAuth Client ID fields for `google_oidc` proposals/summaries with unit test coverage (`2/2` Vitest tests).
+- **Mobile offline queue UX & sync:**
+  - `mobile/lib/core/state/offline_action_queue.dart`, `mobile/lib/core/state/shell_providers.dart`, `mobile/lib/features/tasks/presentation/event_detail_screen.dart`, `mobile/lib/features/messages/presentation/channel_thread_screen.dart`, `mobile/lib/features/home/presentation/home_tab_screen.dart`, `mobile/lib/core/shell/shell_l10n.dart`: added `OfflineFlushResult`/`flushDetailed`/`count`, tracked `pendingOfflineActionsCount` across queued channel posts and event RSVPs, exposed a manual sync banner on Home (`syncOfflineQueue()`), cleared queued actions on `signOut()`, and added Georgian/English strings plus unit tests in `mobile/test/offline_queue_test.dart` & `mobile/test/phase_a_contracts_test.dart`.
+- **Docs & verification status:**
+  - Updated `docs/PRODUCTION_CHECKLIST.md` migration range to `0001..0081` (`81 migrations`).
+  - `npm run check`: **PASS** (`check:identity`, `tokens:check`, `typecheck`, ESLint `--max-warnings 0`, backend integration `4/4`, backend Jest `27` suites / `232` tests, admin Vitest `59` files / `358` tests, `scripts/tests` `8/8`, and production workspace build).
+  - `mobile`: `flutter analyze --no-pub` (`No issues found!`) and `flutter test --no-pub` (`81/81 passed`).
+  - Live local stack (`docker compose` data services healthy, API `:13000`, Web `:15173`): `npm run smoke` **PASS**; headless Chrome verified `/dashboard` scope pills, `/inbox`, and `/platform` technical Quick Login with zero page/console errors (`platform@ertad.local` demo scope holds `platform.read` + `platform.audit.read`). Remaining non-V1/deferred items: full staging/CI `docker compose --profile apps` E2E against clean DB and native mobile device/hardware camera testing.
+
 ## Phase A — Security Hardening, Sovereign Biometrics & Mobile↔Web↔API Contracts (Migrations 80–81, 2026-11-21)
 
 - **DB & Backend Hardening ([`0080_sovereign_flexible_biometric_policy.sql`](../backend/db/foundation/0080_sovereign_flexible_biometric_policy.sql), [`0081_phase_a_security_and_contracts.sql`](../backend/db/foundation/0081_phase_a_security_and_contracts.sql), [`adminSession.ts`](../backend/src/services/adminSession.ts), [`app.ts`](../backend/src/app.ts), [`m4Auth.ts`](../backend/src/modules/mobile/m4Auth.ts), [`mobile/router.ts`](../backend/src/modules/mobile/router.ts), [`platform.ts`](../backend/src/modules/security/platform.ts), [`realtime.ts`](../backend/src/modules/communication/realtime.ts), [`members.ts`](../backend/src/modules/organization/members.ts), [`notificationDispatcher.ts`](../backend/src/services/notificationDispatcher.ts)):**

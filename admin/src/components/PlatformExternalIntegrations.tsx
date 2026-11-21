@@ -24,6 +24,9 @@ const PROVIDER_META: Record<
     configKey: string;
     configLabelKa: string;
     configLabelEn: string;
+    secondaryConfigKey?: string;
+    secondaryLabelKa?: string;
+    secondaryLabelEn?: string;
     secretLabelKa: string;
     secretLabelEn: string;
   }
@@ -32,8 +35,11 @@ const PROVIDER_META: Record<
     ka: "Google OIDC (ავტორიზაცია)",
     en: "Google OIDC (Sign-In)",
     configKey: "androidClientId",
-    configLabelKa: "Android / Web OAuth Client ID",
-    configLabelEn: "Android / Web OAuth Client ID",
+    configLabelKa: "Android OAuth Client ID",
+    configLabelEn: "Android OAuth Client ID",
+    secondaryConfigKey: "iosClientId",
+    secondaryLabelKa: "iOS OAuth Client ID (არასავალდებულო)",
+    secondaryLabelEn: "iOS OAuth Client ID (optional)",
     secretLabelKa: "OAuth Client Secret (არასავალდებულო)",
     secretLabelEn: "OAuth Client Secret (optional)",
   },
@@ -93,6 +99,7 @@ export default function PlatformExternalIntegrations({
   );
   const [enabled, setEnabled] = useState(false);
   const [configVal, setConfigVal] = useState("");
+  const [secondaryConfigVal, setSecondaryConfigVal] = useState("");
   const [secret, setSecret] = useState("");
   const [clearSecret, setClearSecret] = useState(false);
   const [reason, setReason] = useState("");
@@ -145,6 +152,11 @@ export default function PlatformExternalIntegrations({
     setEditing(item.provider);
     setEnabled(item.enabled);
     setConfigVal(item.publicConfig[meta.configKey] ?? "");
+    setSecondaryConfigVal(
+      meta.secondaryConfigKey
+        ? (item.publicConfig[meta.secondaryConfigKey] ?? "")
+        : "",
+    );
     setSecret("");
     setClearSecret(false);
     setReason("");
@@ -167,7 +179,13 @@ export default function PlatformExternalIntegrations({
         provider: editing,
         expectedVersion: current.version,
         enabled,
-        publicConfig: { ...current.publicConfig, [meta.configKey]: configVal.trim() },
+        publicConfig: {
+          ...current.publicConfig,
+          [meta.configKey]: configVal.trim(),
+          ...(meta.secondaryConfigKey
+            ? { [meta.secondaryConfigKey]: secondaryConfigVal.trim() }
+            : {}),
+        },
         ...(secret.trim() ? { secret: secret.trim() } : {}),
         ...(clearSecret ? { clearSecret: true } : {}),
         reason: reason.trim(),
@@ -252,6 +270,9 @@ export default function PlatformExternalIntegrations({
           {providers.map((item) => {
             const meta = PROVIDER_META[item.provider];
             const cfgValue = item.publicConfig[meta.configKey] || "—";
+            const secondaryValue = meta.secondaryConfigKey
+              ? item.publicConfig[meta.secondaryConfigKey]
+              : undefined;
             return (
               <div
                 key={item.provider}
@@ -265,7 +286,11 @@ export default function PlatformExternalIntegrations({
                     {item.enabled
                       ? t("ჩართულია", "Enabled")
                       : t("გამორთულია", "Disabled")}{" "}
-                    · {t(meta.configLabelKa, meta.configLabelEn)}: {cfgValue} ·{" "}
+                    · {t(meta.configLabelKa, meta.configLabelEn)}: {cfgValue}
+                    {secondaryValue
+                      ? ` · ${t(meta.secondaryLabelKa ?? "", meta.secondaryLabelEn ?? "")}: ${secondaryValue}`
+                      : ""}{" "}
+                    ·{" "}
                     {item.hasSecret
                       ? t("საიდუმლო გასაღები შენახულია", "Secret stored")
                       : t("საიდუმლო გასაღები არ არის", "No secret stored")}
@@ -308,6 +333,16 @@ export default function PlatformExternalIntegrations({
             value={configVal}
             onChange={(e) => setConfigVal(e.target.value)}
           />
+          {PROVIDER_META[editing].secondaryConfigKey && (
+            <Input
+              label={t(
+                PROVIDER_META[editing].secondaryLabelKa ?? "",
+                PROVIDER_META[editing].secondaryLabelEn ?? "",
+              )}
+              value={secondaryConfigVal}
+              onChange={(e) => setSecondaryConfigVal(e.target.value)}
+            />
+          )}
           <Input
             type="password"
             label={t(
