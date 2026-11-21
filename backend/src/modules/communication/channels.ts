@@ -67,8 +67,21 @@ const schemas = {
       kind: z.enum(['group', 'global']).optional(),
     })
     .strict(),
-  'direct-peers': org.strict(),
-  'direct-open': org.extend({ key: uuid, peerId: uuid }).strict(),
+  'direct-peers': org.extend({ search: z.string().trim().max(80).optional() }).strict(),
+  'direct-open': org
+    .extend({
+      key: uuid,
+      peerId: uuid.optional(),
+      peerIds: z.array(uuid).min(1).max(12).optional(),
+      title: z.string().trim().min(3).max(120).optional(),
+    })
+    .strict(),
+  'direct-add': write
+    .extend({
+      peerId: uuid.optional(),
+      peerIds: z.array(uuid).min(1).max(12).optional(),
+    })
+    .strict(),
   'direct-block': id.extend({ key: uuid, blocked: z.boolean() }).strict(),
   post: write
     .extend({
@@ -139,6 +152,7 @@ export async function channelCommand(
         'react',
         'pin',
         'direct-open',
+        'direct-add',
         'direct-block',
       ].includes(op)
     ) {
@@ -304,6 +318,7 @@ export function createChannelRouter(
     'react',
     'pin',
     'direct-open',
+    'direct-add',
     'direct-block',
   ] as const)
     router.post('/' + op, requireAdminCsrf, async (req, res, next) => {

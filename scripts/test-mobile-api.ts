@@ -231,14 +231,33 @@ try {
   );
   assert(peersRes.status === 200, `Direct peers failed: ${peersRes.status}`);
   const peersBody = (await peersRes.json()) as {
-    items: Array<{ memberId: string; label: string; optIn: boolean; roleKind: string }>;
+    selfCode: string;
+    items: Array<{ memberId: string; memberCode: string; label: string; optIn: boolean; roleKind: string }>;
   };
+  assert(/^[A-Z][2-9][A-Z][2-9][A-Z][2-9]$/.test(peersBody.selfCode), `Expected 6-char alphanumeric selfCode, got ${peersBody.selfCode}`);
   assert(peersBody.items.length >= 1, 'Expected at least 1 eligible peer in shared unit');
   assert(
-    peersBody.items.every((p) => !p.label.includes('@mobile.ertad.local') && (p.optIn || !p.label.includes('კალანდაძე'))),
-    'Private member legal name/email must not leak when private_hidden'
+    peersBody.items.every(
+      (p) =>
+        /^[A-Z][2-9][A-Z][2-9][A-Z][2-9]$/.test(p.memberCode) &&
+        !p.label.includes('@mobile.ertad.local') &&
+        (p.optIn || !p.label.includes('კალანდაძე'))
+    ),
+    'Private member legal name/email must not leak when private_hidden and memberCode must be 6-char alphanumeric'
   );
   const peerCoord = peersBody.items.find((p) => p.roleKind === 'coordinator') ?? peersBody.items[0];
+
+  // Search by unique alphanumeric code finds the exact peer
+  const codeSearchRes = await fetch(
+    `${base}/channels/direct-peers?organizationId=${personasBody.organizationId}&search=${encodeURIComponent('#' + peerCoord.memberCode)}`,
+    { headers: memberHeaders }
+  );
+  assert(codeSearchRes.status === 200, `Direct peers code search failed: ${codeSearchRes.status}`);
+  const codeSearchBody = (await codeSearchRes.json()) as typeof peersBody;
+  assert(
+    codeSearchBody.items.some((p) => p.memberId === peerCoord.memberId),
+    'Searching by #memberCode must locate the target member'
+  );
 
   const openKey = randomUUID();
   const dmOpen1 = await fetch(`${base}/channels/direct-open`, {
@@ -280,13 +299,43 @@ try {
   });
   assert(dmPostRes.status === 200, `Direct post failed: ${dmPostRes.status}`);
 
+  const dmPostBody = (await dmPostRes.json()) as { messageId: string; seq: number };
+  const dmReplyRes = await fetch(`${base}/channels/post`, {
+    method: 'POST',
+    headers: memberHeaders,
+    body: JSON.stringify({
+      organizationId: personasBody.organizationId,
+      id: dm1.id,
+      key: randomUUID(),
+      body: 'პასუხი კონკრეტულ შეტყობინებაზე',
+      replyId: dmPostBody.messageId,
+    }),
+  });
+  assert(dmReplyRes.status === 200, `Direct reply failed: ${dmReplyRes.status}`);
+
   const dmThreadRes = await fetch(
     `${base}/channels/thread?organizationId=${personasBody.organizationId}&id=${dm1.id}`,
     { headers: memberHeaders }
   );
   assert(dmThreadRes.status === 200, `Direct thread failed: ${dmThreadRes.status}`);
-  const dmThread = (await dmThreadRes.json()) as { items: Array<{ body: string }> };
+  const dmThread = (await dmThreadRes.json()) as {
+    items: Array<{
+      id: string;
+      body: string;
+      authorCode: string;
+      authorLabel: string;
+      replyPreview: { seq: number; body: string; authorCode: string } | null;
+    }>;
+  };
   assert(dmThread.items.some((m) => m.body.includes('გამარჯობა')), 'Expected posted DM message in thread');
+  const replyItem = dmThread.items.find((m) => m.body === 'პასუხი კონკრეტულ შეტყობინებაზე');
+  assert(
+    replyItem &&
+      /^[A-Z][2-9][A-Z][2-9][A-Z][2-9]$/.test(replyItem.authorCode) &&
+      replyItem.replyPreview &&
+      replyItem.replyPreview.body.includes('გამარჯობა'),
+    'Expected enriched authorCode and replyPreview on thread message'
+  );
 
   // Block & unblock direct chat
   const dmBlockRes = await fetch(`${base}/channels/direct-block`, {

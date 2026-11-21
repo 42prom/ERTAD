@@ -166,7 +166,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       minChildSize: 0.5,
       maxChildSize: 0.95,
       builder: (context, scrollController) {
-        final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+        final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
         return Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),

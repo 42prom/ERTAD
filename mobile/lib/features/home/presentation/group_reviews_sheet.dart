@@ -123,7 +123,7 @@ class _GroupReviewsSheetState extends ConsumerState<_GroupReviewsSheet> {
       minChildSize: 0.5,
       maxChildSize: 0.94,
       builder: (context, scrollController) {
-        final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+        final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
         return Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),

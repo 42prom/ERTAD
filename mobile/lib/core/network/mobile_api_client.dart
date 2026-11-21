@@ -558,14 +558,34 @@ class MobileApiClient {
 
   Future<List<Map<String, dynamic>>> fetchDirectPeers({
     required String organizationId,
+    String? search,
+  }) async {
+    final res = await fetchDirectPeersDirectory(
+      organizationId: organizationId,
+      search: search,
+    );
+    return res.items;
+  }
+
+  Future<({String selfCode, List<Map<String, dynamic>> items})>
+  fetchDirectPeersDirectory({
+    required String organizationId,
+    String? search,
   }) async {
     try {
+      final q = search?.trim() ?? '';
       final res = await _dio.get<Map<String, dynamic>>(
         '/mobile/channels/direct-peers',
-        queryParameters: <String, dynamic>{'organizationId': organizationId},
+        queryParameters: <String, dynamic>{
+          'organizationId': organizationId,
+          if (q.isNotEmpty) 'search': q,
+        },
       );
-      final items = (res.data?['items'] as List? ?? const []);
-      return items.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      final selfCode = res.data?['selfCode']?.toString() ?? '';
+      final items = (res.data?['items'] as List? ?? const [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+      return (selfCode: selfCode, items: items);
     } catch (e) {
       _rethrow(e);
     }
@@ -573,14 +593,40 @@ class MobileApiClient {
 
   Future<Map<String, dynamic>> openDirectChannel({
     required String organizationId,
-    required String peerId,
+    String? peerId,
+    List<String>? peerIds,
+    String? title,
   }) async {
     try {
+      final cleanTitle = title?.trim();
       final res = await _dio.post<Map<String, dynamic>>(
         '/mobile/channels/direct-open',
         data: <String, dynamic>{
           'organizationId': organizationId,
-          'peerId': peerId,
+          'peerId': ?peerId,
+          if (peerIds != null && peerIds.isNotEmpty) 'peerIds': peerIds,
+          if (cleanTitle != null && cleanTitle.length >= 3) 'title': cleanTitle,
+          'key': newIdempotencyKey(),
+        },
+      );
+      return Map<String, dynamic>.from(res.data ?? const {});
+    } catch (e) {
+      _rethrow(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> addDirectChannelMembers({
+    required String organizationId,
+    required String channelId,
+    required List<String> peerIds,
+  }) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/mobile/channels/direct-add',
+        data: <String, dynamic>{
+          'organizationId': organizationId,
+          'id': channelId,
+          'peerIds': peerIds,
           'key': newIdempotencyKey(),
         },
       );

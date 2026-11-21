@@ -63,7 +63,7 @@ try {
     orgId = parsed.organizationId;
     groupUnitId = parsed.personas[0].unitId;
     const decCount = await client.query(
-      "SELECT count(*)::int AS c FROM decisions WHERE organization_id=$1 AND status='open'",
+      "SELECT count(*)::int AS c FROM decisions WHERE organization_id=$1 AND status='open' AND closes_at > clock_timestamp()",
       [orgId]
     );
     const chCount = await client.query(
@@ -271,7 +271,7 @@ try {
       const ensureDecision = async (payload: Record<string, unknown>) => {
         const existingRow = (
           await client.query(
-            'SELECT id, status, version FROM decisions WHERE organization_id=$1 AND title=$2 ORDER BY created_at DESC LIMIT 1',
+            'SELECT id, status, version FROM decisions WHERE organization_id=$1 AND title=$2 AND closes_at > clock_timestamp() ORDER BY created_at DESC LIMIT 1',
             [orgId, payload.title]
           )
         ).rows[0];

@@ -1,6 +1,19 @@
 # Verified development status
 
-> Last updated: 2026-11-21 · Branch: `feat/ertad-development` · Not deployed to production
+> Last updated: 2026-11-22 · Branch: `feat/ertad-development` · Not deployed to production
+
+## Flagship Mobile Messaging, Alphanumeric Member Handles & Multi-Member Private Chats (Migration 82, 2026-11-22)
+
+- **DB & API ([`0082_flagship_messaging_and_private_rooms.sql`](../backend/db/foundation/0082_flagship_messaging_and_private_rooms.sql), [`channels.ts`](../backend/src/modules/communication/channels.ts)):**
+  - Added deterministic 6-character alphanumeric member handles (`ertad.member_anon_code`, `LDLDLD` pattern e.g. `#K4M9P2`) replacing sequential `წევრი #1` tags across channels, thread items, and peer directories.
+  - Enriched `thread` and `search` payloads with `authorCode`, `authorLabel`, and `replyPreview` (`seq`, `authorCode`, `authorLabel`, `body` snippet, `hasAttachment`, `removed`) while keeping raw member UUIDs and emails strictly redacted.
+  - Added `ertad.channel_direct_participants`, server-side `direct-peers?search=...` (matching name, group, or `#K4M9P2` code across the organization + returning `selfCode`), multi-select `direct-open` (`peerId` or `peerIds` + optional group `title`), and `direct-add` (`POST /api/v1/mobile/channels/direct-add`) to add participants into an existing private chat.
+- **Mobile UI ([`channel_thread_screen.dart`](../mobile/lib/features/messages/presentation/channel_thread_screen.dart), [`direct_peers_sheet.dart`](../mobile/lib/features/messages/presentation/direct_peers_sheet.dart), [`mobile_api_client.dart`](../mobile/lib/core/network/mobile_api_client.dart), [`shell_providers.dart`](../mobile/lib/core/state/shell_providers.dart), [`shell_l10n.dart`](../mobile/lib/core/shell/shell_l10n.dart), [`work_detail_screen.dart`](../mobile/lib/features/tasks/presentation/work_detail_screen.dart), [`event_detail_screen.dart`](../mobile/lib/features/tasks/presentation/event_detail_screen.dart), [`group_reviews_sheet.dart`](../mobile/lib/features/home/presentation/group_reviews_sheet.dart), [`account_privacy_sheet.dart`](../mobile/lib/core/shell/account_privacy_sheet.dart), [`inbox_sheet.dart`](../mobile/lib/core/shell/inbox_sheet.dart)):**
+  - Rendered image attachments inline inside chat bubbles with in-memory caching, fullscreen `InteractiveViewer` zoom on tap, staged thumbnail preview above the composer before sending, and automatic suppression of dummy `[Photo]` body text.
+  - Replaced `პასუხობ #10` pills with quoted reply cards showing the quoted author's name/code and message snippet, with tap-to-scroll and highlight on the parent message.
+  - Removed duplicate `MediaQuery.viewPaddingOf(context).bottom` inside `SafeArea`-wrapped composers and sheets, eliminating the bottom blank gap and lifting sheets cleanly with `MediaQuery.viewInsetsOf(context).bottom`.
+  - Upgraded `DirectPeersSheet` with multi-select checkboxes, selected member chips, caller's own copyable `#XXXXXX` code banner, search by `#code`/name/group, and `+` (`მონაწილის დამატება`) action in private chat headers.
+- **Verified evidence:** `db:migrate` (`0082`), `test:channels` (`13/13` database scenarios), `test:mobile-api` (PASS), `restore:drill` (`105 tables, 82 migrations`), `flutter analyze --no-pub` (`0` issues), `flutter test --no-pub` (`81/81` passed), `check:identity` & `check:workspace` (`912 eligible paths`).
 
 ## Phase B — Web Admin Role UX, OIDC iOS Parity & Mobile Offline Queue Sync (2026-11-21)
 

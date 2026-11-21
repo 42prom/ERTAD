@@ -757,6 +757,45 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
     return ch;
   }
 
+  Future<Map<String, dynamic>?> openDirectChatMulti(
+    List<String> peerIds, {
+    String? title,
+  }) async {
+    if (!state.isLiveConnected ||
+        state.activeOrgId.startsWith('org-') ||
+        peerIds.isEmpty) {
+      return null;
+    }
+    if (peerIds.length == 1 && (title == null || title.trim().isEmpty)) {
+      return openDirectChat(peerIds.first);
+    }
+    final ch = await _api.openDirectChannel(
+      organizationId: state.activeOrgId,
+      peerIds: peerIds,
+      title: title,
+    );
+    await refreshWorkspace();
+    return ch;
+  }
+
+  Future<Map<String, dynamic>?> addMembersToDirectChat(
+    String channelId,
+    List<String> peerIds,
+  ) async {
+    if (!state.isLiveConnected ||
+        state.activeOrgId.startsWith('org-') ||
+        peerIds.isEmpty) {
+      return null;
+    }
+    final ch = await _api.addDirectChannelMembers(
+      organizationId: state.activeOrgId,
+      channelId: channelId,
+      peerIds: peerIds,
+    );
+    await refreshWorkspace();
+    return ch;
+  }
+
   Future<Map<String, dynamic>> redeemReferralCode(String code) async {
     final orgId = state.activeOrgId;
     final res = await _api.redeemReferralCode(
