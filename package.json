@@ -59,6 +59,8 @@
     "restore:drill": "node scripts/restore-drill.mjs",
     "admin:bootstrap": "tsx scripts/bootstrap-local-admin.ts",
     "mobile:seed": "tsx scripts/bootstrap-mobile-dev.ts",
+    "mobile:apk:tunnel": "node scripts/build-mobile-apk.mjs --tunnel",
+    "mobile:apk:local": "node scripts/build-mobile-apk.mjs --local",
     "test:mobile-api": "tsx scripts/test-mobile-api.ts",
     "demo:bootstrap": "tsx scripts/bootstrap-web-demo.ts",
     "test:demo": "tsx scripts/test-web-demo.ts",

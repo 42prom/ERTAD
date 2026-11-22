@@ -50,8 +50,10 @@ Council members hold zero technical/credential authority and configure organizat
   - Enable automated PITR backups and verify periodic restore drills (`npm run restore:drill` — locally verified: 105 tables, 83 migrations, ACL/RLS/audit checks).
 - [ ] **Secrets & Key Custody**
   - Manage `API_KEY_ENCRYPTION_SECRET`, `JWT_SECRET`, DB credentials, and Redis password via Vault/KMS/HSM (never `.env` files in Git).
-- [ ] **Network & TLS**
-  - Terminate TLS 1.3 at reverse proxy / WAF; set `NODE_ENV=production`, `ERTAD_LOCAL_ADMIN=false` (or scoped production routing), `ERTAD_NETWORK_CONTROL=true`, and verified `TRUST_PROXY`.
+- [ ] **Network, Cloudflare Edge Proxy & TLS**
+  - Place Cloudflare Proxy / WAF or Cloudflare Tunnel in front of origin (`TLS 1.3`, Strict SSL, Authenticated Origin Pulls / private tunnel ingress so the origin server IP is never exposed directly).
+  - Configure Cloudflare Cache Rules to bypass caching on `/api/v1/*` (`Cache-Control: no-store` responses).
+  - Forward verified `CF-Connecting-IP` and `CF-IPCountry` headers, verify with `npm run network:verify`, and set `NODE_ENV=production`, `ERTAD_LOCAL_ADMIN=false` (or scoped production routing), `ERTAD_NETWORK_CONTROL=true`, `ERTAD_COUNTRY_HEADERS_VERIFIED=true`, and explicit `TRUST_PROXY_HOPS` (`1..5`).
 - [ ] **Audit Chain Checkpoints**
   - Periodically verify and export signed SHA-256 `audit_log` checkpoints from `/platform/audit`.
 
@@ -61,7 +63,8 @@ Council members hold zero technical/credential authority and configure organizat
 
 - [ ] **Android Release Build (`ge.ertad.mobile`)**
   - Configure Play App Signing / release keystore (`mobile/android/key.properties`, gitignored).
-  - Build without dev flags: `flutter build appbundle --release` (ensures `kReleaseMode == true`, disabling Dev Quick Login and dev bypasses).
+  - Build against Cloudflare HTTPS endpoint without dev flags: `node scripts/build-mobile-apk.mjs --release --api-url=https://<api-host>/api/v1` (runs `flutter build appbundle --release --dart-define=FLAVOR=prod`, keeping `kReleaseMode == true` and omitting `ERTAD_DEV_WORKSPACE`).
+  - Rely on system CA trust + TLS 1.3 (`usesCleartextTraffic="false"` in `AndroidManifest.xml`), Play Integrity / App Attest, opaque bearer+CSRF tokens, and Zero Trust biometrics — never embed Cloudflare leaf TLS pins that break on certificate rotation.
   - Verify Play Integrity API verdict in Google Play Console.
 - [ ] **iOS Release Build**
   - Enable App Attest & NFC Tag Reading entitlements in Xcode (`Runner.entitlements`).

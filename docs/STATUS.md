@@ -2,6 +2,17 @@
 
 > Last updated: 2026-11-22 · Branch: `feat/ertad-development` · Not deployed to production
 
+## Cable-Free Mobile Cloudflare Tunnel & Production Edge Proxy Hardening (2026-11-22)
+
+- **Mobile HTTP Resilience & Build Tooling ([`app_config.dart`](../mobile/lib/config/app_config.dart), [`mobile_api_client.dart`](../mobile/lib/core/network/mobile_api_client.dart), [`build-mobile-apk.mjs`](../scripts/build-mobile-apk.mjs), [`build-mobile-apk.test.mjs`](../scripts/tests/build-mobile-apk.test.mjs), [`package.json`](../package.json), [`PRODUCTION_CHECKLIST.md`](PRODUCTION_CHECKLIST.md)):**
+  - Normalized `AppConfig.apiBaseUrl` to strip trailing slashes safely and raised default `MobileApiClient` timeouts (`10s` connect, `25s` send/receive) for mobile TLS 1.3 handshakes and 3 MB photo/selfie uploads over cellular/Wi-Fi + Cloudflare.
+  - Added [`scripts/build-mobile-apk.mjs`](../scripts/build-mobile-apk.mjs) (`npm run mobile:apk:tunnel`, `npm run mobile:apk:local`, and `--release --api-url=https://...`) dynamically reading `ERTAD_TUNNEL_ORIGIN` from ignored `.env`, rejecting non-HTTPS/loopback release targets, and omitting dev flags in `--release`.
+  - Documented Cloudflare Edge Proxy / Tunnel requirements in [`PRODUCTION_CHECKLIST.md`](PRODUCTION_CHECKLIST.md): hidden origin via Tunnel/Authenticated Origin Pulls, `/api/v1/*` cache bypass, `CF-Connecting-IP`/`CF-IPCountry` validation (`ERTAD_NETWORK_CONTROL=true`), OS CA + TLS 1.3 without leaf cert pinning, and Play Integrity / App Attest + Zero Trust biometrics.
+- **Verified evidence:**
+  - `scripts/tests` (`12/12`, including `4/4` in `build-mobile-apk.test.mjs`), `flutter analyze --no-pub` (`0 issues`), `flutter test --no-pub` (`84/84 passed`), `npm run check` (PASS: `check:identity`, `tokens:check`, `typecheck`, ESLint `--max-warnings 0`, backend integration `4/4`, Jest `27` suites / `232` tests, Vitest `59` files passed, `scripts/tests` `12/12`, builds), `npm run check:workspace` (`918 eligible paths`).
+  - Live Cloudflare Tunnel stack (API `:13000`, Vite `:15173`, Tunnel ingress `:15174`, `cloudflared` QUIC edges): live HTTPS probe against `ERTAD_TUNNEL_ORIGIN` verified `/health/ready`, `GET /api/v1/mobile/dev/personas` (`X-ERTAD-Network-Source: cloudflare`, `X-ERTAD-Network-Country: GE`), `POST /mobile/dev/login`, `GET /mobile/m4/status` (`biometric_verified`, `permanentVerification: true`), and `POST /mobile/dev/logout` (`200 OK`); `npm run smoke` (PASS).
+  - `npm run mobile:apk:tunnel`: built `mobile/build/app/outputs/flutter-apk/app-debug.apk` (`67.9s`) wired to `ERTAD_TUNNEL_ORIGIN/api/v1` (USB phone not attached during verification).
+
 ## Permanent Biometric Verification, Selfie-Only Device Re-Auth & Manager vs Member Parity (Migration 83, 2026-11-22)
 
 - **DB & API ([`0083_permanent_biometric_and_device_reauth.sql`](../backend/db/foundation/0083_permanent_biometric_and_device_reauth.sql), [`m4Auth.ts`](../backend/src/modules/mobile/m4Auth.ts), [`app.ts`](../backend/src/app.ts), [`bootstrap-mobile-dev.ts`](../scripts/bootstrap-mobile-dev.ts)):**

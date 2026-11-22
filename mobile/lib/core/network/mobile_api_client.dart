@@ -74,8 +74,9 @@ class MobileApiClient {
            Dio(
              BaseOptions(
                baseUrl: baseUrl ?? AppConfig.apiBaseUrl,
-               connectTimeout: const Duration(seconds: 4),
-               receiveTimeout: const Duration(seconds: 10),
+               connectTimeout: const Duration(seconds: 10),
+               sendTimeout: const Duration(seconds: 25),
+               receiveTimeout: const Duration(seconds: 25),
                headers: const {'Accept': 'application/json'},
              ),
            ) {

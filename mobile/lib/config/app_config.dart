@@ -14,11 +14,13 @@ import 'package:flutter/foundation.dart';
 class AppConfig {
   AppConfig._();
 
-  /// Backend API base URL (no trailing slash).
-  static const String apiBaseUrl = String.fromEnvironment(
+  static const String _rawApiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'http://127.0.0.1:13000/api/v1',
   );
+
+  /// Backend API base URL (normalized without trailing slash).
+  static String get apiBaseUrl => _rawApiBaseUrl.replaceFirst(RegExp(r'/+$'), '');
 
   /// Build flavor: dev | staging | prod
   static const String flavor = String.fromEnvironment(
