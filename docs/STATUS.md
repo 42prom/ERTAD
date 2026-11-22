@@ -1,6 +1,20 @@
 # Verified development status
 
-> Last updated: 2026-11-22 · Branch: `feat/ertad-development` · Not deployed to production
+> Last updated: 2026-11-23 · Branch: `feat/ertad-development` · Not deployed to production
+
+## Universal Auditable Biometric Identity, Multi-Gmail & E.164 Phone UX (Migration 84, 2026-11-23)
+
+- **DB & Backend ([`0084_universal_biometric_identity_and_audit.sql`](../backend/db/foundation/0084_universal_biometric_identity_and_audit.sql), [`m4Auth.ts`](../backend/src/modules/mobile/m4Auth.ts), [`members.ts`](../backend/src/modules/organization/members.ts)):**
+  - Added encrypted `face_embedding_cipher` persistence on `ertad.member_identity_proofs`, RLS-enforced `ertad.member_verification_documents` (append-only verified document & encrypted portrait archive across eID/passport enrollments), and RLS-enforced `ertad.member_google_accounts` (up to 3 Google OIDC accounts per member with primary switching and last-login protection).
+  - Updated `ertad.mobile_m4_command` so `POST /api/v1/mobile/m4/biometric/complete` enforces cross-member ArcFace 512-d face deduplication (`>= 0.50` -> `409 DUPLICATE_BIOMETRIC_FACE`) alongside `personSubjectHash`, archives each verified document + portrait, and retains failed attempts (`30 days`) and passed sessions (`3650 days`) in non-purged audit logs; updated `POST /api/v1/mobile/m4/biometric/reauth` to decrypt stored portrait cipher and evaluate real face comparison via the local biometric service when available; added `POST /api/v1/mobile/m4/google/remove` and `POST /api/v1/mobile/m4/google/primary`.
+  - Extended `ertad.mobile_profile_command` (`GET /api/v1/mobile/m4/profile`) and `ertad.member_directory_verification_summary` with `documentsCount`/`documentCount`, `activeDeviceCount`, `linkedGoogleAccounts`/`linkedGoogleCount`, decrypted `documents` portraits (audited via `MEMBER_PORTRAIT_VIEWED`), and non-purged `verificationLog`/`verificationHistory`.
+- **Web Admin & Mobile UX ([`members.ts`](../admin/src/api/members.ts), [`Members.tsx`](../admin/src/pages/Members.tsx), [`mobile_api_client.dart`](../mobile/lib/core/network/mobile_api_client.dart), [`shell_providers.dart`](../mobile/lib/core/state/shell_providers.dart), [`shell_l10n.dart`](../mobile/lib/core/shell/shell_l10n.dart), [`org_context_sheet.dart`](../mobile/lib/core/shell/org_context_sheet.dart), [`liveness_screen.dart`](../mobile/lib/screens/enrollment/liveness_screen.dart), [`PRODUCTION_CHECKLIST.md`](PRODUCTION_CHECKLIST.md)):**
+  - Added document/device/Google counters, blur-to-reveal per-document portrait archive cards, and verification audit log rows to `Members.tsx`.
+  - Converted `OrgContextSheet` to a 3-state verification card (hiding the re-verify CTA button when permanently verified on a trusted device and prompting 3-second selfie re-auth only when untrusted), added `_CountryPhoneSheet` E.164 country dial selector defaulting to `+995`, added linked Google account primary/remove controls, and fixed `428 DEV_STEP_UP_REQUIRED` retry handling for both `DioException` and `MobileApiException` in `_withDevStepUpRetry`.
+- **Verified evidence ([`test-m4-verification.ts`](../scripts/test-m4-verification.ts), [`phase_a_contracts_test.dart`](../mobile/test/phase_a_contracts_test.dart)):**
+  - `npm run db:migrate` (`0084`), `npm run test:m4` (PASS), `npm run mobile:seed` (PASS), `npm run test:mobile-api` (PASS), `npm run restore:drill` (`107 tables, 84 migrations`, `8.6s`).
+  - `flutter analyze --no-pub` (`No issues found!`), `flutter test --no-pub` (`86/86` passed, including `OrgContextSheet` 3-state & `_withDevStepUpRetry` 428 retry tests), `npm run mobile:apk:tunnel` (`app-debug.apk` built cleanly in `99.0s`; USB device not attached during run).
+  - `npm run check` (`check:identity`, `tokens:check`, `typecheck`, `eslint --max-warnings 0`, backend integration `4/4`, Jest `27` suites / `232` tests, Vitest `59` files passed, `scripts/tests` `12/12`, production workspace builds), `npm run check:workspace` (`919 eligible paths`), `npm run smoke` (PASS against `:13000` & `:15173`), local biometric service `/health` (`200 OK`), and live Cloudflare Tunnel HTTPS probe (`/health/ready`, `/mobile/dev/login`, `/mobile/m4/profile`, `/mobile/dev/logout` `200 OK`).
 
 ## Cable-Free Mobile Cloudflare Tunnel & Production Edge Proxy Hardening (2026-11-22)
 

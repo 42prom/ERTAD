@@ -296,7 +296,7 @@ class _LivenessScreenState extends State<LivenessScreen>
       final platform = Platform.isIOS ? 'ios' : 'android';
       final deviceId = await StorageService().getOrCreateInstallationId();
       if (widget.reauthOnly) {
-        await api.reauthBiometric(
+        final res = await api.reauthBiometric(
           deviceId: deviceId,
           platform: platform,
           livenessScore: 0.96,
@@ -305,8 +305,13 @@ class _LivenessScreenState extends State<LivenessScreen>
         );
         await container.read(shellSessionProvider.notifier).refreshWorkspace();
         if (!mounted) return;
+        final evaluated = res['faceMatchEvaluated'] == true;
+        final rawScore = res['faceMatchScore'];
+        final pct = evaluated && rawScore is num
+            ? ' (${(rawScore.toDouble() * 100).round()}%)'
+            : '';
         container.read(ertadFeedbackProvider.notifier).showSuccess(
-              'მოწყობილობა დადასტურდა 3-წამიანი სელფით!',
+              'მოწყობილობა დადასტურდა 3-წამიანი სელფით$pct!',
             );
         Navigator.of(
           context,

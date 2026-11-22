@@ -59,16 +59,20 @@ class MobileApiClient {
 
   final Dio _dio;
   final FlutterSecureStorage _secureStorage;
+  final bool _allowDevStepUp;
 
   MobileApiClient({
     String? baseUrl,
     Dio? dio,
     FlutterSecureStorage? secureStorage,
+    @visibleForTesting bool? allowDevStepUp,
   }) : _secureStorage =
            secureStorage ??
            const FlutterSecureStorage(
              aOptions: AndroidOptions(),
            ),
+       _allowDevStepUp =
+           allowDevStepUp ?? (!kReleaseMode && AppConfig.devWorkspace),
        _dio =
            dio ??
            Dio(
@@ -1047,12 +1051,47 @@ class MobileApiClient {
     }
   }
 
-  /// Binds a verified Google OIDC ID token to the caller's hybrid session (`/mobile/m4/google/bind`).
-  Future<Map<String, dynamic>> bindGoogleIdentity(String idToken) async {
+  /// Binds a verified Google OIDC ID token (up to 3 Google accounts per member).
+  Future<Map<String, dynamic>> bindGoogleIdentity(
+    String idToken, {
+    String? emailHint,
+    bool makePrimary = false,
+  }) async {
     try {
       final res = await _dio.post<Map<String, dynamic>>(
         '/mobile/m4/google/bind',
-        data: <String, dynamic>{'idToken': idToken},
+        data: <String, dynamic>{
+          'idToken': idToken,
+          if (emailHint != null && emailHint.trim().isNotEmpty)
+            'emailHint': emailHint.trim(),
+          if (makePrimary) 'makePrimary': true,
+        },
+      );
+      return Map<String, dynamic>.from(res.data ?? const {});
+    } catch (e) {
+      _rethrow(e);
+    }
+  }
+
+  /// Removes a secondary linked Google account (`/mobile/m4/google/remove`).
+  Future<Map<String, dynamic>> removeGoogleAccount(String accountId) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/mobile/m4/google/remove',
+        data: <String, dynamic>{'accountId': accountId},
+      );
+      return Map<String, dynamic>.from(res.data ?? const {});
+    } catch (e) {
+      _rethrow(e);
+    }
+  }
+
+  /// Marks one of the caller's linked Google accounts as primary (`/mobile/m4/google/primary`).
+  Future<Map<String, dynamic>> setPrimaryGoogleAccount(String accountId) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/mobile/m4/google/primary',
+        data: <String, dynamic>{'accountId': accountId},
       );
       return Map<String, dynamic>.from(res.data ?? const {});
     } catch (e) {
@@ -1068,6 +1107,7 @@ class MobileApiClient {
     required double livenessScore,
     required double faceMatchScore,
     required String personSubjectKey,
+    String documentKind = 'eid_card',
     String? biometricTemplate,
     String? docPortraitBase64,
     String? selfieBase64,
@@ -1082,6 +1122,7 @@ class MobileApiClient {
           'livenessScore': livenessScore,
           'faceMatchScore': faceMatchScore,
           'personSubjectKey': personSubjectKey,
+          'documentKind': documentKind,
           'biometricTemplate': ?biometricTemplate,
           'docPortraitBase64': ?docPortraitBase64,
           'selfieBase64': ?selfieBase64,
@@ -1123,8 +1164,14 @@ class MobileApiClient {
   Future<T> _withDevStepUpRetry<T>(Future<T> Function() fn) async {
     try {
       return await fn();
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 428 && _allowDevStepUp) {
+        await devStepUp();
+        return await fn();
+      }
+      rethrow;
     } on MobileApiException catch (e) {
-      if (e.statusCode == 428 && !kReleaseMode && AppConfig.devWorkspace) {
+      if (e.statusCode == 428 && _allowDevStepUp) {
         await devStepUp();
         return await fn();
       }

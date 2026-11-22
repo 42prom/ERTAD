@@ -4,7 +4,8 @@ import { z } from 'zod';
 import { getApiKeyEncryptionSecret } from '../../config/secrets';
 import { retryDeadlockedTransaction } from '../../db/client';
 import { DeviceAttestationService } from '../../services/deviceAttestation';
-import { encryptSensitiveValue } from '../../services/secretEncryption';
+import { decryptSensitiveValue, encryptSensitiveValue } from '../../services/secretEncryption';
+import { SecurityService } from '../../services/security';
 import { ReviewError } from '../governance/reviews';
 
 const challengeSchema = z
@@ -29,6 +30,14 @@ const verifyAttestationSchema = z
 const bindGoogleSchema = z
   .object({
     idToken: z.string().min(16).max(8192),
+    emailHint: z.string().trim().email().max(160).optional(),
+    makePrimary: z.boolean().optional(),
+  })
+  .strict();
+
+const googleAccountActionSchema = z
+  .object({
+    accountId: z.string().uuid(),
   })
   .strict();
 
@@ -40,16 +49,44 @@ const completeBiometricSchema = z
     livenessScore: z.number().min(0).max(1),
     faceMatchScore: z.number().min(0).max(1),
     personSubjectKey: z.string().min(6).max(256),
+    documentKind: z.enum(['eid_card', 'passport', 'other']).optional(),
     biometricTemplate: z.string().min(16).max(8192).optional(),
     docPortraitBase64: z.string().max(1_500_000).optional(),
     selfieBase64: z.string().max(1_500_000).optional(),
   })
   .strict();
 
+function cosineSimilarity(a: number[], b: number[]): number {
+  if (a.length === 0 || a.length !== b.length) return 0;
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i < a.length; i += 1) {
+    const x = a[i];
+    const y = b[i];
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return 0;
+    dot += x * y;
+    normA += x * x;
+    normB += y * y;
+  }
+  if (normA <= 0 || normB <= 0) return 0;
+  return Math.max(0, dot / (Math.sqrt(normA) * Math.sqrt(normB)));
+}
+
+function maskEmail(raw: string): string {
+  const clean = raw.trim().toLowerCase();
+  const at = clean.indexOf('@');
+  if (at <= 0) return '';
+  const local = clean.slice(0, at);
+  const domain = clean.slice(at);
+  const prefix = local.slice(0, Math.min(2, local.length));
+  return `${prefix}***${domain}`.slice(0, 120);
+}
+
 async function evaluateInHouseFaceMatch(
   selfieBase64: string,
   docPortraitBase64: string
-): Promise<{ evaluated: boolean; score?: number; error?: string }> {
+): Promise<{ evaluated: boolean; score?: number; embedding2?: number[]; error?: string }> {
   const cleanSelfie = selfieBase64.trim().replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, '');
   const cleanDoc = docPortraitBase64.trim().replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, '');
   if (cleanSelfie.length < 128 || cleanDoc.length < 128) {
@@ -77,6 +114,7 @@ async function evaluateInHouseFaceMatch(
         score?: number;
         error?: string;
         faces_detected?: number[];
+        embedding2?: number[];
       };
       if (body.error) {
         return { evaluated: true, score: 0, error: body.error };
@@ -86,7 +124,14 @@ async function evaluateInHouseFaceMatch(
       }
       if (typeof body.score === 'number' && Number.isFinite(body.score)) {
         const clamped = Math.max(0, Math.min(0.999, Number(body.score.toFixed(3))));
-        return { evaluated: true, score: clamped };
+        const embedding2 = Array.isArray(body.embedding2)
+          ? body.embedding2.filter((v) => typeof v === 'number' && Number.isFinite(v))
+          : undefined;
+        return {
+          evaluated: true,
+          score: clamped,
+          embedding2: embedding2 && embedding2.length >= 128 ? embedding2 : undefined,
+        };
       }
     } catch {
       // Try next local biometric endpoint
@@ -325,8 +370,10 @@ export function createMobileM4Router(): Router {
       // In production, require a verified Google OIDC ID token (JWT with RS256/Google tokeninfo or JWKS).
       // In non-production dev mode, allow synthetic `dev-google-sub:<id>` for local simulation.
       let subject = '';
+      let emailHint = '';
       if (process.env.NODE_ENV !== 'production' && parsed.idToken.startsWith('dev-google-sub:')) {
         subject = parsed.idToken;
+        emailHint = parsed.emailHint ? maskEmail(parsed.emailHint) : '';
       } else {
         const runtimeCfg = await retryDeadlockedTransaction(async (client) => {
           const r = await client.query<{
@@ -351,11 +398,17 @@ export function createMobileM4Router(): Router {
         if (!infoRes.ok) {
           throw new ReviewError(401, 'INVALID_GOOGLE_TOKEN');
         }
-        const info = (await infoRes.json()) as { aud?: string; sub?: string; email_verified?: string };
+        const info = (await infoRes.json()) as {
+          aud?: string;
+          sub?: string;
+          email?: string;
+          email_verified?: string;
+        };
         if (!info.aud || !allowedClientIds.has(info.aud) || !info.sub || info.email_verified !== 'true') {
           throw new ReviewError(401, 'INVALID_GOOGLE_TOKEN');
         }
         subject = info.sub;
+        emailHint = info.email ? maskEmail(info.email) : '';
       }
 
       const googleSubHash = createHmac('sha256', getApiKeyEncryptionSecret())
@@ -369,7 +422,55 @@ export function createMobileM4Router(): Router {
             session.sessionId,
             session.sessionTokenHash,
             'bind_google',
-            JSON.stringify({ googleSubHash }),
+            JSON.stringify({
+              googleSubHash,
+              emailHint,
+              makePrimary: parsed.makePrimary === true,
+            }),
+          ]
+        );
+        return q.rows[0]?.result;
+      });
+      res.set('Cache-Control', 'no-store').json(result);
+    } catch (error) {
+      mapM4Error(error, next);
+    }
+  });
+
+  router.post('/google/remove', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const session = req.adminSession!;
+      const parsed = googleAccountActionSchema.parse(req.body);
+      const result = await retryDeadlockedTransaction(async (client) => {
+        const q = await client.query<{ result: unknown }>(
+          'SELECT ertad.mobile_m4_command($1, $2, $3, $4) AS result',
+          [
+            session.sessionId,
+            session.sessionTokenHash,
+            'remove_google',
+            JSON.stringify({ accountId: parsed.accountId }),
+          ]
+        );
+        return q.rows[0]?.result;
+      });
+      res.set('Cache-Control', 'no-store').json(result);
+    } catch (error) {
+      mapM4Error(error, next);
+    }
+  });
+
+  router.post('/google/primary', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const session = req.adminSession!;
+      const parsed = googleAccountActionSchema.parse(req.body);
+      const result = await retryDeadlockedTransaction(async (client) => {
+        const q = await client.query<{ result: unknown }>(
+          'SELECT ertad.mobile_m4_command($1, $2, $3, $4) AS result',
+          [
+            session.sessionId,
+            session.sessionTokenHash,
+            'set_primary_google',
+            JSON.stringify({ accountId: parsed.accountId }),
           ]
         );
         return q.rows[0]?.result;
@@ -400,8 +501,17 @@ export function createMobileM4Router(): Router {
         .replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, '');
       const portraitCipher =
         rawPortrait.length >= 32 ? encryptSensitiveValue(rawPortrait) : null;
+      const documentKind = parsed.documentKind ?? 'eid_card';
+      const documentSeed =
+        rawPortrait.length >= 32
+          ? createHash('sha256').update(rawPortrait).digest('hex')
+          : parsed.personSubjectKey;
+      const documentFingerprint = createHmac('sha256', getApiKeyEncryptionSecret())
+        .update(`ertad-doc-v1\0${documentKind}\0${documentSeed}`)
+        .digest('hex');
 
       let effectiveFaceMatchScore = parsed.faceMatchScore;
+      let faceEmbeddingCipher: string | null = null;
       if (parsed.selfieBase64 && rawPortrait.length >= 128) {
         const matchEval = await evaluateInHouseFaceMatch(parsed.selfieBase64, rawPortrait);
         if (matchEval.evaluated) {
@@ -410,6 +520,51 @@ export function createMobileM4Router(): Router {
             : typeof matchEval.score === 'number'
               ? matchEval.score
               : 0;
+          if (!matchEval.error && Array.isArray(matchEval.embedding2) && matchEval.embedding2.length >= 128) {
+            const peers = await retryDeadlockedTransaction(async (client) => {
+              const q = await client.query<{
+                result: Array<{ memberId: string; faceEmbeddingCipher: string }>;
+              }>('SELECT ertad.mobile_m4_command($1, $2, $3, $4) AS result', [
+                session.sessionId,
+                session.sessionTokenHash,
+                'list_peer_embeddings',
+                '{}',
+              ]);
+              return q.rows[0]?.result ?? [];
+            });
+            for (const peer of peers) {
+              try {
+                const dec = decryptSensitiveValue(peer.faceEmbeddingCipher);
+                const peerEmb = JSON.parse(dec) as unknown;
+                if (
+                  Array.isArray(peerEmb) &&
+                  cosineSimilarity(matchEval.embedding2, peerEmb as number[]) >= 0.5
+                ) {
+                  await retryDeadlockedTransaction(async (client) => {
+                    await client.query('SELECT ertad.mobile_m4_command($1, $2, $3, $4)', [
+                      session.sessionId,
+                      session.sessionTokenHash,
+                      'record_failed_attempt',
+                      JSON.stringify({
+                        sessionKind: 'enrollment',
+                        livenessScore: parsed.livenessScore,
+                        faceMatchScore: effectiveFaceMatchScore,
+                      }),
+                    ]);
+                    await SecurityService.logAuditEventInTransaction(
+                      client,
+                      'BIOMETRIC_DUPLICATE_FACE_BLOCKED',
+                      { matchedMemberId: peer.memberId }
+                    );
+                  }).catch(() => {});
+                  throw new ReviewError(409, 'DUPLICATE_BIOMETRIC_FACE');
+                }
+              } catch (err) {
+                if (err instanceof ReviewError) throw err;
+              }
+            }
+            faceEmbeddingCipher = encryptSensitiveValue(JSON.stringify(matchEval.embedding2));
+          }
         } else if (
           process.env.NODE_ENV === 'production' ||
           process.env.ERTAD_REQUIRE_INHOUSE_BIOMETRIC === 'true'
@@ -418,28 +573,52 @@ export function createMobileM4Router(): Router {
         }
       }
 
-      const result = await retryDeadlockedTransaction(async (client) => {
-        const q = await client.query<{ result: unknown }>(
-          'SELECT ertad.mobile_m4_command($1, $2, $3, $4) AS result',
-          [
-            session.sessionId,
-            session.sessionTokenHash,
-            'complete_biometric',
-            JSON.stringify({
-              deviceId: parsed.deviceId ?? null,
-              sodCscaVerified: parsed.sodCscaVerified,
-              citizenshipCountry: parsed.citizenshipCountry,
-              livenessScore: parsed.livenessScore,
-              faceMatchScore: effectiveFaceMatchScore,
-              personUniquenessHash,
-              biometricTemplateCipher,
-              biometricTemplateDigest,
-              portraitCipher,
-            }),
-          ]
-        );
-        return q.rows[0]?.result;
-      });
+      const result = await (async () => {
+        try {
+          return await retryDeadlockedTransaction(async (client) => {
+            const q = await client.query<{ result: unknown }>(
+              'SELECT ertad.mobile_m4_command($1, $2, $3, $4) AS result',
+              [
+                session.sessionId,
+                session.sessionTokenHash,
+                'complete_biometric',
+                JSON.stringify({
+                  deviceId: parsed.deviceId ?? null,
+                  sodCscaVerified: parsed.sodCscaVerified,
+                  citizenshipCountry: parsed.citizenshipCountry,
+                  livenessScore: parsed.livenessScore,
+                  faceMatchScore: effectiveFaceMatchScore,
+                  personUniquenessHash,
+                  documentKind,
+                  documentFingerprint,
+                  biometricTemplateCipher,
+                  biometricTemplateDigest,
+                  portraitCipher,
+                  faceEmbeddingCipher,
+                }),
+              ]
+            );
+            return q.rows[0]?.result;
+          });
+        } catch (dbErr) {
+          const msg = (dbErr as { message?: string })?.message ?? '';
+          if ((dbErr as { code?: string })?.code === '42501' && msg.toLowerCase().includes('threshold')) {
+            await retryDeadlockedTransaction(async (client) => {
+              await client.query('SELECT ertad.mobile_m4_command($1, $2, $3, $4)', [
+                session.sessionId,
+                session.sessionTokenHash,
+                'record_failed_attempt',
+                JSON.stringify({
+                  sessionKind: 'enrollment',
+                  livenessScore: parsed.livenessScore,
+                  faceMatchScore: effectiveFaceMatchScore,
+                }),
+              ]);
+            }).catch(() => {});
+          }
+          throw dbErr;
+        }
+      })();
       res.set('Cache-Control', 'no-store').json(result);
     } catch (error) {
       mapM4Error(error, next);
@@ -453,32 +632,94 @@ export function createMobileM4Router(): Router {
       const keyIdHash = parsed.deviceId
         ? createHash('sha256').update(parsed.deviceId).digest('hex')
         : undefined;
-      const result = await retryDeadlockedTransaction(async (client) => {
-        const q = await client.query<{ result: unknown }>(
-          'SELECT ertad.mobile_m4_command($1, $2, $3, $4) AS result',
-          [
+
+      let effectiveFaceMatchScore = parsed.faceMatchScore;
+      let faceMatchEvaluated = false;
+
+      if (parsed.selfieBase64) {
+        const ref = await retryDeadlockedTransaction(async (client) => {
+          const q = await client.query<{
+            result: { portraitCipher?: string | null; hasPortrait?: boolean };
+          }>('SELECT ertad.mobile_m4_command($1, $2, $3, $4) AS result', [
             session.sessionId,
             session.sessionTokenHash,
-            'verify_reauth',
-            JSON.stringify({
-              livenessScore: parsed.livenessScore,
-              faceMatchScore: parsed.faceMatchScore,
-              ...(parsed.deviceId
-                ? {
-                    deviceId: parsed.deviceId,
-                    platform: parsed.platform ?? 'android',
-                    appId: parsed.appId ?? 'ge.ertad.mobile',
-                    keyIdHash,
-                    verdict: 'strong',
-                    counter: Math.floor(Date.now() / 1000),
-                  }
-                : {}),
-            }),
-          ]
-        );
-        return q.rows[0]?.result;
+            'get_reauth_reference',
+            '{}',
+          ]);
+          return q.rows[0]?.result;
+        });
+
+        if (typeof ref?.portraitCipher === 'string' && ref.portraitCipher.length > 0) {
+          const storedPortrait = decryptSensitiveValue(ref.portraitCipher);
+          const matchEval = await evaluateInHouseFaceMatch(parsed.selfieBase64, storedPortrait);
+          if (matchEval.evaluated) {
+            faceMatchEvaluated = true;
+            effectiveFaceMatchScore = matchEval.error
+              ? 0
+              : typeof matchEval.score === 'number'
+                ? matchEval.score
+                : 0;
+          } else if (
+            process.env.NODE_ENV === 'production' ||
+            process.env.ERTAD_REQUIRE_INHOUSE_BIOMETRIC === 'true'
+          ) {
+            throw new ReviewError(503, 'BIOMETRIC_SERVICE_UNAVAILABLE');
+          }
+        }
+      }
+
+      const result = await (async () => {
+        try {
+          return await retryDeadlockedTransaction(async (client) => {
+            const q = await client.query<{ result: Record<string, unknown> }>(
+              'SELECT ertad.mobile_m4_command($1, $2, $3, $4) AS result',
+              [
+                session.sessionId,
+                session.sessionTokenHash,
+                'verify_reauth',
+                JSON.stringify({
+                  livenessScore: parsed.livenessScore,
+                  faceMatchScore: effectiveFaceMatchScore,
+                  ...(parsed.deviceId
+                    ? {
+                        deviceId: parsed.deviceId,
+                        platform: parsed.platform ?? 'android',
+                        appId: parsed.appId ?? 'ge.ertad.mobile',
+                        keyIdHash,
+                        verdict: 'strong',
+                        counter: Math.floor(Date.now() / 1000),
+                      }
+                    : {}),
+                }),
+              ]
+            );
+            return q.rows[0]?.result ?? {};
+          });
+        } catch (dbErr) {
+          const msg = (dbErr as { message?: string })?.message ?? '';
+          if ((dbErr as { code?: string })?.code === '42501' && msg.toLowerCase().includes('threshold')) {
+            await retryDeadlockedTransaction(async (client) => {
+              await client.query('SELECT ertad.mobile_m4_command($1, $2, $3, $4)', [
+                session.sessionId,
+                session.sessionTokenHash,
+                'record_failed_attempt',
+                JSON.stringify({
+                  sessionKind: 'reauth',
+                  deviceId: parsed.deviceId ?? null,
+                  livenessScore: parsed.livenessScore,
+                  faceMatchScore: effectiveFaceMatchScore,
+                }),
+              ]);
+            }).catch(() => {});
+          }
+          throw dbErr;
+        }
+      })();
+      res.set('Cache-Control', 'no-store').json({
+        ...result,
+        faceMatchEvaluated,
+        faceMatchScore: effectiveFaceMatchScore,
       });
-      res.set('Cache-Control', 'no-store').json(result);
     } catch (error) {
       mapM4Error(error, next);
     }

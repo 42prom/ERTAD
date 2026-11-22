@@ -1,4 +1,6 @@
+import 'package:dio/dio.dart';
 import 'package:ertad_mobile/core/network/mobile_api_client.dart';
+import 'package:ertad_mobile/core/shell/org_context_sheet.dart';
 import 'package:ertad_mobile/core/state/offline_action_queue.dart';
 import 'package:ertad_mobile/core/state/shell_providers.dart';
 import 'package:ertad_mobile/core/theme/ertad_theme.dart';
@@ -47,7 +49,10 @@ class _FakeMobileApiClient extends MobileApiClient {
   Future<Map<String, dynamic>> fetchWorkspaceBootstrap() async {
     return <String, dynamic>{
       'units': const [
-        <String, dynamic>{'id': '11111111-1111-4111-8111-111111111111', 'name': 'ERTAD Test'},
+        <String, dynamic>{
+          'id': '11111111-1111-4111-8111-111111111111',
+          'name': 'ERTAD Test',
+        },
       ],
       'reviews': reviewsResponse,
       'summary': const <String, dynamic>{
@@ -101,12 +106,18 @@ class _FakeMobileApiClient extends MobileApiClient {
     required String organizationId,
     String view = 'all',
     String source = 'all',
-  }) async => const <String, dynamic>{'items': <Map<String, dynamic>>[], 'unread': 0};
+  }) async => const <String, dynamic>{
+    'items': <Map<String, dynamic>>[],
+    'unread': 0,
+  };
 
   @override
   Future<Map<String, dynamic>> fetchContributionPoints({
     required String organizationId,
-  }) async => const <String, dynamic>{'balance': '42', 'entries': <Map<String, dynamic>>[]};
+  }) async => const <String, dynamic>{
+    'balance': '42',
+    'entries': <Map<String, dynamic>>[],
+  };
 
   @override
   Future<List<Map<String, dynamic>>> fetchReviews({
@@ -177,6 +188,7 @@ class _LiveConnectedShellNotifier extends ShellSessionNotifier {
     String m4AssuranceLevel = 'biometric_verified',
     bool m4DeviceTrusted = true,
     bool m4NeedsSelfieReauth = false,
+    Map<String, dynamic>? memberProfile,
   }) {
     state = ShellSessionState(
       organizations: <OrgContextSummary>[
@@ -196,8 +208,52 @@ class _LiveConnectedShellNotifier extends ShellSessionNotifier {
       m4AssuranceLevel: m4AssuranceLevel,
       m4DeviceTrusted: m4DeviceTrusted,
       m4NeedsSelfieReauth: m4NeedsSelfieReauth,
+      memberProfile: memberProfile,
     );
   }
+}
+
+class _StepUpRetryStubAdapter implements HttpClientAdapter {
+  final List<String> paths = <String>[];
+  bool _failedOnce = false;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    paths.add(options.path);
+    if (options.path == '/mobile/work/create' && !_failedOnce) {
+      _failedOnce = true;
+      return ResponseBody.fromString(
+        '{"code":"DEV_STEP_UP_REQUIRED","error":{"code":"DEV_STEP_UP_REQUIRED","message":"Step-up required"}}',
+        428,
+        headers: const <String, List<String>>{
+          Headers.contentTypeHeader: <String>[Headers.jsonContentType],
+        },
+      );
+    }
+    if (options.path == '/mobile/dev/step-up') {
+      return ResponseBody.fromString(
+        '{"ok":true}',
+        200,
+        headers: const <String, List<String>>{
+          Headers.contentTypeHeader: <String>[Headers.jsonContentType],
+        },
+      );
+    }
+    return ResponseBody.fromString(
+      '{"id":"work-created-1","title":"Created after step-up"}',
+      200,
+      headers: const <String, List<String>>{
+        Headers.contentTypeHeader: <String>[Headers.jsonContentType],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
 }
 
 void main() {
@@ -240,7 +296,8 @@ void main() {
     'ShellSessionNotifier derives manager authority from server bootstrap and signOut clears all state',
     () async {
       SharedPreferences.setMockInitialValues(<String, Object>{
-        'ertad_offline_cache_11111111-1111-4111-8111-111111111111': '{"work":[]}',
+        'ertad_offline_cache_11111111-1111-4111-8111-111111111111':
+            '{"work":[]}',
         'ertad_vote_receipt_poll-1': 'A1B2C3D4E5F60718',
       });
       final api = _FakeMobileApiClient();
@@ -266,7 +323,12 @@ void main() {
       expect(notifier.state.reviewWorkItems, isEmpty);
 
       final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getString('ertad_offline_cache_11111111-1111-4111-8111-111111111111'), isNull);
+      expect(
+        prefs.getString(
+          'ertad_offline_cache_11111111-1111-4111-8111-111111111111',
+        ),
+        isNull,
+      );
       expect(prefs.getString('ertad_vote_receipt_poll-1'), isNull);
     },
   );
@@ -313,21 +375,22 @@ void main() {
               ),
             ),
           ],
-          child: legacy_provider.ChangeNotifierProvider<LocalizationService>.value(
-            value: loc,
-            child: MaterialApp(
-              theme: ErtadTheme.lightTheme,
-              home: Scaffold(
-                body: SingleChildScrollView(
-                  child: DecisionResultsCard(
-                    key: const ValueKey('poll-empty'),
-                    poll: pollEmpty,
-                    isClosed: true,
+          child:
+              legacy_provider.ChangeNotifierProvider<LocalizationService>.value(
+                value: loc,
+                child: MaterialApp(
+                  theme: ErtadTheme.lightTheme,
+                  home: Scaffold(
+                    body: SingleChildScrollView(
+                      child: DecisionResultsCard(
+                        key: const ValueKey('poll-empty'),
+                        poll: pollEmpty,
+                        isClosed: true,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -378,21 +441,22 @@ void main() {
               ),
             ),
           ],
-          child: legacy_provider.ChangeNotifierProvider<LocalizationService>.value(
-            value: loc,
-            child: MaterialApp(
-              theme: ErtadTheme.lightTheme,
-              home: Scaffold(
-                body: SingleChildScrollView(
-                  child: DecisionResultsCard(
-                    key: const ValueKey('survey-1'),
-                    poll: surveyPoll,
-                    isClosed: true,
+          child:
+              legacy_provider.ChangeNotifierProvider<LocalizationService>.value(
+                value: loc,
+                child: MaterialApp(
+                  theme: ErtadTheme.lightTheme,
+                  home: Scaffold(
+                    body: SingleChildScrollView(
+                      child: DecisionResultsCard(
+                        key: const ValueKey('survey-1'),
+                        poll: surveyPoll,
+                        isClosed: true,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -491,7 +555,11 @@ void main() {
           'permanentVerification': true,
         }
         ..workUnitsResponse = const [
-          <String, dynamic>{'id': 'u-1', 'name': 'Saburtalo', 'canCreate': true},
+          <String, dynamic>{
+            'id': 'u-1',
+            'name': 'Saburtalo',
+            'canCreate': true,
+          },
         ]
         ..channelUnitsResponse = const [
           <String, dynamic>{'id': 'u-1', 'name': 'Saburtalo'},
@@ -550,13 +618,14 @@ void main() {
               ),
             ),
           ],
-          child: legacy_provider.ChangeNotifierProvider<LocalizationService>.value(
-            value: loc,
-            child: MaterialApp(
-              theme: ErtadTheme.lightTheme,
-              home: Scaffold(body: child),
-            ),
-          ),
+          child:
+              legacy_provider.ChangeNotifierProvider<LocalizationService>.value(
+                value: loc,
+                child: MaterialApp(
+                  theme: ErtadTheme.lightTheme,
+                  home: Scaffold(body: child),
+                ),
+              ),
         );
       }
 
@@ -581,16 +650,28 @@ void main() {
       Widget buildTabs({required bool manager}) {
         final api = _FakeMobileApiClient()
           ..reviewsResponse = manager
-              ? const [<String, dynamic>{'id': 'rev-1', 'name': 'Unit'}]
+              ? const [
+                  <String, dynamic>{'id': 'rev-1', 'name': 'Unit'},
+                ]
               : const []
           ..workUnitsResponse = manager
-              ? const [<String, dynamic>{'id': 'u-1', 'name': 'Unit', 'canCreate': true}]
+              ? const [
+                  <String, dynamic>{
+                    'id': 'u-1',
+                    'name': 'Unit',
+                    'canCreate': true,
+                  },
+                ]
               : const []
           ..channelUnitsResponse = manager
-              ? const [<String, dynamic>{'id': 'u-1', 'name': 'Unit'}]
+              ? const [
+                  <String, dynamic>{'id': 'u-1', 'name': 'Unit'},
+                ]
               : const []
           ..decisionAudiencesResponse = manager
-              ? const [<String, dynamic>{'id': 'u-1', 'name': 'Unit'}]
+              ? const [
+                  <String, dynamic>{'id': 'u-1', 'name': 'Unit'},
+                ]
               : const [];
 
         return ProviderScope(
@@ -608,25 +689,26 @@ void main() {
               ),
             ),
           ],
-          child: legacy_provider.ChangeNotifierProvider<LocalizationService>.value(
-            value: loc,
-            child: MaterialApp(
-              theme: ErtadTheme.lightTheme,
-              home: Scaffold(
-                body: Column(
-                  children: [
-                    const Expanded(child: TasksTabScreen()),
-                    const Expanded(child: MessagesTabScreen()),
-                    Expanded(
-                      child: PollsTabScreen(
-                        pollsLoader: () async => const <Poll>[],
-                      ),
+          child:
+              legacy_provider.ChangeNotifierProvider<LocalizationService>.value(
+                value: loc,
+                child: MaterialApp(
+                  theme: ErtadTheme.lightTheme,
+                  home: Scaffold(
+                    body: Column(
+                      children: [
+                        const Expanded(child: TasksTabScreen()),
+                        const Expanded(child: MessagesTabScreen()),
+                        Expanded(
+                          child: PollsTabScreen(
+                            pollsLoader: () async => const <Poll>[],
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
         );
       }
 
@@ -641,6 +723,116 @@ void main() {
       expect(find.text('New task'), findsOneWidget);
       expect(find.text('New channel'), findsOneWidget);
       expect(find.text('New poll'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'OrgContextSheet hides re-verify CTA on trusted verified device and shows selfie CTA only when reauth is required',
+    (tester) async {
+      final loc = LocalizationService();
+      await loc.setLanguage(AppLanguage.english);
+      final api = _FakeMobileApiClient();
+
+      final profileData = <String, dynamic>{
+        'permanentVerification': true,
+        'sodCscaVerified': true,
+        'citizenshipCountry': 'GEO',
+        'documentsCount': 2,
+        'googleLinked': true,
+        'linkedGoogleAccounts': const [
+          <String, dynamic>{
+            'id': 'g-1',
+            'emailHint': 'p***@gmail.com',
+            'isPrimary': true,
+          },
+          <String, dynamic>{
+            'id': 'g-2',
+            'emailHint': 's***@gmail.com',
+            'isPrimary': false,
+          },
+        ],
+        'identityStats': const <String, dynamic>{
+          'pointsBalance': 10,
+          'tasksCompleted': 1,
+          'votesCast': 2,
+          'referralsCount': 0,
+        },
+      };
+
+      Widget buildSheet({required bool needsSelfie}) {
+        return ProviderScope(
+          key: ValueKey<bool>(needsSelfie),
+          overrides: [
+            mobileApiClientProvider.overrideWithValue(api),
+            shellSessionProvider.overrideWith(
+              (ref) => _LiveConnectedShellNotifier(
+                api,
+                orgId: '11111111-1111-4111-8111-111111111111',
+                m4AssuranceLevel: 'biometric_verified',
+                m4DeviceTrusted: !needsSelfie,
+                m4NeedsSelfieReauth: needsSelfie,
+                memberProfile: profileData,
+              ),
+            ),
+          ],
+          child: legacy_provider.ChangeNotifierProvider<LocalizationService>.value(
+            value: loc,
+            child: MaterialApp(
+              theme: ErtadTheme.lightTheme,
+              home: const Scaffold(body: OrgContextSheet()),
+            ),
+          ),
+        );
+      }
+
+      await tester.pumpWidget(buildSheet(needsSelfie: false));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Permanently verified · This device is confirmed'),
+        findsOneWidget,
+      );
+      expect(find.text('Verify with selfie'), findsNothing);
+      expect(find.text('Biometric re-check'), findsNothing);
+      expect(find.text('Verify identity'), findsNothing);
+      expect(find.text('Documents'), findsOneWidget);
+      expect(find.text('Primary'), findsOneWidget);
+      expect(find.text('Make primary'), findsOneWidget);
+
+      await tester.pumpWidget(buildSheet(needsSelfie: true));
+      await tester.pumpAndSettle();
+      expect(find.text('Verify with selfie'), findsOneWidget);
+    },
+  );
+
+  test(
+    'MobileApiClient._withDevStepUpRetry catches DioException 428, runs dev step-up, and retries creation once',
+    () async {
+      final adapter = _StepUpRetryStubAdapter();
+      final dio = Dio(
+        BaseOptions(baseUrl: 'http://127.0.0.1:13000/api/v1'),
+      )..httpClientAdapter = adapter;
+      final client = MobileApiClient(
+        dio: dio,
+        allowDevStepUp: true,
+      );
+
+      final result = await client.createWorkItem(
+        organizationId: '11111111-1111-4111-8111-111111111111',
+        unitId: '22222222-2222-4222-8222-222222222222',
+        title: 'Task after dev step-up',
+        description: 'Testing 428 auto-retry',
+        roleLabel: 'Member',
+        priority: 'medium',
+        capacity: 1,
+        deadlineIso: '2026-12-31T12:00:00Z',
+      );
+
+      expect(result['id'], 'work-created-1');
+      expect(adapter.paths, const <String>[
+        '/mobile/work/create',
+        '/mobile/dev/step-up',
+        '/mobile/work/create',
+      ]);
     },
   );
 }

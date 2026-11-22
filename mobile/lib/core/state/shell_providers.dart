@@ -881,6 +881,29 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
     state = state.copyWith(memberProfile: updated);
   }
 
+  Future<void> bindGoogleAccount(
+    String idToken, {
+    String? emailHint,
+    bool makePrimary = false,
+  }) async {
+    await _api.bindGoogleIdentity(
+      idToken,
+      emailHint: emailHint,
+      makePrimary: makePrimary,
+    );
+    await refreshWorkspace();
+  }
+
+  Future<void> setPrimaryGoogleAccount(String accountId) async {
+    await _api.setPrimaryGoogleAccount(accountId);
+    await refreshWorkspace();
+  }
+
+  Future<void> removeGoogleAccount(String accountId) async {
+    await _api.removeGoogleAccount(accountId);
+    await refreshWorkspace();
+  }
+
   void updateCounts({int? inbox, int? messages, int? pendingActions}) {
     state = state.copyWith(
       unreadInboxCount: inbox ?? state.unreadInboxCount,

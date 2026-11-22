@@ -91,20 +91,12 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
   }
 
   Future<void> _editPhoneDialog({required bool hasPhone}) async {
-    final action = await showErtadTextInputDialog(
-      context,
-      title: shellTr(context, 'profile_phone_title', fallback: 'Phone Number'),
-      hintText: shellTr(
-        context,
-        'profile_phone_hint',
-        fallback: '+995 5XX XX XX XX',
-      ),
-      cancelLabel: shellTr(context, 'cancel', fallback: 'Cancel'),
-      confirmLabel: shellTr(context, 'save', fallback: 'Save'),
-      destructiveLabel:
-          hasPhone ? shellTr(context, 'delete', fallback: 'Remove') : null,
-      destructiveValue: hasPhone ? '__CLEAR__' : null,
-      keyboardType: TextInputType.phone,
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _CountryPhoneSheet(hasPhone: hasPhone),
     );
     if (!mounted || action == null) return;
     try {
@@ -121,7 +113,7 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
                 fallback: 'Phone number removed',
               ),
             );
-      } else if (action.length >= 7) {
+      } else if (action.length >= 8) {
         await ref
             .read(shellSessionProvider.notifier)
             .updateMemberPhone(phone: action);
@@ -150,6 +142,42 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
               context,
               'profile_phone_error',
               fallback: 'Please enter a valid phone number',
+            ),
+          );
+    }
+  }
+
+  Future<void> _setPrimaryGoogle(String accountId) async {
+    try {
+      HapticFeedback.selectionClick();
+      await ref
+          .read(shellSessionProvider.notifier)
+          .setPrimaryGoogleAccount(accountId);
+    } catch (_) {
+      if (!mounted) return;
+      ref.read(ertadFeedbackProvider.notifier).showWarning(
+            shellTr(
+              context,
+              'error_retry',
+              fallback: 'Something went wrong. Please try again.',
+            ),
+          );
+    }
+  }
+
+  Future<void> _removeGoogle(String accountId) async {
+    try {
+      HapticFeedback.lightImpact();
+      await ref
+          .read(shellSessionProvider.notifier)
+          .removeGoogleAccount(accountId);
+    } catch (_) {
+      if (!mounted) return;
+      ref.read(ertadFeedbackProvider.notifier).showWarning(
+            shellTr(
+              context,
+              'error_retry',
+              fallback: 'Something went wrong. Please try again.',
             ),
           );
     }
@@ -213,9 +241,13 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
     final citizenship = prof?['citizenshipCountry']?.toString().trim() ?? '';
     final nfcOk = prof?['sodCscaVerified'] == true || session.m4SodCscaVerified;
     final googleLinked = prof?['googleLinked'] == true;
+    final linkedGoogleAccounts =
+        (prof?['linkedGoogleAccounts'] as List? ?? const [])
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList(growable: false);
     final hasPhone = prof?['hasPhone'] == true;
     final phoneHint = prof?['phoneHint']?.toString() ?? '';
-    final hasStoredTemplate = prof?['hasStoredTemplate'] == true;
     final permanentVerification = prof?['permanentVerification'] == true;
     final needsSelfieReauth = isVerified && session.m4NeedsSelfieReauth;
 
@@ -400,48 +432,44 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
                                 ),
                               )
                             : isVerified
-                                ? OutlinedButton.icon(
-                                    onPressed: () {
-                                      HapticFeedback.selectionClick();
-                                      final nav = Navigator.of(
-                                        context,
-                                        rootNavigator: true,
-                                      );
-                                      nav.pop();
-                                      nav.push(
-                                        MaterialPageRoute<void>(
-                                          builder: (_) => hasStoredTemplate
-                                              ? LivenessScreen(
-                                                  policy: VerificationPolicy
-                                                      .defaultFirstParty(),
-                                                  enrollmentSessionId:
-                                                      'm4-reauth',
-                                                  docPortraitBase64: '',
-                                                  m4Mode: true,
-                                                  reauthOnly: true,
-                                                )
-                                              : const IntroScreen(),
-                                        ),
-                                      );
-                                    },
-                                    icon: Icon(
-                                      hasStoredTemplate
-                                          ? Icons.face_retouching_natural_rounded
-                                          : Icons.fingerprint_rounded,
-                                      size: 18,
+                                ? Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 10,
                                     ),
-                                    label: Text(
-                                      hasStoredTemplate
-                                          ? shellTr(
+                                    decoration: BoxDecoration(
+                                      color: p.success.withValues(alpha: 0.10),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: p.success.withValues(alpha: 0.28),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.verified_user_rounded,
+                                          size: 18,
+                                          color: p.success,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            shellTr(
                                               context,
-                                              'm4_reauth_cta',
-                                              fallback: 'Verify with selfie',
-                                            )
-                                          : shellTr(
-                                              context,
-                                              'profile_reverify_cta',
-                                              fallback: 'Biometric re-check',
+                                              'm4_device_confirmed_badge',
+                                              fallback:
+                                                  'Permanently verified · This device is confirmed',
                                             ),
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(
+                                                  color: p.success,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   )
                                 : FilledButton.icon(
@@ -739,6 +767,133 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
                   ),
                 ),
 
+                if (linkedGoogleAccounts.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  ErtadSurfaceCard(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.g_mobiledata_rounded,
+                              size: 20,
+                              color: p.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                shellTr(
+                                  context,
+                                  'profile_google_accounts',
+                                  fallback: 'Linked Google accounts',
+                                ),
+                                style: Theme.of(context).textTheme.titleSmall,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ...linkedGoogleAccounts.map((acc) {
+                          final accId = acc['id']?.toString() ?? '';
+                          final emailHint = acc['emailHint']?.toString() ?? '';
+                          final isPrimary = acc['isPrimary'] == true;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isPrimary
+                                      ? Icons.star_rounded
+                                      : Icons.alternate_email_rounded,
+                                  size: 16,
+                                  color: isPrimary ? p.primary : p.muted,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    emailHint.isNotEmpty ? emailHint : 'Google',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style:
+                                        Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                ),
+                                if (isPrimary)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: p.primarySoft,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      shellTr(
+                                        context,
+                                        'profile_google_primary',
+                                        fallback: 'Primary',
+                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall
+                                          ?.copyWith(
+                                            color: p.primary,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                  )
+                                else if (accId.isNotEmpty)
+                                  TextButton(
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      minimumSize: const Size(0, 30),
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                    onPressed: () => _setPrimaryGoogle(accId),
+                                    child: Text(
+                                      shellTr(
+                                        context,
+                                        'profile_google_make_primary',
+                                        fallback: 'Make primary',
+                                      ),
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                  ),
+                                if (linkedGoogleAccounts.length > 1 &&
+                                    accId.isNotEmpty)
+                                  IconButton(
+                                    tooltip: shellTr(
+                                      context,
+                                      'delete',
+                                      fallback: 'Remove',
+                                    ),
+                                    visualDensity: VisualDensity.compact,
+                                    icon: Icon(
+                                      Icons.close_rounded,
+                                      size: 16,
+                                      color: p.muted,
+                                    ),
+                                    onPressed: () => _removeGoogle(accId),
+                                  ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                ],
+
                 // 3. Only show group switcher if member belongs to >1 organizations
                 if (session.organizations.length > 1) ...[
                   const SizedBox(height: 14),
@@ -908,8 +1063,9 @@ class _ProfileHistoryCard extends StatelessWidget {
         .whereType<Map>()
         .map((e) => Map<String, dynamic>.from(e))
         .toList(growable: false);
+    final docsCount = (profile['documentsCount'] as num?)?.toInt() ?? 0;
 
-    if (stats.isEmpty && devices.isEmpty && history.isEmpty) {
+    if (stats.isEmpty && devices.isEmpty && history.isEmpty && docsCount == 0) {
       return const SizedBox.shrink();
     }
 
@@ -994,6 +1150,15 @@ class _ProfileHistoryCard extends StatelessWidget {
                   ),
                   value: '${stats['referralsCount'] ?? 0}',
                 ),
+                if (docsCount > 0)
+                  _StatBadge(
+                    label: shellTr(
+                      context,
+                      'profile_docs_count_label',
+                      fallback: 'Documents',
+                    ),
+                    value: '$docsCount',
+                  ),
               ],
             ),
           ],
@@ -1094,6 +1259,12 @@ class _ProfileHistoryCard extends StatelessWidget {
                       'profile_event_enrollment',
                       fallback: 'Initial eID verification',
                     );
+              final rawMatch = item['faceMatchScore'];
+              final matchPct =
+                  rawMatch is num ? (rawMatch * 100).round() : null;
+              final label = matchPct != null
+                  ? '$title · ${shellTr(context, 'profile_match_prefix', fallback: 'Match')} $matchPct%'
+                  : title;
               final when = _shortDate(item['createdAt']?.toString());
               return Padding(
                 padding: const EdgeInsets.only(bottom: 4),
@@ -1109,8 +1280,8 @@ class _ProfileHistoryCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        title,
-                        maxLines: 1,
+                        label,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
@@ -1167,6 +1338,205 @@ class _StatBadge extends StatelessWidget {
             ).textTheme.labelSmall?.copyWith(color: p.muted),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CountryPhoneSheet extends StatefulWidget {
+  final bool hasPhone;
+
+  const _CountryPhoneSheet({required this.hasPhone});
+
+  @override
+  State<_CountryPhoneSheet> createState() => _CountryPhoneSheetState();
+}
+
+class _CountryPhoneSheetState extends State<_CountryPhoneSheet> {
+  static const List<({String code, String label})> _codes = [
+    (code: '+995', label: '🇬🇪 +995 (GE)'),
+    (code: '+1', label: '🇺🇸 +1 (US/CA)'),
+    (code: '+44', label: '🇬🇧 +44 (UK)'),
+    (code: '+49', label: '🇩🇪 +49 (DE)'),
+    (code: '+33', label: '🇫🇷 +33 (FR)'),
+    (code: '+39', label: '🇮🇹 +39 (IT)'),
+    (code: '+34', label: '🇪🇸 +34 (ES)'),
+    (code: '+30', label: '🇬🇷 +30 (GR)'),
+    (code: '+48', label: '🇵🇱 +48 (PL)'),
+    (code: '+90', label: '🇹🇷 +90 (TR)'),
+    (code: '+374', label: '🇦🇲 +374 (AM)'),
+    (code: '+994', label: '🇦🇿 +994 (AZ)'),
+    (code: '+380', label: '🇺🇦 +380 (UA)'),
+    (code: '+972', label: '🇮🇱 +972 (IL)'),
+    (code: '+31', label: '🇳🇱 +31 (NL)'),
+    (code: '+32', label: '🇧🇪 +32 (BE)'),
+    (code: '+41', label: '🇨🇭 +41 (CH)'),
+    (code: '+43', label: '🇦🇹 +43 (AT)'),
+    (code: '+46', label: '🇸🇪 +46 (SE)'),
+    (code: '+420', label: '🇨🇿 +420 (CZ)'),
+  ];
+
+  String _selectedCode = '+995';
+  final TextEditingController _customCodeCtrl = TextEditingController();
+  final TextEditingController _numberCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _customCodeCtrl.dispose();
+    _numberCtrl.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final codeDigits = _selectedCode == 'OTHER'
+        ? _customCodeCtrl.text.replaceAll(RegExp(r'[^0-9]'), '')
+        : _selectedCode.replaceAll(RegExp(r'[^0-9]'), '');
+    final localDigits = _numberCtrl.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (codeDigits.isEmpty || localDigits.length < 5) {
+      Navigator.of(context).pop('');
+      return;
+    }
+    Navigator.of(context).pop('+$codeDigits$localDigits');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.ertad;
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          12,
+          16,
+          16 + MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ErtadModalSheetHeader(
+              icon: Icons.phone_outlined,
+              title: shellTr(
+                context,
+                'profile_phone_title',
+                fallback: 'Phone Number',
+              ),
+              closeTooltip: shellTr(context, 'close', fallback: 'Close'),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 4,
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _selectedCode,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: shellTr(
+                        context,
+                        'profile_phone_country_label',
+                        fallback: 'Country code',
+                      ),
+                    ),
+                    items: [
+                      ..._codes.map(
+                        (c) => DropdownMenuItem<String>(
+                          value: c.code,
+                          child: Text(
+                            c.label,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                      DropdownMenuItem<String>(
+                        value: 'OTHER',
+                        child: Text(
+                          shellTr(
+                            context,
+                            'profile_phone_custom_code',
+                            fallback: 'Custom +',
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                    onChanged: (v) {
+                      if (v == null) return;
+                      setState(() => _selectedCode = v);
+                    },
+                  ),
+                ),
+                if (_selectedCode == 'OTHER') ...[
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 82,
+                    child: TextField(
+                      controller: _customCodeCtrl,
+                      keyboardType: TextInputType.phone,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(5),
+                      ],
+                      decoration: const InputDecoration(
+                        prefixText: '+',
+                        hintText: '995',
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 5,
+                  child: TextField(
+                    controller: _numberCtrl,
+                    autofocus: true,
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9\s\-()]')),
+                    ],
+                    decoration: InputDecoration(
+                      labelText: shellTr(
+                        context,
+                        'profile_phone_number_label',
+                        fallback: 'Number',
+                      ),
+                      hintText: '5XX XX XX XX',
+                    ),
+                    onSubmitted: (_) => _submit(),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                if (widget.hasPhone)
+                  TextButton(
+                    style: TextButton.styleFrom(foregroundColor: p.danger),
+                    onPressed: () => Navigator.of(context).pop('__CLEAR__'),
+                    child: Text(
+                      shellTr(context, 'delete', fallback: 'Remove'),
+                    ),
+                  ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(
+                    shellTr(context, 'cancel', fallback: 'Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: _submit,
+                  child: Text(
+                    shellTr(context, 'save', fallback: 'Save'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

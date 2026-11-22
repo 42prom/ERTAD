@@ -70,6 +70,28 @@ export async function memberDirectoryCommand(
             faceMatchScore?: number | null;
             verifiedAt?: string | null;
             portraitCipher?: string | null;
+            documentCount?: number;
+            activeDeviceCount?: number;
+            linkedGoogleCount?: number;
+            documents?: Array<{
+              id: string;
+              documentKind?: 'eid_card' | 'passport' | 'other';
+              issuingCountry?: string;
+              sodCscaVerified?: boolean;
+              livenessScore?: number | null;
+              faceMatchScore?: number | null;
+              portraitCipher?: string | null;
+              createdAt?: string;
+            }>;
+            verificationLog?: Array<{
+              id: string;
+              sessionKind?: 'enrollment' | 'reauth';
+              status?: string;
+              sodCscaVerified?: boolean;
+              livenessScore?: number | null;
+              faceMatchScore?: number | null;
+              createdAt?: string;
+            }>;
           } | null;
         }>(
           'SELECT ertad.member_directory_verification_summary($1,$2,$3,$4) AS v',
@@ -88,14 +110,44 @@ export async function memberDirectoryCommand(
               const dec = decryptSensitiveValue(raw.portraitCipher);
               if (dec && dec.length >= 16) {
                 portraitDataUrl = `data:image/jpeg;base64,${dec}`;
-                await SecurityService.logAuditEventInTransaction(client, 'MEMBER_PORTRAIT_VIEWED', {
-                  organizationId: args.organizationId,
-                  targetMemberId: args.memberId,
-                });
               }
             } catch {
               portraitDataUrl = null;
             }
+          }
+          const docs = Array.isArray(raw.documents)
+            ? raw.documents.map((doc) => {
+                let docPortraitDataUrl: string | null = null;
+                if (doc.portraitCipher) {
+                  try {
+                    const dec = decryptSensitiveValue(doc.portraitCipher);
+                    if (dec && dec.length >= 16) {
+                      docPortraitDataUrl = `data:image/jpeg;base64,${dec}`;
+                    }
+                  } catch {
+                    docPortraitDataUrl = null;
+                  }
+                }
+                return {
+                  id: doc.id,
+                  documentKind: doc.documentKind ?? 'eid_card',
+                  issuingCountry: doc.issuingCountry ?? '',
+                  sodCscaVerified: doc.sodCscaVerified === true,
+                  livenessScore:
+                    typeof doc.livenessScore === 'number' ? doc.livenessScore : null,
+                  faceMatchScore:
+                    typeof doc.faceMatchScore === 'number' ? doc.faceMatchScore : null,
+                  portraitDataUrl: docPortraitDataUrl,
+                  createdAt: doc.createdAt ?? '',
+                };
+              })
+            : [];
+          if (portraitDataUrl || docs.some((d) => d.portraitDataUrl)) {
+            await SecurityService.logAuditEventInTransaction(client, 'MEMBER_PORTRAIT_VIEWED', {
+              organizationId: args.organizationId,
+              targetMemberId: args.memberId,
+              documentCount: docs.length,
+            });
           }
           data.verification = {
             assuranceLevel: raw.assuranceLevel ?? 'google_scoped',
@@ -107,6 +159,14 @@ export async function memberDirectoryCommand(
               typeof raw.faceMatchScore === 'number' ? raw.faceMatchScore : null,
             verifiedAt: raw.verifiedAt ?? null,
             portraitDataUrl,
+            documentCount:
+              typeof raw.documentCount === 'number' ? raw.documentCount : docs.length,
+            activeDeviceCount:
+              typeof raw.activeDeviceCount === 'number' ? raw.activeDeviceCount : 0,
+            linkedGoogleCount:
+              typeof raw.linkedGoogleCount === 'number' ? raw.linkedGoogleCount : 0,
+            documents: docs,
+            verificationLog: Array.isArray(raw.verificationLog) ? raw.verificationLog : [],
           };
         }
       }

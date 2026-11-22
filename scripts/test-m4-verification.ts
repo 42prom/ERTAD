@@ -269,9 +269,54 @@ async function run(): Promise<void> {
     const gBind = await fetch(`${base}/mobile/m4/google/bind`, {
       method: 'POST',
       headers: mHeaders,
-      body: JSON.stringify({ idToken: `dev-google-sub:${randomUUID()}` }),
+      body: JSON.stringify({
+        idToken: `dev-google-sub:${randomUUID()}`,
+        emailHint: 'primary.member@gmail.com',
+      }),
     });
     assert(gBind.status === 200, `Google bind failed: ${gBind.status}`);
+
+    // Multi-Gmail linking, primary switching, and removal
+    const gBind2 = await fetch(`${base}/mobile/m4/google/bind`, {
+      method: 'POST',
+      headers: mHeaders,
+      body: JSON.stringify({
+        idToken: `dev-google-sub:${randomUUID()}`,
+        emailHint: 'second.member@gmail.com',
+        makePrimary: false,
+      }),
+    });
+    assert(gBind2.status === 200, `Second Google bind failed: ${gBind2.status}`);
+    const gBind2Json = (await gBind2.json()) as {
+      linkedGoogleAccounts?: Array<{ id: string; emailHint: string; isPrimary: boolean }>;
+    };
+    assert(
+      Array.isArray(gBind2Json.linkedGoogleAccounts) && gBind2Json.linkedGoogleAccounts.length >= 2,
+      `Expected >=2 linked Google accounts, got ${JSON.stringify(gBind2Json.linkedGoogleAccounts)}`
+    );
+    const nonPrimaryGoogle = gBind2Json.linkedGoogleAccounts.find((a) => !a.isPrimary);
+    assert(nonPrimaryGoogle, 'Expected a non-primary Google account row');
+
+    const gPrimary = await fetch(`${base}/mobile/m4/google/primary`, {
+      method: 'POST',
+      headers: mHeaders,
+      body: JSON.stringify({ accountId: nonPrimaryGoogle.id }),
+    });
+    assert(gPrimary.status === 200, `Set primary Google failed: ${gPrimary.status}`);
+    const gPrimaryJson = (await gPrimary.json()) as {
+      linkedGoogleAccounts?: Array<{ id: string; isPrimary: boolean }>;
+    };
+    assert(
+      gPrimaryJson.linkedGoogleAccounts?.find((a) => a.id === nonPrimaryGoogle.id)?.isPrimary === true,
+      'Expected selected Google account to become primary'
+    );
+
+    const gRemove = await fetch(`${base}/mobile/m4/google/remove`, {
+      method: 'POST',
+      headers: mHeaders,
+      body: JSON.stringify({ accountId: nonPrimaryGoogle.id }),
+    });
+    assert(gRemove.status === 200, `Remove secondary Google failed: ${gRemove.status}`);
 
     // Low liveness score must fail
     const bioFail = await fetch(`${base}/mobile/m4/biometric/complete`, {
@@ -297,6 +342,7 @@ async function run(): Promise<void> {
       headers: mHeaders,
       body: JSON.stringify({
         deviceId,
+        documentKind: 'eid_card',
         sodCscaVerified: true,
         citizenshipCountry: 'GEO',
         livenessScore: 0.94,
@@ -307,6 +353,25 @@ async function run(): Promise<void> {
       }),
     });
     assert(bioOk.status === 200, `Valid eID complete failed: ${bioOk.status}`);
+
+    // Archive a second document (passport) for the same verified member
+    const samplePassportPortrait = Buffer.from('synthetic-passport-portrait-jpeg-bytes-'.repeat(600)).toString('base64');
+    const bioSecondDoc = await fetch(`${base}/mobile/m4/biometric/complete`, {
+      method: 'POST',
+      headers: mHeaders,
+      body: JSON.stringify({
+        deviceId,
+        documentKind: 'passport',
+        sodCscaVerified: true,
+        citizenshipCountry: 'GEO',
+        livenessScore: 0.95,
+        faceMatchScore: 0.91,
+        personSubjectKey: sharedPersonKey,
+        biometricTemplate: sampleTemplate,
+        docPortraitBase64: samplePassportPortrait,
+      }),
+    });
+    assert(bioSecondDoc.status === 200, `Second document archival failed: ${bioSecondDoc.status}`);
 
     // Verify /status reports stored encrypted biometric template & portrait without leaking cipher
     const statusAfterBio = (await (await fetch(`${base}/mobile/m4/status`, { headers: mHeaders })).json()) as {
@@ -398,11 +463,21 @@ async function run(): Promise<void> {
     assert(profileHistRes.status === 200, `Profile history fetch failed: ${profileHistRes.status}`);
     const profileHist = (await profileHistRes.json()) as {
       permanentVerification: boolean;
+      documentsCount: number;
+      linkedGoogleAccounts: Array<Record<string, unknown>>;
       devices: Array<Record<string, unknown>>;
       verificationHistory: Array<Record<string, unknown>>;
       identityStats: Record<string, unknown>;
     };
     assert(profileHist.permanentVerification === true, 'Expected profile permanentVerification=true');
+    assert(
+      typeof profileHist.documentsCount === 'number' && profileHist.documentsCount >= 2,
+      `Expected documentsCount >= 2, got ${profileHist.documentsCount}`
+    );
+    assert(
+      Array.isArray(profileHist.linkedGoogleAccounts) && profileHist.linkedGoogleAccounts.length >= 1,
+      'Expected linkedGoogleAccounts on profile'
+    );
     assert(
       Array.isArray(profileHist.devices) && profileHist.devices.length >= 2,
       'Expected profile devices list with >=2 devices'
@@ -592,6 +667,27 @@ async function run(): Promise<void> {
   } finally {
     // Clean up test-created proposals/proofs/operators cleanly so dev member stays unverified for manual testing
     await ownerPool.query('DELETE FROM ertad.platform_integration_proposals WHERE proposer_id = ANY($1::uuid[])', [createdAdmins]).catch(() => {});
+    await ownerPool.query(
+      `DELETE FROM ertad.member_verification_documents WHERE member_id IN (
+        SELECT mu.id FROM ertad.member_users mu
+        JOIN ertad.admin_users au ON au.id = mu.web_account_id
+        WHERE au.email LIKE '%@mobile.ertad.local'
+      )`
+    ).catch(() => {});
+    await ownerPool.query(
+      `DELETE FROM ertad.member_google_accounts WHERE member_id IN (
+        SELECT mu.id FROM ertad.member_users mu
+        JOIN ertad.admin_users au ON au.id = mu.web_account_id
+        WHERE au.email LIKE '%@mobile.ertad.local'
+      )`
+    ).catch(() => {});
+    await ownerPool.query(
+      `DELETE FROM ertad.biometric_verification_sessions WHERE member_id IN (
+        SELECT mu.id FROM ertad.member_users mu
+        JOIN ertad.admin_users au ON au.id = mu.web_account_id
+        WHERE au.email LIKE '%@mobile.ertad.local'
+      )`
+    ).catch(() => {});
     await ownerPool.query(
       `DELETE FROM ertad.member_identity_proofs WHERE member_id IN (
         SELECT mu.id FROM ertad.member_users mu

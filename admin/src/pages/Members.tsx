@@ -38,6 +38,7 @@ export default function Members() {
     [selected, setSelected] = useState(""),
     [detail, setDetail] = useState<MemberDetail | null>(null),
     [revealedMemberId, setRevealedMemberId] = useState(""),
+    [revealedDocIds, setRevealedDocIds] = useState<Record<string, boolean>>({}),
     [workPage, setWorkPage] = useState(1);
   const [loading, setLoading] = useState(true),
     [error, setError] = useState("");
@@ -586,6 +587,178 @@ export default function Members() {
                     )}
                   </div>
                 </div>
+                {(typeof detail.verification?.documentCount === "number" ||
+                  typeof detail.verification?.activeDeviceCount === "number" ||
+                  typeof detail.verification?.linkedGoogleCount === "number") && (
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--muted)]">
+                    {typeof detail.verification?.documentCount === "number" && (
+                      <span className="rounded-lg border border-[var(--border)] bg-[var(--elevated)] px-2.5 py-1">
+                        {t("საბუთები", "Documents")}:{" "}
+                        <strong className="text-[var(--text)]">
+                          {detail.verification.documentCount}
+                        </strong>
+                      </span>
+                    )}
+                    {typeof detail.verification?.activeDeviceCount ===
+                      "number" && (
+                      <span className="rounded-lg border border-[var(--border)] bg-[var(--elevated)] px-2.5 py-1">
+                        {t("აქტიური მოწყობილობები", "Active devices")}:{" "}
+                        <strong className="text-[var(--text)]">
+                          {detail.verification.activeDeviceCount}
+                        </strong>
+                      </span>
+                    )}
+                    {typeof detail.verification?.linkedGoogleCount ===
+                      "number" && (
+                      <span className="rounded-lg border border-[var(--border)] bg-[var(--elevated)] px-2.5 py-1">
+                        {t("მიბმული Google", "Linked Google")}:{" "}
+                        <strong className="text-[var(--text)]">
+                          {detail.verification.linkedGoogleCount}
+                        </strong>
+                      </span>
+                    )}
+                  </div>
+                )}
+                {(detail.verification?.documents?.length ?? 0) > 0 && (
+                  <div className="mt-4 border-t border-[var(--border)] pt-3">
+                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                      {t(
+                        "გამოყენებული საბუთები და პორტრეტები",
+                        "Verified documents & portraits",
+                      )}
+                    </h3>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {detail.verification!.documents!.map((doc, idx) => {
+                        const docKey = `${detail.id}:${doc.id}`;
+                        const revealDoc = Boolean(revealedDocIds[docKey]);
+                        const docLabel =
+                          doc.documentKind === "passport"
+                            ? t("პასპორტი", "Passport")
+                            : doc.documentKind === "eid_card"
+                              ? t("ID ბარათი / eID", "eID Card")
+                              : t("სხვა საბუთი", "Other document");
+                        return (
+                          <div
+                            key={doc.id}
+                            className="flex items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--elevated)] p-2.5"
+                          >
+                            {doc.portraitDataUrl ? (
+                              <div className="flex shrink-0 flex-col items-start gap-1">
+                                <img
+                                  src={doc.portraitDataUrl}
+                                  alt={`${name(detail)} #${idx + 1}`}
+                                  className={`h-14 w-14 rounded-lg border border-[var(--border)] object-cover transition ${revealDoc ? "" : "blur-md"}`}
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={() =>
+                                    setRevealedDocIds((prev) => ({
+                                      ...prev,
+                                      [docKey]: !prev[docKey],
+                                    }))
+                                  }
+                                >
+                                  {revealDoc
+                                    ? t("დამალვა", "Hide")
+                                    : t("ჩვენება", "Show")}
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] text-xs text-[var(--muted)]">
+                                —
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1 text-xs">
+                              <p className="font-semibold text-[var(--text)]">
+                                {docLabel}
+                                {doc.issuingCountry
+                                  ? ` · ${doc.issuingCountry}`
+                                  : ""}
+                              </p>
+                              <p className="text-[var(--muted)]">
+                                {doc.sodCscaVerified
+                                  ? t(
+                                      "SOD/CSCA: დადასტურებული",
+                                      "SOD/CSCA: verified",
+                                    )
+                                  : t(
+                                      "SOD/CSCA: არ არის",
+                                      "SOD/CSCA: unverified",
+                                    )}
+                                {typeof doc.faceMatchScore === "number"
+                                  ? ` · ${t("სახე", "Face")}: ${Math.round(doc.faceMatchScore * 100)}%`
+                                  : ""}
+                              </p>
+                              <p className="text-[11px] text-[var(--muted)]">
+                                {doc.createdAt
+                                  ? new Date(doc.createdAt).toLocaleString(
+                                      language === "ka" ? "ka-GE" : "en-GB",
+                                    )
+                                  : ""}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {(detail.verification?.verificationLog?.length ?? 0) > 0 && (
+                  <div className="mt-4 border-t border-[var(--border)] pt-3">
+                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                      {t("ვერიფიკაციის აუდიტის ლოგი", "Verification audit log")}
+                    </h3>
+                    <div className="space-y-1.5 text-xs">
+                      {detail.verification!.verificationLog!.map((entry) => {
+                        const passed = entry.status === "passed";
+                        return (
+                          <div
+                            key={entry.id}
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--elevated)] px-2.5 py-1.5"
+                          >
+                            <span className="font-medium text-[var(--text)]">
+                              {entry.sessionKind === "reauth"
+                                ? t(
+                                    "სელფით მოწყობილობის დადასტურება",
+                                    "Selfie device confirmation",
+                                  )
+                                : t(
+                                    "eID საწყისი ვერიფიკაცია",
+                                    "Initial eID verification",
+                                  )}
+                              {" · "}
+                              <span
+                                className={
+                                  passed
+                                    ? "text-emerald-600 dark:text-emerald-400"
+                                    : "text-red-600 dark:text-red-400"
+                                }
+                              >
+                                {passed
+                                  ? t("წარმატებული", "Passed")
+                                  : entry.status}
+                              </span>
+                            </span>
+                            <span className="text-[var(--muted)]">
+                              {typeof entry.faceMatchScore === "number"
+                                ? `${t("სახე", "Face")}: ${Math.round(entry.faceMatchScore * 100)}%`
+                                : ""}
+                              {typeof entry.livenessScore === "number"
+                                ? `${typeof entry.faceMatchScore === "number" ? " · " : ""}${t("სიცოცხლისუნარიანობა", "Liveness")}: ${Math.round(entry.livenessScore * 100)}%`
+                                : ""}
+                              {entry.createdAt
+                                ? ` · ${new Date(entry.createdAt).toLocaleString(
+                                    language === "ka" ? "ka-GE" : "en-GB",
+                                  )}`
+                                : ""}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
                 <p className="mt-3">
                   {t("ქულები ხილულ ფარგლებში", "Points in visible scope")}:{" "}
                   {detail.points ?? t("შეზღუდულია", "Restricted")}

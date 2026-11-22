@@ -26,6 +26,25 @@ export interface DirectoryMember {
   memberships: DirectoryMembership[];
   points: string | null;
 }
+export interface MemberVerificationDocument {
+  id: string;
+  documentKind: "eid_card" | "passport" | "other";
+  issuingCountry: string;
+  sodCscaVerified: boolean;
+  livenessScore?: number | null;
+  faceMatchScore?: number | null;
+  portraitDataUrl: string | null;
+  createdAt: string;
+}
+export interface MemberVerificationLogEntry {
+  id: string;
+  sessionKind: "enrollment" | "reauth";
+  status: string;
+  sodCscaVerified: boolean;
+  livenessScore?: number | null;
+  faceMatchScore?: number | null;
+  createdAt: string;
+}
 export interface MemberVerificationSummary {
   assuranceLevel: string;
   citizenshipCountry: string;
@@ -34,6 +53,11 @@ export interface MemberVerificationSummary {
   faceMatchScore?: number | null;
   verifiedAt: string | null;
   portraitDataUrl: string | null;
+  documentCount?: number;
+  activeDeviceCount?: number;
+  linkedGoogleCount?: number;
+  documents?: MemberVerificationDocument[];
+  verificationLog?: MemberVerificationLogEntry[];
 }
 export interface MemberDetail extends DirectoryMember {
   canPropose: boolean;
