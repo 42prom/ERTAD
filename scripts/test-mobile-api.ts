@@ -398,6 +398,151 @@ try {
   );
   assert(decisionsList.status === 200, `Decisions list failed: ${decisionsList.status}`);
 
+  // 8b. Manager vs Member parity: Manager creates work, channel & poll in subordinate hierarchy; Member is denied
+  const mgrStepUpRes = await fetch(`${base}/dev/step-up`, {
+    method: 'POST',
+    headers: mgrHeaders,
+    body: '{}',
+  });
+  assert(mgrStepUpRes.status === 200, `Manager step-up failed: ${mgrStepUpRes.status}`);
+
+  const mgrWorkUnitsRes = await fetch(
+    `${base}/work/units?organizationId=${personasBody.organizationId}`,
+    { headers: mgrHeaders }
+  );
+  assert(mgrWorkUnitsRes.status === 200, `Manager work/units failed: ${mgrWorkUnitsRes.status}`);
+  const mgrWorkUnits = (await mgrWorkUnitsRes.json()) as Array<{ id: string; canCreate?: boolean }>;
+  const targetWorkUnit = mgrWorkUnits.find((u) => u.canCreate);
+  assert(!!targetWorkUnit, 'Expected manager to have at least one creatable work unit');
+
+  const mgrCreateWorkRes = await fetch(`${base}/work/create`, {
+    method: 'POST',
+    headers: mgrHeaders,
+    body: JSON.stringify({
+      key: randomUUID(),
+      organizationId: personasBody.organizationId,
+      unitId: targetWorkUnit!.id,
+      title: 'Manager Hierarchy Task Check',
+      description: 'Testing manager subordinate task creation from mobile API',
+      roleLabel: 'Volunteer',
+      priority: 'normal',
+      capacity: 5,
+      deadline: new Date(Date.now() + 7 * 86400_000).toISOString(),
+      contributionRuleId: null,
+    }),
+  });
+  assert(mgrCreateWorkRes.status === 200, `Manager work/create failed: ${mgrCreateWorkRes.status}`);
+
+  const mgrChUnitsRes = await fetch(
+    `${base}/channels/units?organizationId=${personasBody.organizationId}&page=1`,
+    { headers: mgrHeaders }
+  );
+  assert(mgrChUnitsRes.status === 200, `Manager channels/units failed: ${mgrChUnitsRes.status}`);
+  const mgrChUnits = (await mgrChUnitsRes.json()) as { items: Array<{ id: string }> };
+  assert(mgrChUnits.items.length > 0, 'Expected manager to have authorized channel unit');
+
+  const mgrCreateChRes = await fetch(`${base}/channels/create`, {
+    method: 'POST',
+    headers: mgrHeaders,
+    body: JSON.stringify({
+      key: randomUUID(),
+      organizationId: personasBody.organizationId,
+      unitId: mgrChUnits.items[0].id,
+      title: 'Manager Hierarchy Channel Check',
+      kind: 'group',
+    }),
+  });
+  assert(mgrCreateChRes.status === 200, `Manager channels/create failed: ${mgrCreateChRes.status}`);
+
+  const mgrDecAudRes = await fetch(
+    `${base}/decisions/audiences?organizationId=${personasBody.organizationId}`,
+    { headers: mgrHeaders }
+  );
+  assert(mgrDecAudRes.status === 200, `Manager decisions/audiences failed: ${mgrDecAudRes.status}`);
+  const mgrDecAuds = (await mgrDecAudRes.json()) as Array<{ id: string }>;
+  assert(mgrDecAuds.length > 0, 'Expected manager to have authorized decision audience');
+
+  const mgrCreateDecRes = await fetch(`${base}/decisions/create`, {
+    method: 'POST',
+    headers: mgrHeaders,
+    body: JSON.stringify({
+      key: randomUUID(),
+      organizationId: personasBody.organizationId,
+      unitId: mgrDecAuds[0].id,
+      kind: 'poll',
+      privacy: 'named',
+      title: 'Manager Hierarchy Poll Check',
+      description: 'Testing manager poll creation from mobile API',
+      options: ['Approve Plan', 'Revise Plan'],
+      quorum: 20,
+      closesAt: new Date(Date.now() + 7 * 86400_000).toISOString(),
+      includedUnitIds: [mgrDecAuds[0].id],
+    }),
+  });
+  assert(mgrCreateDecRes.status === 200, `Manager decisions/create failed: ${mgrCreateDecRes.status}`);
+  const createdDec = (await mgrCreateDecRes.json()) as { id: string };
+  assert(!!createdDec.id, 'Expected created decision id');
+
+  const mgrPublishDecRes = await fetch(`${base}/decisions/publish`, {
+    method: 'POST',
+    headers: mgrHeaders,
+    body: JSON.stringify({
+      key: randomUUID(),
+      organizationId: personasBody.organizationId,
+      id: createdDec.id,
+      version: 1,
+    }),
+  });
+  assert(mgrPublishDecRes.status === 200, `Manager decisions/publish failed: ${mgrPublishDecRes.status}`);
+
+  const memChUnitsRes = await fetch(
+    `${base}/channels/units?organizationId=${personasBody.organizationId}&page=1`,
+    { headers: memberHeaders }
+  );
+  assert(memChUnitsRes.status === 200, `Member channels/units failed: ${memChUnitsRes.status}`);
+  const memChUnits = (await memChUnitsRes.json()) as { items: Array<{ id: string }> };
+  assert(memChUnits.items.length === 0, 'Expected plain member to have zero channel creation units');
+
+  const memCreateChRes = await fetch(`${base}/channels/create`, {
+    method: 'POST',
+    headers: memberHeaders,
+    body: JSON.stringify({
+      key: randomUUID(),
+      organizationId: personasBody.organizationId,
+      unitId: mgrChUnits.items[0].id,
+      title: 'Unauthorized Member Channel',
+      kind: 'group',
+    }),
+  });
+  assert(memCreateChRes.status === 403, `Expected 403 for member channels/create, got ${memCreateChRes.status}`);
+
+  const memDecAudRes = await fetch(
+    `${base}/decisions/audiences?organizationId=${personasBody.organizationId}`,
+    { headers: memberHeaders }
+  );
+  assert(memDecAudRes.status === 200, `Member decisions/audiences failed: ${memDecAudRes.status}`);
+  const memDecAuds = (await memDecAudRes.json()) as Array<{ id: string }>;
+  assert(memDecAuds.length === 0, 'Expected plain member to have zero decision audiences');
+
+  const memCreateDecRes = await fetch(`${base}/decisions/create`, {
+    method: 'POST',
+    headers: memberHeaders,
+    body: JSON.stringify({
+      key: randomUUID(),
+      organizationId: personasBody.organizationId,
+      unitId: mgrDecAuds[0].id,
+      kind: 'poll',
+      privacy: 'named',
+      title: 'Unauthorized Member Poll',
+      description: 'Should be forbidden for plain member',
+      options: ['A', 'B'],
+      quorum: 20,
+      closesAt: new Date(Date.now() + 7 * 86400_000).toISOString(),
+      includedUnitIds: [mgrDecAuds[0].id],
+    }),
+  });
+  assert(memCreateDecRes.status === 403, `Expected 403 for member decisions/create, got ${memCreateDecRes.status}`);
+
   const prefsRes = await fetch(`${base}/account/notifications`, { headers: mgrHeaders });
   assert(prefsRes.status === 200, `Notifications prefs failed: ${prefsRes.status}`);
 

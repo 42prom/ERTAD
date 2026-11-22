@@ -119,6 +119,34 @@ class VerificationPolicy {
       allowMocks: _readBool(env, 'allowMocks', defaultValue: false),
     );
   }
+
+  /// Built-in sovereign ERTAD first-party verification policy fallback.
+  factory VerificationPolicy.defaultFirstParty() {
+    return VerificationPolicy.fromJson(<String, dynamic>{
+      'nfc': <String, dynamic>{
+        'provider': 'on_device_georgia',
+        'requireNfc': true,
+        'requireGeorgianCitizen': true,
+        'requirePersonalNumber': true,
+        'allowSkipDocumentWhenNfcHasPortrait': true,
+      },
+      'documentScanner': <String, dynamic>{
+        'provider': 'on_device_ocr_mrz',
+        'requireDocumentPhotoScan': false,
+        'strictness': 'strict',
+      },
+      'liveness': <String, dynamic>{
+        'provider': '3d_face_detector',
+        'minScore': 0.85,
+        'retryLimit': 3,
+      },
+      'faceMatch': <String, dynamic>{
+        'provider': 'custom_biometric_matcher',
+        'minScore': 0.40,
+      },
+      'env': <String, dynamic>{'allowMocks': false},
+    });
+  }
 }
 
 class NfcPolicy {

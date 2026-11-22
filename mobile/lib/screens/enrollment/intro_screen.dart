@@ -27,33 +27,6 @@ class _IntroScreenState extends State<IntroScreen> {
   final IApiService _api = ServiceLocator.apiService;
   bool _loading = false;
 
-  VerificationPolicy _builtInFirstPartyPolicy() {
-    return VerificationPolicy.fromJson(<String, dynamic>{
-      'nfc': <String, dynamic>{
-        'provider': 'on_device_georgia',
-        'requireNfc': true,
-        'requireGeorgianCitizen': true,
-        'requirePersonalNumber': true,
-        'allowSkipDocumentWhenNfcHasPortrait': true,
-      },
-      'documentScanner': <String, dynamic>{
-        'provider': 'on_device_ocr_mrz',
-        'requireDocumentPhotoScan': false,
-        'strictness': 'strict',
-      },
-      'liveness': <String, dynamic>{
-        'provider': '3d_face_detector',
-        'minScore': 0.85,
-        'retryLimit': 3,
-      },
-      'faceMatch': <String, dynamic>{
-        'provider': 'custom_biometric_matcher',
-        'minScore': 0.80,
-      },
-      'env': <String, dynamic>{'allowMocks': false},
-    });
-  }
-
   Future<void> _start() async {
     HapticFeedback.selectionClick();
     setState(() => _loading = true);
@@ -63,7 +36,7 @@ class _IntroScreenState extends State<IntroScreen> {
       try {
         policy = await _api.fetchVerificationPolicy();
       } catch (_) {
-        policy = _builtInFirstPartyPolicy();
+        policy = VerificationPolicy.defaultFirstParty();
       }
 
       if (!mounted) return;

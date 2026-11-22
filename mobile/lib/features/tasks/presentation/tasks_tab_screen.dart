@@ -7,6 +7,7 @@ import '../../../core/shell/tab_scroll_registry.dart';
 import '../../../core/state/shell_providers.dart';
 import '../../../core/theme/ertad_theme.dart';
 import '../../../core/widgets/ertad_ui.dart';
+import 'create_task_sheet.dart';
 import 'event_detail_screen.dart';
 import 'work_detail_screen.dart';
 
@@ -72,6 +73,21 @@ class _TasksTabScreenState extends ConsumerState<TasksTabScreen> {
     );
     if (!mounted) return;
     ref.read(shellSessionProvider.notifier).refreshWorkspace();
+  }
+
+  Future<void> _createTask() async {
+    final orgId = ref.read(shellSessionProvider).activeOrgId;
+    if (orgId.startsWith('org-') || orgId.isEmpty) return;
+    final created = await showCreateTaskSheet(
+      context,
+      organizationId: orgId,
+    );
+    if (created != null && mounted) {
+      ref.read(ertadFeedbackProvider.notifier).showSuccess(
+        shellTr(context, 'mgr_task_created_ok', fallback: 'Task created'),
+      );
+      await ref.read(shellSessionProvider.notifier).refreshWorkspace();
+    }
   }
 
   @override
@@ -185,6 +201,25 @@ class _TasksTabScreenState extends ConsumerState<TasksTabScreen> {
           selectedIndex: activeSegment,
           onSelected: (i) => setState(() => _segment = i),
         ),
+        if ((session.canCreateWork || session.isGroupManager) &&
+            session.isLiveConnected &&
+            !session.activeOrgId.startsWith('org-')) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.tonalIcon(
+              onPressed: _createTask,
+              icon: const Icon(Icons.add_task_rounded, size: 18),
+              label: Text(
+                shellTr(
+                  context,
+                  'mgr_create_task_btn',
+                  fallback: 'New task',
+                ),
+              ),
+            ),
+          ),
+        ],
         if (_query.isNotEmpty ||
             (rawWorkList.length + rawEventList.length) > 4) ...[
           const SizedBox(height: 12),

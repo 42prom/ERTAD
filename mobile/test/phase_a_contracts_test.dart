@@ -2,6 +2,10 @@ import 'package:ertad_mobile/core/network/mobile_api_client.dart';
 import 'package:ertad_mobile/core/state/offline_action_queue.dart';
 import 'package:ertad_mobile/core/state/shell_providers.dart';
 import 'package:ertad_mobile/core/theme/ertad_theme.dart';
+import 'package:ertad_mobile/features/home/presentation/home_tab_screen.dart';
+import 'package:ertad_mobile/features/messages/presentation/messages_tab_screen.dart';
+import 'package:ertad_mobile/features/polls/presentation/polls_tab_screen.dart';
+import 'package:ertad_mobile/features/tasks/presentation/tasks_tab_screen.dart';
 import 'package:ertad_mobile/models/poll.dart';
 import 'package:ertad_mobile/screens/voting/decision_results_card.dart';
 import 'package:ertad_mobile/services/localization_service.dart';
@@ -18,6 +22,18 @@ class _FakeMobileApiClient extends MobileApiClient {
   bool fetchedNeedsReview = false;
   bool fetchedReviews = false;
   Map<String, dynamic> decisionDetailResponse = const <String, dynamic>{};
+  List<Map<String, dynamic>> reviewsResponse = const [
+    <String, dynamic>{'id': 'rev-ctx-1', 'name': 'Unit'},
+  ];
+  Map<String, dynamic> m4StatusResponse = const <String, dynamic>{
+    'assuranceLevel': 'biometric_verified',
+    'sodCscaVerified': true,
+    'deviceTrusted': true,
+    'needsSelfieReauth': false,
+  };
+  List<Map<String, dynamic>> workUnitsResponse = const [];
+  List<Map<String, dynamic>> channelUnitsResponse = const [];
+  List<Map<String, dynamic>> decisionAudiencesResponse = const [];
 
   _FakeMobileApiClient() : super(baseUrl: 'http://127.0.0.1:13000/api/v1');
 
@@ -33,9 +49,7 @@ class _FakeMobileApiClient extends MobileApiClient {
       'units': const [
         <String, dynamic>{'id': '11111111-1111-4111-8111-111111111111', 'name': 'ERTAD Test'},
       ],
-      'reviews': const [
-        <String, dynamic>{'id': 'rev-ctx-1', 'name': 'Unit'},
-      ],
+      'reviews': reviewsResponse,
       'summary': const <String, dynamic>{
         'pendingReviews': 2,
         'upcomingEvents48h': 1,
@@ -106,10 +120,23 @@ class _FakeMobileApiClient extends MobileApiClient {
   }
 
   @override
-  Future<Map<String, dynamic>> fetchM4Status() async => const <String, dynamic>{
-    'assuranceLevel': 'biometric_verified',
-    'sodCscaVerified': true,
-  };
+  Future<Map<String, dynamic>> fetchM4Status({String? deviceId}) async =>
+      m4StatusResponse;
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchWorkUnits({
+    required String organizationId,
+  }) async => workUnitsResponse;
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchChannelUnits({
+    required String organizationId,
+  }) async => channelUnitsResponse;
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchDecisionAudiences({
+    required String organizationId,
+  }) async => decisionAudiencesResponse;
 
   @override
   Future<Map<String, dynamic>> fetchReferralSummary({
@@ -140,18 +167,35 @@ class _FakeMobileApiClient extends MobileApiClient {
 }
 
 class _LiveConnectedShellNotifier extends ShellSessionNotifier {
-  _LiveConnectedShellNotifier(super.api, {required String orgId}) {
+  _LiveConnectedShellNotifier(
+    super.api, {
+    required String orgId,
+    bool hasManagerAuthority = false,
+    bool canCreateWork = false,
+    bool canCreateChannel = false,
+    bool canCreateDecision = false,
+    String m4AssuranceLevel = 'biometric_verified',
+    bool m4DeviceTrusted = true,
+    bool m4NeedsSelfieReauth = false,
+  }) {
     state = ShellSessionState(
       organizations: <OrgContextSummary>[
         OrgContextSummary(
           id: orgId,
           name: 'ERTAD Live',
           unitName: 'Unit',
-          roleLabel: 'Member',
+          roleLabel: hasManagerAuthority ? 'Manager' : 'Member',
         ),
       ],
       activeOrgId: orgId,
       isLiveConnected: true,
+      hasManagerAuthority: hasManagerAuthority,
+      canCreateWork: canCreateWork,
+      canCreateChannel: canCreateChannel,
+      canCreateDecision: canCreateDecision,
+      m4AssuranceLevel: m4AssuranceLevel,
+      m4DeviceTrusted: m4DeviceTrusted,
+      m4NeedsSelfieReauth: m4NeedsSelfieReauth,
     );
   }
 }
@@ -431,6 +475,172 @@ void main() {
       await notifier.signOut();
       expect(await queue.count(), 0);
       expect(notifier.state.pendingOfflineActionsCount, 0);
+    },
+  );
+
+  test(
+    'ShellSessionNotifier tracks m4NeedsSelfieReauth and hierarchy creation capabilities',
+    () async {
+      final api = _FakeMobileApiClient()
+        ..reviewsResponse = const []
+        ..m4StatusResponse = const <String, dynamic>{
+          'assuranceLevel': 'biometric_verified',
+          'sodCscaVerified': true,
+          'deviceTrusted': false,
+          'needsSelfieReauth': true,
+          'permanentVerification': true,
+        }
+        ..workUnitsResponse = const [
+          <String, dynamic>{'id': 'u-1', 'name': 'Saburtalo', 'canCreate': true},
+        ]
+        ..channelUnitsResponse = const [
+          <String, dynamic>{'id': 'u-1', 'name': 'Saburtalo'},
+        ]
+        ..decisionAudiencesResponse = const [
+          <String, dynamic>{'id': 'u-1', 'name': 'Saburtalo'},
+        ];
+
+      final notifier = ShellSessionNotifier(api);
+      await notifier.refreshWorkspace();
+
+      expect(notifier.state.m4AssuranceLevel, 'biometric_verified');
+      expect(notifier.state.m4DeviceTrusted, isFalse);
+      expect(notifier.state.m4NeedsSelfieReauth, isTrue);
+      expect(notifier.state.canCreateWork, isTrue);
+      expect(notifier.state.canCreateChannel, isTrue);
+      expect(notifier.state.canCreateDecision, isTrue);
+      expect(notifier.state.hasManagerAuthority, isTrue);
+      expect(notifier.state.isGroupManager, isTrue);
+
+      await notifier.signOut();
+      expect(notifier.state.m4NeedsSelfieReauth, isFalse);
+      expect(notifier.state.m4DeviceTrusted, isTrue);
+      expect(notifier.state.canCreateWork, isFalse);
+      expect(notifier.state.canCreateChannel, isFalse);
+      expect(notifier.state.canCreateDecision, isFalse);
+    },
+  );
+
+  testWidgets(
+    'HomeTabScreen and MessagesTabScreen prompt 3-second selfie without eID rescan when m4NeedsSelfieReauth=true',
+    (tester) async {
+      final loc = LocalizationService();
+      await loc.setLanguage(AppLanguage.english);
+      final api = _FakeMobileApiClient()
+        ..reviewsResponse = const []
+        ..m4StatusResponse = const <String, dynamic>{
+          'assuranceLevel': 'biometric_verified',
+          'sodCscaVerified': true,
+          'deviceTrusted': false,
+          'needsSelfieReauth': true,
+        };
+
+      Widget buildApp(Widget child) {
+        return ProviderScope(
+          key: ValueKey<Type>(child.runtimeType),
+          overrides: [
+            mobileApiClientProvider.overrideWithValue(api),
+            shellSessionProvider.overrideWith(
+              (ref) => _LiveConnectedShellNotifier(
+                api,
+                orgId: '11111111-1111-4111-8111-111111111111',
+                m4AssuranceLevel: 'biometric_verified',
+                m4DeviceTrusted: false,
+                m4NeedsSelfieReauth: true,
+              ),
+            ),
+          ],
+          child: legacy_provider.ChangeNotifierProvider<LocalizationService>.value(
+            value: loc,
+            child: MaterialApp(
+              theme: ErtadTheme.lightTheme,
+              home: Scaffold(body: child),
+            ),
+          ),
+        );
+      }
+
+      await tester.pumpWidget(buildApp(const HomeTabScreen()));
+      await tester.pumpAndSettle();
+      expect(find.text('Verify with selfie'), findsOneWidget);
+      expect(find.text('Verify identity'), findsNothing);
+
+      await tester.pumpWidget(buildApp(const MessagesTabScreen()));
+      await tester.pumpAndSettle();
+      expect(find.text('Verify with selfie'), findsOneWidget);
+      expect(find.text('Chats protected by eID biometrics'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'Manager vs Member functional parity hides creation buttons for Member and shows them for Manager',
+    (tester) async {
+      final loc = LocalizationService();
+      await loc.setLanguage(AppLanguage.english);
+
+      Widget buildTabs({required bool manager}) {
+        final api = _FakeMobileApiClient()
+          ..reviewsResponse = manager
+              ? const [<String, dynamic>{'id': 'rev-1', 'name': 'Unit'}]
+              : const []
+          ..workUnitsResponse = manager
+              ? const [<String, dynamic>{'id': 'u-1', 'name': 'Unit', 'canCreate': true}]
+              : const []
+          ..channelUnitsResponse = manager
+              ? const [<String, dynamic>{'id': 'u-1', 'name': 'Unit'}]
+              : const []
+          ..decisionAudiencesResponse = manager
+              ? const [<String, dynamic>{'id': 'u-1', 'name': 'Unit'}]
+              : const [];
+
+        return ProviderScope(
+          key: ValueKey<bool>(manager),
+          overrides: [
+            mobileApiClientProvider.overrideWithValue(api),
+            shellSessionProvider.overrideWith(
+              (ref) => _LiveConnectedShellNotifier(
+                api,
+                orgId: '11111111-1111-4111-8111-111111111111',
+                hasManagerAuthority: manager,
+                canCreateWork: manager,
+                canCreateChannel: manager,
+                canCreateDecision: manager,
+              ),
+            ),
+          ],
+          child: legacy_provider.ChangeNotifierProvider<LocalizationService>.value(
+            value: loc,
+            child: MaterialApp(
+              theme: ErtadTheme.lightTheme,
+              home: Scaffold(
+                body: Column(
+                  children: [
+                    const Expanded(child: TasksTabScreen()),
+                    const Expanded(child: MessagesTabScreen()),
+                    Expanded(
+                      child: PollsTabScreen(
+                        pollsLoader: () async => const <Poll>[],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      await tester.pumpWidget(buildTabs(manager: false));
+      await tester.pumpAndSettle();
+      expect(find.text('New task'), findsNothing);
+      expect(find.text('New channel'), findsNothing);
+      expect(find.text('New poll'), findsNothing);
+
+      await tester.pumpWidget(buildTabs(manager: true));
+      await tester.pumpAndSettle();
+      expect(find.text('New task'), findsOneWidget);
+      expect(find.text('New channel'), findsOneWidget);
+      expect(find.text('New poll'), findsOneWidget);
     },
   );
 }

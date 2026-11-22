@@ -10,7 +10,9 @@ import '../../../core/shell/tab_scroll_registry.dart';
 import '../../../core/state/shell_providers.dart';
 import '../../../core/theme/ertad_theme.dart';
 import '../../../core/widgets/ertad_ui.dart';
+import '../../../models/verification_models.dart';
 import '../../../screens/enrollment/intro_screen.dart';
+import '../../../screens/enrollment/liveness_screen.dart';
 import 'group_reviews_sheet.dart';
 
 /// Center Home tab (index 2): calm plain-member operational hub with zero clutter.
@@ -130,6 +132,31 @@ class HomeTabScreen extends ConsumerWidget {
             ),
             onAction: () => Navigator.of(context, rootNavigator: true).push(
               MaterialPageRoute<void>(builder: (_) => const IntroScreen()),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ] else if (session.isLiveConnected &&
+            session.m4NeedsSelfieReauth) ...[
+          ErtadStateBanner(
+            icon: Icons.face_retouching_natural_rounded,
+            tone: ErtadTone.warning,
+            message:
+                '${shellTr(context, 'm4_reauth_banner_title', fallback: 'New device detected')} — ${shellTr(context, 'm4_reauth_banner_body', fallback: 'Confirm with a 3-second selfie — no ID scan needed.')}',
+            actionLabel: shellTr(
+              context,
+              'm4_reauth_cta',
+              fallback: 'Verify with selfie',
+            ),
+            onAction: () => Navigator.of(context, rootNavigator: true).push(
+              MaterialPageRoute<void>(
+                builder: (_) => LivenessScreen(
+                  policy: VerificationPolicy.defaultFirstParty(),
+                  enrollmentSessionId: 'm4-reauth',
+                  docPortraitBase64: '',
+                  m4Mode: true,
+                  reauthOnly: true,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 12),

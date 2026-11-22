@@ -8,8 +8,11 @@ import '../../../core/shell/tab_scroll_registry.dart';
 import '../../../core/state/shell_providers.dart';
 import '../../../core/theme/ertad_theme.dart';
 import '../../../core/widgets/ertad_ui.dart';
+import '../../../models/verification_models.dart';
 import '../../../screens/enrollment/intro_screen.dart';
+import '../../../screens/enrollment/liveness_screen.dart';
 import 'channel_thread_screen.dart';
+import 'create_channel_sheet.dart';
 import 'direct_peers_sheet.dart';
 
 /// Messages tab (index 1):
@@ -54,6 +57,29 @@ class _MessagesTabScreenState extends ConsumerState<MessagesTabScreen> {
     final createdChannel = await showDirectPeersSheet(context);
     if (createdChannel != null && mounted) {
       await _openChannel(createdChannel);
+    }
+  }
+
+  Future<void> _createChannel() async {
+    final orgId = ref.read(shellSessionProvider).activeOrgId;
+    if (orgId.startsWith('org-') || orgId.isEmpty) return;
+    final created = await showCreateChannelSheet(
+      context,
+      organizationId: orgId,
+    );
+    if (created != null && mounted) {
+      ref.read(ertadFeedbackProvider.notifier).showSuccess(
+        shellTr(
+          context,
+          'mgr_channel_created_ok',
+          fallback: 'Channel created',
+        ),
+      );
+      await ref.read(shellSessionProvider.notifier).refreshWorkspace();
+      if (!mounted) return;
+      if (created['id'] != null) {
+        await _openChannel(created);
+      }
     }
   }
 
@@ -197,6 +223,57 @@ class _MessagesTabScreenState extends ConsumerState<MessagesTabScreen> {
             ),
           ),
         ] else ...[
+          if (session.isLiveConnected && session.m4NeedsSelfieReauth) ...[
+            ErtadStateBanner(
+              icon: Icons.face_retouching_natural_rounded,
+              tone: ErtadTone.warning,
+              message:
+                  '${shellTr(context, 'm4_reauth_banner_title', fallback: 'New device detected')} — ${shellTr(context, 'm4_reauth_banner_body', fallback: 'Confirm with a 3-second selfie — no ID scan needed.')}',
+              actionLabel: shellTr(
+                context,
+                'm4_reauth_cta',
+                fallback: 'Verify with selfie',
+              ),
+              onAction: () => Navigator.of(context, rootNavigator: true).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => LivenessScreen(
+                    policy: VerificationPolicy.defaultFirstParty(),
+                    enrollmentSessionId: 'm4-reauth',
+                    docPortraitBase64: '',
+                    m4Mode: true,
+                    reauthOnly: true,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (_selectedCategory == 1 &&
+              (session.canCreateChannel || session.isGroupManager) &&
+              session.isLiveConnected &&
+              !session.activeOrgId.startsWith('org-')) ...[
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.tonalIcon(
+                onPressed: _createChannel,
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(48, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                icon: const Icon(Icons.add_comment_rounded),
+                label: Text(
+                  shellTr(
+                    context,
+                    'mgr_create_channel_btn',
+                    fallback: 'New channel',
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           if (_selectedCategory == 2 &&
               session.isLiveConnected &&
               !session.activeOrgId.startsWith('org-')) ...[

@@ -341,6 +341,85 @@ async function run(): Promise<void> {
     const reauthJson = (await reauthOk.json()) as { reauthenticated: boolean };
     assert(reauthJson.reauthenticated === true, 'Expected reauthenticated=true');
 
+    // 3b. Permanent verification & new-device selfie-only re-auth + profile history
+    const newDeviceId = 'dev-device-new-99';
+    const newDevStatusBefore = await fetch(
+      `${base}/mobile/m4/status?deviceId=${encodeURIComponent(newDeviceId)}`,
+      { headers: mHeaders }
+    );
+    assert(newDevStatusBefore.status === 200, `New-device status failed: ${newDevStatusBefore.status}`);
+    const beforeBody = (await newDevStatusBefore.json()) as {
+      assuranceLevel: string;
+      permanentVerification: boolean;
+      deviceTrusted: boolean;
+      needsSelfieReauth: boolean;
+    };
+    assert(beforeBody.assuranceLevel === 'biometric_verified', 'Expected permanent biometric assurance');
+    assert(beforeBody.permanentVerification === true, 'Expected permanentVerification=true');
+    assert(beforeBody.deviceTrusted === false, 'Expected new device to be untrusted initially');
+    assert(beforeBody.needsSelfieReauth === true, 'Expected needsSelfieReauth=true on unrecognized device');
+
+    const newDevReauth = await fetch(`${base}/mobile/m4/biometric/reauth`, {
+      method: 'POST',
+      headers: mHeaders,
+      body: JSON.stringify({
+        deviceId: newDeviceId,
+        platform: 'android',
+        appId: 'ge.ertad.mobile',
+        livenessScore: 0.96,
+        faceMatchScore: 0.92,
+      }),
+    });
+    assert(newDevReauth.status === 200, `New-device selfie reauth failed: ${newDevReauth.status}`);
+    const newDevReauthJson = (await newDevReauth.json()) as {
+      reauthenticated: boolean;
+      deviceTrusted?: boolean;
+    };
+    assert(newDevReauthJson.reauthenticated === true, 'Expected new-device reauthenticated=true');
+    assert(newDevReauthJson.deviceTrusted === true, 'Expected deviceTrusted=true in reauth response');
+
+    const newDevStatusAfter = await fetch(
+      `${base}/mobile/m4/status?deviceId=${encodeURIComponent(newDeviceId)}`,
+      { headers: mHeaders }
+    );
+    assert(newDevStatusAfter.status === 200, `New-device status-after failed: ${newDevStatusAfter.status}`);
+    const afterBody = (await newDevStatusAfter.json()) as {
+      permanentVerification: boolean;
+      deviceTrusted: boolean;
+      needsSelfieReauth: boolean;
+      activeDeviceCount: number;
+    };
+    assert(afterBody.permanentVerification === true, 'Expected permanentVerification=true after reauth');
+    assert(afterBody.deviceTrusted === true, 'Expected new device trusted after selfie reauth');
+    assert(afterBody.needsSelfieReauth === false, 'Expected needsSelfieReauth=false after selfie reauth');
+    assert(afterBody.activeDeviceCount >= 2, `Expected >=2 trusted devices, got ${afterBody.activeDeviceCount}`);
+
+    const profileHistRes = await fetch(`${base}/mobile/m4/profile`, { headers: mHeaders });
+    assert(profileHistRes.status === 200, `Profile history fetch failed: ${profileHistRes.status}`);
+    const profileHist = (await profileHistRes.json()) as {
+      permanentVerification: boolean;
+      devices: Array<Record<string, unknown>>;
+      verificationHistory: Array<Record<string, unknown>>;
+      identityStats: Record<string, unknown>;
+    };
+    assert(profileHist.permanentVerification === true, 'Expected profile permanentVerification=true');
+    assert(
+      Array.isArray(profileHist.devices) && profileHist.devices.length >= 2,
+      'Expected profile devices list with >=2 devices'
+    );
+    assert(
+      Array.isArray(profileHist.verificationHistory) && profileHist.verificationHistory.length >= 2,
+      'Expected profile verificationHistory with enrollment and reauth events'
+    );
+    assert(
+      profileHist.identityStats &&
+        typeof profileHist.identityStats.pointsBalance === 'number' &&
+        typeof profileHist.identityStats.tasksCompleted === 'number' &&
+        typeof profileHist.identityStats.votesCast === 'number' &&
+        typeof profileHist.identityStats.referralsCount === 'number',
+      'Expected numeric identityStats counters on profile'
+    );
+
     // 4. Operator holds device -> member eID on held device is blocked -> release & purge biometrics
     const holdRes = await fetch(`${base}/admin/platform/verification/devices/control`, {
       method: 'POST',

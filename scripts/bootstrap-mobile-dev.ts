@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from 'node:crypto';
+import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { loadEnvFile } from 'node:process';
 import pg from 'pg';
@@ -24,6 +24,7 @@ if (
 process.env.DATABASE_URL = `postgresql://ertad_app:${encodeURIComponent(process.env.APP_DB_PASSWORD)}@127.0.0.1:${pgPort}/ertad`;
 
 const { hashAdminPassword } = await import('../backend/src/services/adminPassword');
+const { getApiKeyEncryptionSecret } = await import('../backend/src/config/secrets');
 const { encryptSensitiveValue } = await import('../backend/src/services/secretEncryption');
 const { generateMfaSecret } = await import('../backend/src/services/adminMfa');
 const { createMobileBearerSession, revokeAdminSession, authenticateMobileBearerSession } =
@@ -49,6 +50,57 @@ await client.connect();
 let managerCreds: { id: string; passwordHash: string; email: string } | null = null;
 let orgId = '';
 let groupUnitId = '';
+let seedPersonaMemberIds: string[] = [];
+
+async function ensurePermanentDevBiometrics(memberIds: string[]): Promise<void> {
+  const secret = getApiKeyEncryptionSecret();
+  for (const mid of memberIds) {
+    const uniqHash = createHmac('sha256', secret)
+      .update(`ertad-person-uniqueness-v1\0dev-persona:${mid}`)
+      .digest('hex');
+    const synthTemplate = `ertad-dev-tpl-v1:${mid}`;
+    const tmplCipher = encryptSensitiveValue(synthTemplate);
+    const tmplDigest = createHmac('sha256', secret)
+      .update(`ertad-biometric-template-v1\0${synthTemplate}`)
+      .digest('hex');
+
+    await client.query(
+      `INSERT INTO member_identity_proofs (
+         member_id, person_uniqueness_hash, assurance_level, citizenship_country,
+         sod_csca_verified, liveness_score, face_match_score,
+         biometric_template_cipher, biometric_template_digest,
+         verified_at, expires_at, updated_at
+       ) VALUES ($1, $2, 'biometric_verified', 'GE', true, 0.960, 0.920, $3, $4, clock_timestamp(), NULL, clock_timestamp())
+       ON CONFLICT (member_id) DO UPDATE
+         SET person_uniqueness_hash = COALESCE(member_identity_proofs.person_uniqueness_hash, EXCLUDED.person_uniqueness_hash),
+             assurance_level = 'biometric_verified',
+             citizenship_country = COALESCE(member_identity_proofs.citizenship_country, 'GE'),
+             sod_csca_verified = true,
+             liveness_score = COALESCE(member_identity_proofs.liveness_score, 0.960),
+             face_match_score = COALESCE(member_identity_proofs.face_match_score, 0.920),
+             biometric_template_cipher = COALESCE(member_identity_proofs.biometric_template_cipher, EXCLUDED.biometric_template_cipher),
+             biometric_template_digest = COALESCE(member_identity_proofs.biometric_template_digest, EXCLUDED.biometric_template_digest),
+             verified_at = COALESCE(member_identity_proofs.verified_at, clock_timestamp()),
+             expires_at = NULL,
+             updated_at = clock_timestamp()`,
+      [mid, uniqHash, tmplCipher, tmplDigest]
+    );
+
+    const hasSess = await client.query(
+      'SELECT 1 FROM biometric_verification_sessions WHERE member_id = $1 LIMIT 1',
+      [mid]
+    );
+    if (!hasSess.rowCount) {
+      await client.query(
+        `INSERT INTO biometric_verification_sessions (
+           member_id, status, session_kind, sod_csca_verified,
+           liveness_score, face_match_score, expires_at
+         ) VALUES ($1, 'passed', 'enrollment', true, 0.960, 0.920, clock_timestamp() + interval '1 day')`,
+        [mid]
+      );
+    }
+  }
+}
 
 try {
   await client.query('BEGIN');
@@ -62,6 +114,7 @@ try {
     const parsed = mobileDevSchema.parse(JSON.parse(readFileSync(mobileDevFile, 'utf8')));
     orgId = parsed.organizationId;
     groupUnitId = parsed.personas[0].unitId;
+    seedPersonaMemberIds = parsed.personas.map((p) => p.memberId);
     const decCount = await client.query(
       "SELECT count(*)::int AS c FROM decisions WHERE organization_id=$1 AND status='open' AND closes_at > clock_timestamp()",
       [orgId]
@@ -241,9 +294,12 @@ try {
       `${JSON.stringify({ version: 1, organizationId: orgId, personas }, null, 2)}\n`,
       { mode: 0o600 }
     );
+    seedPersonaMemberIds = personas.map((p) => p.memberId);
     await client.query('COMMIT');
     console.log('Seeded mobile dev org, group & 2 scoped personas (.local/mobile-dev-access.json).');
   }
+
+  await ensurePermanentDevBiometrics(seedPersonaMemberIds);
 
   // Seed rich Georgian operational domain items via authentic SQL commands if manager was just created.
   if (managerCreds) {

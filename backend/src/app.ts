@@ -67,6 +67,7 @@ export function createApp(checks: DependencyChecks, logger: Logger, origin: stri
   if (localAdmin) app.use('/api/v1/admin', express.json({ limit: '16kb' }), localAdmin);
   if (localMobile) {
     app.use('/api/v1/mobile/m4/biometric/complete', express.json({ limit: '3mb' }));
+    app.use('/api/v1/mobile/m4/biometric/reauth', express.json({ limit: '3mb' }));
     app.use('/api/v1/mobile', express.json({ limit: '16kb' }), localMobile);
   }
   app.use('/api/v1', (_req, res) => res.status(401).json({

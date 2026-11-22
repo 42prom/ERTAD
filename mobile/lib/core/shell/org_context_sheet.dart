@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../models/verification_models.dart';
 import '../../screens/enrollment/intro_screen.dart';
+import '../../screens/enrollment/liveness_screen.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/region_selection_sheet.dart';
 import '../feedback/ertad_feedback.dart';
@@ -214,6 +215,9 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
     final googleLinked = prof?['googleLinked'] == true;
     final hasPhone = prof?['hasPhone'] == true;
     final phoneHint = prof?['phoneHint']?.toString() ?? '';
+    final hasStoredTemplate = prof?['hasStoredTemplate'] == true;
+    final permanentVerification = prof?['permanentVerification'] == true;
+    final needsSelfieReauth = isVerified && session.m4NeedsSelfieReauth;
 
     final refSummary = session.referralSummary;
     final personalCode = refSummary?['personalCode']?.toString() ?? '';
@@ -297,22 +301,37 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
-                                  isVerified
+                                  needsSelfieReauth
                                       ? shellTr(
                                           context,
-                                          'profile_verified_status',
-                                          fallback: 'Verified',
+                                          'm4_reauth_banner_title',
+                                          fallback: 'New device detected',
                                         )
-                                      : shellTr(
-                                          context,
-                                          'profile_unverified_status',
-                                          fallback: 'Unverified',
-                                        ),
+                                      : isVerified
+                                          ? (permanentVerification
+                                              ? shellTr(
+                                                  context,
+                                                  'm4_permanent_badge',
+                                                  fallback:
+                                                      'Permanently verified · Never expires',
+                                                )
+                                              : shellTr(
+                                                  context,
+                                                  'profile_verified_status',
+                                                  fallback: 'Verified',
+                                                ))
+                                          : shellTr(
+                                              context,
+                                              'profile_unverified_status',
+                                              fallback: 'Unverified',
+                                            ),
                                   style: Theme.of(context).textTheme.bodySmall
                                       ?.copyWith(
-                                        color: isVerified
-                                            ? p.success
-                                            : p.warning,
+                                        color: needsSelfieReauth
+                                            ? p.warning
+                                            : isVerified
+                                                ? p.success
+                                                : p.warning,
                                         fontWeight: FontWeight.w600,
                                       ),
                                 ),
@@ -346,8 +365,8 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
                       const SizedBox(height: 14),
                       SizedBox(
                         width: double.infinity,
-                        child: isVerified
-                            ? OutlinedButton.icon(
+                        child: needsSelfieReauth
+                            ? FilledButton.icon(
                                 onPressed: () {
                                   HapticFeedback.selectionClick();
                                   final nav = Navigator.of(
@@ -357,54 +376,111 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
                                   nav.pop();
                                   nav.push(
                                     MaterialPageRoute<void>(
-                                      builder: (_) => const IntroScreen(),
+                                      builder: (_) => LivenessScreen(
+                                        policy:
+                                            VerificationPolicy.defaultFirstParty(),
+                                        enrollmentSessionId: 'm4-reauth',
+                                        docPortraitBase64: '',
+                                        m4Mode: true,
+                                        reauthOnly: true,
+                                      ),
                                     ),
                                   );
                                 },
                                 icon: const Icon(
-                                  Icons.fingerprint_rounded,
+                                  Icons.face_retouching_natural_rounded,
                                   size: 18,
                                 ),
                                 label: Text(
                                   shellTr(
                                     context,
-                                    'profile_reverify_cta',
-                                    fallback: 'Biometric re-check',
+                                    'm4_reauth_cta',
+                                    fallback: 'Verify with selfie',
                                   ),
                                 ),
                               )
-                            : FilledButton.icon(
-                                onPressed: () {
-                                  HapticFeedback.selectionClick();
-                                  final nav = Navigator.of(
-                                    context,
-                                    rootNavigator: true,
-                                  );
-                                  nav.pop();
-                                  nav.push(
-                                    MaterialPageRoute<void>(
-                                      builder: (_) => const IntroScreen(),
+                            : isVerified
+                                ? OutlinedButton.icon(
+                                    onPressed: () {
+                                      HapticFeedback.selectionClick();
+                                      final nav = Navigator.of(
+                                        context,
+                                        rootNavigator: true,
+                                      );
+                                      nav.pop();
+                                      nav.push(
+                                        MaterialPageRoute<void>(
+                                          builder: (_) => hasStoredTemplate
+                                              ? LivenessScreen(
+                                                  policy: VerificationPolicy
+                                                      .defaultFirstParty(),
+                                                  enrollmentSessionId:
+                                                      'm4-reauth',
+                                                  docPortraitBase64: '',
+                                                  m4Mode: true,
+                                                  reauthOnly: true,
+                                                )
+                                              : const IntroScreen(),
+                                        ),
+                                      );
+                                    },
+                                    icon: Icon(
+                                      hasStoredTemplate
+                                          ? Icons.face_retouching_natural_rounded
+                                          : Icons.fingerprint_rounded,
+                                      size: 18,
                                     ),
-                                  );
-                                },
-                                icon: const Icon(
-                                  Icons.fingerprint_rounded,
-                                  size: 18,
-                                ),
-                                label: Text(
-                                  shellTr(
-                                    context,
-                                    'profile_verify_cta',
-                                    fallback: 'Verify identity',
+                                    label: Text(
+                                      hasStoredTemplate
+                                          ? shellTr(
+                                              context,
+                                              'm4_reauth_cta',
+                                              fallback: 'Verify with selfie',
+                                            )
+                                          : shellTr(
+                                              context,
+                                              'profile_reverify_cta',
+                                              fallback: 'Biometric re-check',
+                                            ),
+                                    ),
+                                  )
+                                : FilledButton.icon(
+                                    onPressed: () {
+                                      HapticFeedback.selectionClick();
+                                      final nav = Navigator.of(
+                                        context,
+                                        rootNavigator: true,
+                                      );
+                                      nav.pop();
+                                      nav.push(
+                                        MaterialPageRoute<void>(
+                                          builder: (_) => const IntroScreen(),
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(
+                                      Icons.fingerprint_rounded,
+                                      size: 18,
+                                    ),
+                                    label: Text(
+                                      shellTr(
+                                        context,
+                                        'profile_verify_cta',
+                                        fallback: 'Verify identity',
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
                       ),
                     ],
                   ),
                 ),
 
                 const SizedBox(height: 12),
+
+                if (isVerified && prof != null) ...[
+                  _ProfileHistoryCard(profile: prof),
+                  const SizedBox(height: 12),
+                ],
 
                 // 2. Personal Details (on-device encrypted eID + server region/group)
                 ErtadSurfaceCard(
@@ -804,6 +880,294 @@ class _ProfileInfoRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ProfileHistoryCard extends StatelessWidget {
+  final Map<String, dynamic> profile;
+
+  const _ProfileHistoryCard({required this.profile});
+
+  String _shortDate(String? iso) {
+    if (iso == null || iso.isEmpty) return '';
+    return iso.length >= 10 ? iso.substring(0, 10) : iso;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.ertad;
+    final stats = profile['identityStats'] is Map
+        ? Map<String, dynamic>.from(profile['identityStats'] as Map)
+        : const <String, dynamic>{};
+    final devices = (profile['devices'] as List? ?? const [])
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList(growable: false);
+    final history = (profile['verificationHistory'] as List? ?? const [])
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList(growable: false);
+
+    if (stats.isEmpty && devices.isEmpty && history.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return ErtadSurfaceCard(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.history_rounded, size: 18, color: p.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  shellTr(
+                    context,
+                    'profile_history_section',
+                    fallback: 'Verification & activity history',
+                  ),
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+              ),
+              if (profile['permanentVerification'] == true)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: p.success.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    shellTr(
+                      context,
+                      'profile_never_expires',
+                      fallback: 'Permanent',
+                    ),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: p.success,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          if (stats.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _StatBadge(
+                  label: shellTr(
+                    context,
+                    'profile_stats_points',
+                    fallback: 'Points',
+                  ),
+                  value: '${stats['pointsBalance'] ?? 0}',
+                ),
+                _StatBadge(
+                  label: shellTr(
+                    context,
+                    'profile_stats_tasks',
+                    fallback: 'Tasks done',
+                  ),
+                  value: '${stats['tasksCompleted'] ?? 0}',
+                ),
+                _StatBadge(
+                  label: shellTr(
+                    context,
+                    'profile_stats_votes',
+                    fallback: 'Votes cast',
+                  ),
+                  value: '${stats['votesCast'] ?? 0}',
+                ),
+                _StatBadge(
+                  label: shellTr(
+                    context,
+                    'profile_stats_referrals',
+                    fallback: 'Referrals',
+                  ),
+                  value: '${stats['referralsCount'] ?? 0}',
+                ),
+              ],
+            ),
+          ],
+          if (devices.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              shellTr(
+                context,
+                'profile_devices_label',
+                fallback: 'Trusted devices',
+              ),
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: p.muted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            FutureBuilder<String>(
+              future: StorageService().getOrCreateInstallationId(),
+              builder: (context, snap) {
+                final currentId = snap.data;
+                return Column(
+                  children: devices.take(5).map((dev) {
+                    final devId = dev['deviceId']?.toString() ?? '';
+                    final shortId = devId.length > 8
+                        ? devId.substring(0, 8)
+                        : devId;
+                    final platform = (dev['platform']?.toString() ?? 'android')
+                        .toUpperCase();
+                    final isCurrent = currentId != null && devId == currentId;
+                    final dateLabel = _shortDate(dev['lastSeenAt']?.toString());
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        children: [
+                          Icon(
+                            platform == 'IOS'
+                                ? Icons.phone_iphone_rounded
+                                : Icons.phone_android_rounded,
+                            size: 16,
+                            color: isCurrent ? p.success : p.muted,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '$platform · $shortId${dateLabel.isNotEmpty ? ' ($dateLabel)' : ''}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                          if (isCurrent)
+                            Text(
+                              shellTr(
+                                context,
+                                'profile_current_device',
+                                fallback: 'Current',
+                              ),
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
+                                    color: p.success,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                            ),
+                        ],
+                      ),
+                    );
+                  }).toList(growable: false),
+                );
+              },
+            ),
+          ],
+          if (history.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              shellTr(
+                context,
+                'profile_verifications_label',
+                fallback: 'Verification log',
+              ),
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: p.muted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            ...history.take(5).map((item) {
+              final kind = item['sessionKind']?.toString() ?? 'enrollment';
+              final ok = item['passed'] == true;
+              final title = kind == 'reauth'
+                  ? shellTr(
+                      context,
+                      'profile_event_reauth',
+                      fallback: 'Selfie device confirmation',
+                    )
+                  : shellTr(
+                      context,
+                      'profile_event_enrollment',
+                      fallback: 'Initial eID verification',
+                    );
+              final when = _shortDate(item['createdAt']?.toString());
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  children: [
+                    Icon(
+                      ok
+                          ? Icons.check_circle_outline_rounded
+                          : Icons.error_outline_rounded,
+                      size: 15,
+                      color: ok ? p.success : p.danger,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                    if (when.isNotEmpty)
+                      Text(
+                        when,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.labelSmall?.copyWith(color: p.muted),
+                      ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _StatBadge extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _StatBadge({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.ertad;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: p.elevated,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: p.hairline),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: p.primary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(color: p.muted),
+          ),
+        ],
+      ),
     );
   }
 }

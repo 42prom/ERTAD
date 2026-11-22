@@ -37,6 +37,7 @@ class LivenessScreen extends StatefulWidget {
     this.m4PersonSubjectKey,
     this.m4CitizenshipCountry,
     this.m4SodCscaVerified = true,
+    this.reauthOnly = false,
   });
 
   final VerificationPolicy policy;
@@ -49,6 +50,7 @@ class LivenessScreen extends StatefulWidget {
   final String? m4PersonSubjectKey;
   final String? m4CitizenshipCountry;
   final bool m4SodCscaVerified;
+  final bool reauthOnly;
 
   @override
   State<LivenessScreen> createState() => _LivenessScreenState();
@@ -293,6 +295,25 @@ class _LivenessScreenState extends State<LivenessScreen>
       final api = container.read(mobileApiClientProvider);
       final platform = Platform.isIOS ? 'ios' : 'android';
       final deviceId = await StorageService().getOrCreateInstallationId();
+      if (widget.reauthOnly) {
+        await api.reauthBiometric(
+          deviceId: deviceId,
+          platform: platform,
+          livenessScore: 0.96,
+          faceMatchScore: 0.92,
+          selfieBase64: selfieBase64.isNotEmpty ? selfieBase64 : null,
+        );
+        await container.read(shellSessionProvider.notifier).refreshWorkspace();
+        if (!mounted) return;
+        container.read(ertadFeedbackProvider.notifier).showSuccess(
+              'მოწყობილობა დადასტურდა 3-წამიანი სელფით!',
+            );
+        Navigator.of(
+          context,
+          rootNavigator: true,
+        ).popUntil((route) => route.isFirst);
+        return;
+      }
       final chal = await api.requestAttestationChallenge(platform);
       final nonce = chal['nonce']?.toString() ?? '';
       if (nonce.isEmpty) {

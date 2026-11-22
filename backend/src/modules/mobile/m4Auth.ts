@@ -95,10 +95,20 @@ async function evaluateInHouseFaceMatch(
   return { evaluated: false };
 }
 
+const statusQuerySchema = z
+  .object({
+    deviceId: z.string().min(8).max(128).optional(),
+  })
+  .strict();
+
 const reauthBiometricSchema = z
   .object({
     livenessScore: z.number().min(0).max(1),
     faceMatchScore: z.number().min(0).max(1),
+    deviceId: z.string().min(8).max(128).optional(),
+    platform: z.enum(['android', 'ios']).optional(),
+    appId: z.string().min(3).max(160).optional(),
+    selfieBase64: z.string().max(1_500_000).optional(),
   })
   .strict();
 
@@ -180,10 +190,16 @@ export function createMobileM4Router(): Router {
   router.get('/status', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = req.adminSession!;
+      const query = statusQuerySchema.parse(req.query);
       const result = await retryDeadlockedTransaction(async (client) => {
         const q = await client.query<{ result: unknown }>(
           'SELECT ertad.mobile_m4_command($1, $2, $3, $4) AS result',
-          [session.sessionId, session.sessionTokenHash, 'status', JSON.stringify({})]
+          [
+            session.sessionId,
+            session.sessionTokenHash,
+            'status',
+            JSON.stringify(query.deviceId ? { deviceId: query.deviceId } : {}),
+          ]
         );
         return q.rows[0]?.result;
       });
@@ -434,6 +450,9 @@ export function createMobileM4Router(): Router {
     try {
       const session = req.adminSession!;
       const parsed = reauthBiometricSchema.parse(req.body);
+      const keyIdHash = parsed.deviceId
+        ? createHash('sha256').update(parsed.deviceId).digest('hex')
+        : undefined;
       const result = await retryDeadlockedTransaction(async (client) => {
         const q = await client.query<{ result: unknown }>(
           'SELECT ertad.mobile_m4_command($1, $2, $3, $4) AS result',
@@ -441,7 +460,20 @@ export function createMobileM4Router(): Router {
             session.sessionId,
             session.sessionTokenHash,
             'verify_reauth',
-            JSON.stringify(parsed),
+            JSON.stringify({
+              livenessScore: parsed.livenessScore,
+              faceMatchScore: parsed.faceMatchScore,
+              ...(parsed.deviceId
+                ? {
+                    deviceId: parsed.deviceId,
+                    platform: parsed.platform ?? 'android',
+                    appId: parsed.appId ?? 'ge.ertad.mobile',
+                    keyIdHash,
+                    verdict: 'strong',
+                    counter: Math.floor(Date.now() / 1000),
+                  }
+                : {}),
+            }),
           ]
         );
         return q.rows[0]?.result;

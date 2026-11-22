@@ -11,6 +11,7 @@ import '../../../core/widgets/ertad_ui.dart';
 import '../../../models/poll.dart';
 import '../../../screens/dashboard/poll_card.dart';
 import '../../../services/service_locator.dart';
+import 'create_poll_sheet.dart';
 
 /// Polls & Decisions tab (index 4): unified scroll, search, filter chips & ErtadSurfaceCard PollCards.
 class PollsTabScreen extends ConsumerStatefulWidget {
@@ -40,6 +41,25 @@ class _PollsTabScreenState extends ConsumerState<PollsTabScreen> {
   void dispose() {
     _search.dispose();
     super.dispose();
+  }
+
+  Future<void> _createPoll() async {
+    final orgId = ref.read(shellSessionProvider).activeOrgId;
+    if (orgId.startsWith('org-') || orgId.isEmpty) return;
+    final created = await showCreatePollSheet(
+      context,
+      organizationId: orgId,
+    );
+    if (created != null && mounted) {
+      ref.read(ertadFeedbackProvider.notifier).showSuccess(
+        shellTr(
+          context,
+          'mgr_poll_created_ok',
+          fallback: 'Poll created and published',
+        ),
+      );
+      await _load();
+    }
   }
 
   Future<void> _load() async {
@@ -208,6 +228,25 @@ class _PollsTabScreenState extends ConsumerState<PollsTabScreen> {
           selectedIndex: _filterIndex,
           onSelected: (i) => setState(() => _filterIndex = i),
         ),
+        if ((session.canCreateDecision || session.isGroupManager) &&
+            session.isLiveConnected &&
+            !session.activeOrgId.startsWith('org-')) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.tonalIcon(
+              onPressed: _createPoll,
+              icon: const Icon(Icons.add_chart_rounded, size: 18),
+              label: Text(
+                shellTr(
+                  context,
+                  'mgr_create_poll_btn',
+                  fallback: 'New poll',
+                ),
+              ),
+            ),
+          ),
+        ],
         if (_searchQuery.isNotEmpty || source.length > 4) ...[
           const SizedBox(height: 10),
           TextField(

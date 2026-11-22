@@ -975,9 +975,15 @@ class MobileApiClient {
   }
 
   /// Fetches the caller's M4 identity & device assurance status (`/mobile/m4/status`).
-  Future<Map<String, dynamic>> fetchM4Status() async {
+  Future<Map<String, dynamic>> fetchM4Status({String? deviceId}) async {
     try {
-      final res = await _dio.get<Map<String, dynamic>>('/mobile/m4/status');
+      final cleanId = deviceId?.trim() ?? '';
+      final res = await _dio.get<Map<String, dynamic>>(
+        '/mobile/m4/status',
+        queryParameters: cleanId.isNotEmpty
+            ? <String, dynamic>{'deviceId': cleanId}
+            : null,
+      );
       return Map<String, dynamic>.from(res.data ?? const {});
     } catch (e) {
       _rethrow(e);
@@ -1090,6 +1096,9 @@ class MobileApiClient {
   Future<Map<String, dynamic>> reauthBiometric({
     required double livenessScore,
     required double faceMatchScore,
+    String? deviceId,
+    String? platform,
+    String? selfieBase64,
   }) async {
     try {
       final res = await _dio.post<Map<String, dynamic>>(
@@ -1097,9 +1106,202 @@ class MobileApiClient {
         data: <String, dynamic>{
           'livenessScore': livenessScore,
           'faceMatchScore': faceMatchScore,
+          if (deviceId != null && deviceId.trim().isNotEmpty)
+            'deviceId': deviceId.trim(),
+          'platform': ?platform,
+          if (selfieBase64 != null && selfieBase64.isNotEmpty)
+            'selfieBase64': selfieBase64,
         },
       );
       return Map<String, dynamic>.from(res.data ?? const {});
+    } catch (e) {
+      _rethrow(e);
+    }
+  }
+
+  Future<T> _withDevStepUpRetry<T>(Future<T> Function() fn) async {
+    try {
+      return await fn();
+    } on MobileApiException catch (e) {
+      if (e.statusCode == 428 && !kReleaseMode && AppConfig.devWorkspace) {
+        await devStepUp();
+        return await fn();
+      }
+      rethrow;
+    }
+  }
+
+  /// Fetches units in caller's hierarchy where they hold `workitem.create` (`/mobile/work/units`).
+  Future<List<Map<String, dynamic>>> fetchWorkUnits({
+    required String organizationId,
+  }) async {
+    try {
+      final res = await _dio.get<List<dynamic>>(
+        '/mobile/work/units',
+        queryParameters: <String, dynamic>{'organizationId': organizationId},
+      );
+      return (res.data ?? const <dynamic>[])
+          .whereType<Map>()
+          .map(Map<String, dynamic>.from)
+          .where((u) => u['canCreate'] == true)
+          .toList(growable: false);
+    } catch (e) {
+      _rethrow(e);
+    }
+  }
+
+  /// Creates a hierarchy-scoped task (`/mobile/work/create`).
+  Future<Map<String, dynamic>> createWorkItem({
+    required String organizationId,
+    required String unitId,
+    required String title,
+    required String description,
+    required String roleLabel,
+    required String priority,
+    required int capacity,
+    required String deadlineIso,
+  }) async {
+    try {
+      return await _withDevStepUpRetry(() async {
+        final res = await _dio.post<Map<String, dynamic>>(
+          '/mobile/work/create',
+          data: <String, dynamic>{
+            'key': newIdempotencyKey(),
+            'organizationId': organizationId,
+            'unitId': unitId,
+            'title': title.trim(),
+            'description': description.trim(),
+            'roleLabel': roleLabel.trim(),
+            'priority': priority,
+            'capacity': capacity,
+            'deadline': deadlineIso,
+            'contributionRuleId': null,
+          },
+        );
+        return Map<String, dynamic>.from(res.data ?? const {});
+      });
+    } catch (e) {
+      _rethrow(e);
+    }
+  }
+
+  /// Fetches units where caller can create channels (`/mobile/channels/units`).
+  Future<List<Map<String, dynamic>>> fetchChannelUnits({
+    required String organizationId,
+  }) async {
+    try {
+      final res = await _dio.get<Map<String, dynamic>>(
+        '/mobile/channels/units',
+        queryParameters: <String, dynamic>{
+          'organizationId': organizationId,
+          'page': 1,
+        },
+      );
+      final raw = res.data?['items'] as List? ?? const [];
+      return raw
+          .whereType<Map>()
+          .map(Map<String, dynamic>.from)
+          .toList(growable: false);
+    } catch (e) {
+      _rethrow(e);
+    }
+  }
+
+  /// Creates a group or hierarchical channel (`/mobile/channels/create`).
+  Future<Map<String, dynamic>> createChannel({
+    required String organizationId,
+    required String unitId,
+    required String title,
+    String kind = 'group',
+  }) async {
+    try {
+      return await _withDevStepUpRetry(() async {
+        final res = await _dio.post<Map<String, dynamic>>(
+          '/mobile/channels/create',
+          data: <String, dynamic>{
+            'key': newIdempotencyKey(),
+            'organizationId': organizationId,
+            'unitId': unitId,
+            'title': title.trim(),
+            'kind': kind,
+          },
+        );
+        return Map<String, dynamic>.from(res.data ?? const {});
+      });
+    } catch (e) {
+      _rethrow(e);
+    }
+  }
+
+  /// Fetches subordinate audience units where caller holds `decision.manage` (`/mobile/decisions/audiences`).
+  Future<List<Map<String, dynamic>>> fetchDecisionAudiences({
+    required String organizationId,
+  }) async {
+    try {
+      final res = await _dio.get<List<dynamic>>(
+        '/mobile/decisions/audiences',
+        queryParameters: <String, dynamic>{'organizationId': organizationId},
+      );
+      return (res.data ?? const <dynamic>[])
+          .whereType<Map>()
+          .map(Map<String, dynamic>.from)
+          .toList(growable: false);
+    } catch (e) {
+      _rethrow(e);
+    }
+  }
+
+  /// Creates and immediately publishes a hierarchy-scoped poll or referendum (`/mobile/decisions/create` + `publish`).
+  Future<Map<String, dynamic>> createAndPublishDecision({
+    required String organizationId,
+    required String unitId,
+    required String kind,
+    required String privacy,
+    required String title,
+    required String description,
+    required List<String> options,
+    required int quorum,
+    required String closesAtIso,
+    int? threshold,
+    Map<String, String>? referendumLabels,
+  }) async {
+    try {
+      return await _withDevStepUpRetry(() async {
+        final created = await _dio.post<Map<String, dynamic>>(
+          '/mobile/decisions/create',
+          data: <String, dynamic>{
+            'key': newIdempotencyKey(),
+            'organizationId': organizationId,
+            'unitId': unitId,
+            'kind': kind,
+            'privacy': privacy,
+            'title': title.trim(),
+            'description': description.trim(),
+            'options': kind == 'referendum'
+                ? const <String>['Yes', 'No', 'Abstain']
+                : options.map((e) => e.trim()).toList(growable: false),
+            'quorum': quorum,
+            'closesAt': closesAtIso,
+            'includedUnitIds': <String>[unitId],
+            if (kind == 'referendum') 'threshold': threshold ?? 50,
+            if (kind == 'referendum' && referendumLabels != null)
+              'referendumLabels': referendumLabels,
+          },
+        );
+        final draft = Map<String, dynamic>.from(created.data ?? const {});
+        final decisionId = draft['id']?.toString() ?? '';
+        if (decisionId.isEmpty) return draft;
+        final pub = await _dio.post<Map<String, dynamic>>(
+          '/mobile/decisions/publish',
+          data: <String, dynamic>{
+            'key': newIdempotencyKey(),
+            'organizationId': organizationId,
+            'id': decisionId,
+            'version': 1,
+          },
+        );
+        return Map<String, dynamic>.from(pub.data ?? draft);
+      });
     } catch (e) {
       _rethrow(e);
     }

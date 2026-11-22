@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../config/app_config.dart';
 import '../../models/poll.dart';
+import '../../services/storage_service.dart';
 import '../network/mobile_api_client.dart';
 import '../network/mobile_mappers.dart';
 import 'offline_action_queue.dart';
@@ -68,6 +69,11 @@ class ShellSessionState {
   final String m4AssuranceLevel;
   final bool m4SodCscaVerified;
   final bool m4RequireDeviceAttestation;
+  final bool m4DeviceTrusted;
+  final bool m4NeedsSelfieReauth;
+  final bool canCreateWork;
+  final bool canCreateChannel;
+  final bool canCreateDecision;
   final Map<String, dynamic>? referralSummary;
   final List<Map<String, dynamic>> notificationChannels;
   final Map<String, dynamic>? memberProfile;
@@ -107,6 +113,11 @@ class ShellSessionState {
     this.m4AssuranceLevel = 'google_scoped',
     this.m4SodCscaVerified = false,
     this.m4RequireDeviceAttestation = true,
+    this.m4DeviceTrusted = true,
+    this.m4NeedsSelfieReauth = false,
+    this.canCreateWork = false,
+    this.canCreateChannel = false,
+    this.canCreateDecision = false,
     this.referralSummary,
     this.notificationChannels = const [],
     this.memberProfile,
@@ -156,6 +167,11 @@ class ShellSessionState {
     String? m4AssuranceLevel,
     bool? m4SodCscaVerified,
     bool? m4RequireDeviceAttestation,
+    bool? m4DeviceTrusted,
+    bool? m4NeedsSelfieReauth,
+    bool? canCreateWork,
+    bool? canCreateChannel,
+    bool? canCreateDecision,
     Map<String, dynamic>? referralSummary,
     List<Map<String, dynamic>>? notificationChannels,
     Map<String, dynamic>? memberProfile,
@@ -199,6 +215,11 @@ class ShellSessionState {
       m4SodCscaVerified: m4SodCscaVerified ?? this.m4SodCscaVerified,
       m4RequireDeviceAttestation:
           m4RequireDeviceAttestation ?? this.m4RequireDeviceAttestation,
+      m4DeviceTrusted: m4DeviceTrusted ?? this.m4DeviceTrusted,
+      m4NeedsSelfieReauth: m4NeedsSelfieReauth ?? this.m4NeedsSelfieReauth,
+      canCreateWork: canCreateWork ?? this.canCreateWork,
+      canCreateChannel: canCreateChannel ?? this.canCreateChannel,
+      canCreateDecision: canCreateDecision ?? this.canCreateDecision,
       referralSummary: referralSummary ?? this.referralSummary,
       notificationChannels: notificationChannels ?? this.notificationChannels,
       memberProfile: memberProfile ?? this.memberProfile,
@@ -396,6 +417,9 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
       List<Map<String, dynamic>> inboxItems = state.liveInboxItems;
       String pointsBalance = state.contributionBalance;
       List<Map<String, dynamic>> pointsEntries = state.contributionEntries;
+      bool canCreateWork = false;
+      bool canCreateChannel = false;
+      bool canCreateDecision = false;
       int liveInboxUnread = (inbox['unread'] as num?)?.toInt() ?? 0;
 
       if (orgId.isNotEmpty && !orgId.startsWith('org-')) {
@@ -425,6 +449,15 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
           _api
               .fetchContributionPoints(organizationId: orgId)
               .catchError((_) => const <String, dynamic>{}),
+          _api
+              .fetchWorkUnits(organizationId: orgId)
+              .catchError((_) => <Map<String, dynamic>>[]),
+          _api
+              .fetchChannelUnits(organizationId: orgId)
+              .catchError((_) => <Map<String, dynamic>>[]),
+          _api
+              .fetchDecisionAudiences(organizationId: orgId)
+              .catchError((_) => <Map<String, dynamic>>[]),
           if (effectiveManager) ...[
             _api
                 .fetchWorkItems(organizationId: orgId, view: 'needs_review')
@@ -447,9 +480,14 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
         myWork = results[6] as List<Map<String, dynamic>>;
         historyWork = results[7] as List<Map<String, dynamic>>;
         final ptsPayload = results[8] as Map<String, dynamic>;
-        if (effectiveManager && results.length >= 11) {
-          reviewWork = results[9] as List<Map<String, dynamic>>;
-          reviewsList = results[10] as List<Map<String, dynamic>>;
+        canCreateWork = (results[9] as List<Map<String, dynamic>>).isNotEmpty;
+        canCreateChannel =
+            (results[10] as List<Map<String, dynamic>>).isNotEmpty;
+        canCreateDecision =
+            (results[11] as List<Map<String, dynamic>>).isNotEmpty;
+        if (effectiveManager && results.length >= 14) {
+          reviewWork = results[12] as List<Map<String, dynamic>>;
+          reviewsList = results[13] as List<Map<String, dynamic>>;
         }
         if (ptsPayload['balance'] != null) {
           pointsBalance = ptsPayload['balance'].toString();
@@ -527,7 +565,14 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
         upcomingEvents48h: (summary['upcomingEvents48h'] as num?)?.toInt() ?? 0,
         openDecisionsCount: derivedOpenDecisions,
         pendingReviewsCount: (summary['pendingReviews'] as num?)?.toInt() ?? 0,
-        hasManagerAuthority: hasServerManager,
+        hasManagerAuthority:
+            hasServerManager ||
+            canCreateWork ||
+            canCreateChannel ||
+            canCreateDecision,
+        canCreateWork: canCreateWork,
+        canCreateChannel: canCreateChannel,
+        canCreateDecision: canCreateDecision,
         urgentItems: filteredUrgent,
         livePolls: polls,
         historyPolls: historyPolls,
@@ -546,12 +591,18 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
         isLoading: false,
       );
       try {
-        final m4 = await _api.fetchM4Status();
+        String? deviceId;
+        try {
+          deviceId = await StorageService().getOrCreateInstallationId();
+        } catch (_) {}
+        final m4 = await _api.fetchM4Status(deviceId: deviceId);
         state = state.copyWith(
           m4AssuranceLevel:
               m4['assuranceLevel']?.toString() ?? state.m4AssuranceLevel,
           m4SodCscaVerified: m4['sodCscaVerified'] == true,
           m4RequireDeviceAttestation: m4['requireDeviceAttestation'] != false,
+          m4DeviceTrusted: m4['deviceTrusted'] != false,
+          m4NeedsSelfieReauth: m4['needsSelfieReauth'] == true,
         );
       } catch (_) {
         // M4 status enrichment is non-blocking for offline/legacy paths.
@@ -719,6 +770,11 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
       activeOrgId: 'org-tbilisi-saburtalo',
       devPersona: DevPersona.member,
       hasManagerAuthority: false,
+      canCreateWork: false,
+      canCreateChannel: false,
+      canCreateDecision: false,
+      m4DeviceTrusted: true,
+      m4NeedsSelfieReauth: false,
       isLiveConnected: false,
     );
   }
