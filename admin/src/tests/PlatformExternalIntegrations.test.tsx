@@ -3,9 +3,16 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import PlatformExternalIntegrations from "../components/PlatformExternalIntegrations";
 import { platformApi } from "../api/platform";
+import { authApi } from "../api/client";
 
 vi.mock("../components/useConsolePreferences", () => ({
   useConsolePreferences: () => ({ language: "en", theme: "light" }),
+}));
+
+vi.mock("../api/client", () => ({
+  authApi: {
+    stepUp: vi.fn(),
+  },
 }));
 
 vi.mock("../api/platform", () => ({
@@ -127,6 +134,37 @@ describe("PlatformExternalIntegrations", () => {
           action: "approve",
         }),
       ),
+    );
+  });
+
+  it("prompts inline password step-up on 428 and retries proposal automatically", async () => {
+    const user = userEvent.setup();
+    vi.mocked(platformApi.proposeExternalIntegration)
+      .mockRejectedValueOnce({ response: { status: 428 } })
+      .mockResolvedValueOnce({
+        proposalId: "44444444-4444-4444-8444-444444444444",
+        status: "pending",
+      });
+    vi.mocked(authApi.stepUp).mockResolvedValueOnce({
+      message: "ok",
+      stepUpExpiresAt: "2026-11-24T20:00:00Z",
+    });
+
+    render(<PlatformExternalIntegrations canPropose canApprove={false} />);
+    const configureButtons = await screen.findAllByRole("button", {
+      name: /Configure/i,
+    });
+    await user.click(configureButtons[0]);
+    await user.type(screen.getByLabelText("Change reason"), "Rotate OIDC config");
+    await user.click(screen.getByRole("button", { name: /Submit proposal/i }));
+
+    const pwInput = await screen.findByLabelText("Your password");
+    await user.type(pwInput, "synthetic-tech-pass");
+    await user.click(screen.getByRole("button", { name: /Confirm & submit/i }));
+
+    await waitFor(() => expect(authApi.stepUp).toHaveBeenCalledWith("synthetic-tech-pass"));
+    await waitFor(() =>
+      expect(platformApi.proposeExternalIntegration).toHaveBeenCalledTimes(2),
     );
   });
 });

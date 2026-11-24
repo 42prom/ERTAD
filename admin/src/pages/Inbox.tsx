@@ -119,7 +119,6 @@ export default function Inbox() {
     )[key] ?? key;
   const refresh = () => {
     generation.current++;
-    setData(null);
     setRevision((v) => v + 1);
   };
   const readScope1Key = JSON.stringify([view, source, page]);

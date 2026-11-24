@@ -56,7 +56,6 @@ export default function Contribution() {
     [templateTitle, setTemplateTitle] = useState(""),
     [allowedUnitId, setAllowedUnitId] = useState("");
   const refresh = () => {
-    setData(null);
     setRevision((v) => v + 1);
   };
   const { send, locked, feedback } = useCollectiveWrite(demo, () => {
@@ -166,7 +165,6 @@ export default function Contribution() {
     unitId,
     memberId,
     page,
-    revision,
     entryId,
   ]);
   const [readScope1, setReadScope1] = useState(readScope1Key);
@@ -196,6 +194,7 @@ export default function Contribution() {
       })
       .catch(() => {
         if (live) {
+          setData(null);
           setMode("");
           setError(
             t(
@@ -215,7 +214,6 @@ export default function Contribution() {
   useEffect(() => {
     const update = () => {
       if (dirty) return;
-      setData(null);
       setRevision((v) => v + 1);
     };
     window.addEventListener("focus", update);

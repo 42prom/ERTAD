@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { authApi } from "../api/client";
 import {
   platformApi,
   type ExternalIntegrationProposal,
@@ -104,6 +105,12 @@ export default function PlatformExternalIntegrations({
   const [clearSecret, setClearSecret] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
+  const [stepUpPassword, setStepUpPassword] = useState("");
+  const [pendingStepUp, setPendingStepUp] = useState<
+    | { kind: "propose" }
+    | { kind: "review"; proposalId: string; action: "approve" | "reject" }
+    | null
+  >(null);
 
   const load = useCallback(async () => {
     try {
@@ -164,9 +171,8 @@ export default function PlatformExternalIntegrations({
     setError("");
   }
 
-  async function submitProposal(e: FormEvent) {
-    e.preventDefault();
-    if (!editing || busy) return;
+  async function executePropose() {
+    if (!editing) return;
     const current = providers.find((p) => p.provider === editing);
     if (!current) return;
     const meta = PROVIDER_META[editing];
@@ -192,6 +198,8 @@ export default function PlatformExternalIntegrations({
       });
       setSecret("");
       setEditing(null);
+      setPendingStepUp(null);
+      setStepUpPassword("");
       setNotice(
         t(
           "ინტეგრაციის ცვლილება გაიგზავნა მეორე ტექნიკურ ოპერატორთან დასამტკიცებლად.",
@@ -199,16 +207,34 @@ export default function PlatformExternalIntegrations({
         ),
       );
       await load();
-    } catch {
-      setError(
-        t(
-          "ცვლილების შეთავაზება ვერ შესრულდა — შეამოწმეთ უფლება და მიმდინარე პაროლის დადასტურება.",
-          "Could not submit integration proposal — verify permission and fresh step-up.",
-        ),
-      );
+    } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response
+        ?.status;
+      if (status === 428) {
+        setPendingStepUp({ kind: "propose" });
+        setError(
+          t(
+            "ამ ცვლილების შესანახად დაადასტურეთ თქვენი პაროლი ქვემოთ.",
+            "Confirm your password below to submit this change.",
+          ),
+        );
+      } else {
+        setError(
+          t(
+            "ცვლილების შეთავაზება ვერ შესრულდა — შეამოწმეთ უფლება და მიმდინარე პაროლის დადასტურება.",
+            "Could not submit integration proposal — verify permission and fresh step-up.",
+          ),
+        );
+      }
     } finally {
       setBusy(false);
     }
+  }
+
+  async function submitProposal(e: FormEvent) {
+    e.preventDefault();
+    if (!editing || busy) return;
+    await executePropose();
   }
 
   async function reviewProposal(
@@ -224,20 +250,62 @@ export default function PlatformExternalIntegrations({
         proposalId,
         action,
       });
+      setPendingStepUp(null);
+      setStepUpPassword("");
       setNotice(
         action === "approve"
           ? t("ინტეგრაცია დამტკიცდა და გააქტიურდა.", "Integration change approved.")
           : t("შეთავაზება უარყოფილია.", "Proposal rejected."),
       );
       await load();
+    } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response
+        ?.status;
+      if (status === 428) {
+        setPendingStepUp({ kind: "review", proposalId, action });
+        setError(
+          t(
+            "ამ მოქმედებისთვის დაადასტურეთ თქვენი პაროლი ქვემოთ.",
+            "Confirm your password below to complete this review.",
+          ),
+        );
+      } else {
+        setError(
+          t(
+            "დამტკიცება ვერ შესრულდა (საკუთარი შეთავაზების დამტკიცება აკრძალულია).",
+            "Review failed (independent second operator required).",
+          ),
+        );
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function confirmStepUpAndRetry(e: FormEvent) {
+    e.preventDefault();
+    if (!pendingStepUp || !stepUpPassword || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await authApi.stepUp(stepUpPassword);
+      setStepUpPassword("");
+      const action = pendingStepUp;
+      setPendingStepUp(null);
+      setBusy(false);
+      if (action.kind === "propose") {
+        await executePropose();
+      } else {
+        await reviewProposal(action.proposalId, action.action);
+      }
     } catch {
+      setStepUpPassword("");
       setError(
         t(
-          "დამტკიცება ვერ შესრულდა (საკუთარი შეთავაზების დამტკიცება აკრძალულია).",
-          "Review failed (independent second operator required).",
+          "პაროლის დადასტურება ვერ მოხერხდა. გადაამოწმეთ პაროლი და სცადეთ ხელახლა.",
+          "Password confirmation failed. Check your password and try again.",
         ),
       );
-    } finally {
       setBusy(false);
     }
   }
@@ -263,6 +331,43 @@ export default function PlatformExternalIntegrations({
 
       {notice && <p role="status">{notice}</p>}
       {error && <p role="alert">{error}</p>}
+      {pendingStepUp && (
+        <form
+          onSubmit={confirmStepUpAndRetry}
+          className="rounded-lg border border-[var(--primary)] bg-[var(--elevated)] p-3 space-y-3"
+        >
+          <p className="text-sm font-medium">
+            {t(
+              "უსაფრთხოების დადასტურება (Step-Up): შეიყვანეთ თქვენი ანგარიშის პაროლი ცვლილების გასაგრძელებლად.",
+              "Security step-up required: enter your account password to continue.",
+            )}
+          </p>
+          <Input
+            type="password"
+            autoComplete="current-password"
+            label={t("თქვენი პაროლი", "Your password")}
+            value={stepUpPassword}
+            disabled={busy}
+            onChange={(e) => setStepUpPassword(e.target.value)}
+          />
+          <div className="flex gap-2">
+            <Button type="submit" disabled={busy || !stepUpPassword}>
+              {t("დადასტურება და გაგზავნა", "Confirm & submit")}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={busy}
+              onClick={() => {
+                setPendingStepUp(null);
+                setStepUpPassword("");
+              }}
+            >
+              {t("გაუქმება", "Cancel")}
+            </Button>
+          </div>
+        </form>
+      )}
       {loading && <p role="status">{t("იტვირთება…", "Loading…")}</p>}
 
       {!loading && (

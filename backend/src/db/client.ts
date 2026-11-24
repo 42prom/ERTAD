@@ -10,10 +10,10 @@ const pool = new Pool({
   statement_timeout: 10000, // 10 seconds max query time
 });
 
-// Handle pool errors
+// Handle pool errors without terminating the API process on transient idle disconnects (e.g. 57P01).
+// pg.Pool automatically evicts the errored idle client and opens a fresh connection on next checkout.
 pool.on('error', (err) => {
   console.error('Unexpected error on idle client', databaseErrorMetadata(err));
-  process.exit(-1);
 });
 
 export interface QueryResult<T = any> {

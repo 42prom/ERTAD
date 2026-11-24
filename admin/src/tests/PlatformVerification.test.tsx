@@ -3,9 +3,16 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import PlatformVerification from "../components/PlatformVerification";
 import { platformApi } from "../api/platform";
+import { authApi } from "../api/client";
 
 vi.mock("../components/useConsolePreferences", () => ({
   useConsolePreferences: () => ({ language: "en", theme: "light" }),
+}));
+
+vi.mock("../api/client", () => ({
+  authApi: {
+    stepUp: vi.fn(),
+  },
 }));
 
 vi.mock("../api/platform", () => ({
@@ -141,5 +148,35 @@ describe("PlatformVerification", () => {
         reason: "operator_request",
       }),
     );
+  });
+
+  it("prompts inline password step-up on 428 and retries verification proposal", async () => {
+    const user = userEvent.setup();
+    vi.mocked(platformApi.proposeVerificationPolicy)
+      .mockRejectedValueOnce({ response: { status: 428 } })
+      .mockResolvedValueOnce({
+        proposalId: "55555555-5555-4555-8555-555555555555",
+        status: "pending",
+      });
+    vi.mocked(authApi.stepUp).mockResolvedValueOnce({
+      message: "ok",
+      stepUpExpiresAt: "2026-11-24T20:00:00Z",
+    });
+
+    render(
+      <PlatformVerification
+        canPropose
+        canApprove={false}
+        canControlDevices={false}
+        refreshRevision={0}
+      />,
+    );
+    await user.click(await screen.findByRole("button", { name: /Propose policy change/i }));
+    const pwInput = await screen.findByLabelText("Your password");
+    await user.type(pwInput, "synthetic-tech-pass");
+    await user.click(screen.getByRole("button", { name: /Confirm & submit/i }));
+
+    await waitFor(() => expect(authApi.stepUp).toHaveBeenCalledWith("synthetic-tech-pass"));
+    await waitFor(() => expect(platformApi.proposeVerificationPolicy).toHaveBeenCalledTimes(2));
   });
 });

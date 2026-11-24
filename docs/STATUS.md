@@ -2,6 +2,21 @@
 
 > Last updated: 2026-11-24 · Branch: `feat/ertad-development` · Not deployed to production
 
+## Sell-Ready Web Admin, Backend Pool Resilience & Mobile Org Sync Polish (2026-11-24)
+
+- **Technical Manager Inline Step-Up & Validation UX ([`PlatformExternalIntegrations.tsx`](../admin/src/components/PlatformExternalIntegrations.tsx), [`PlatformVerification.tsx`](../admin/src/components/PlatformVerification.tsx), [`PlatformMail.tsx`](../admin/src/components/PlatformMail.tsx), [`PlatformExternalIntegrations.test.tsx`](../admin/src/tests/PlatformExternalIntegrations.test.tsx), [`PlatformVerification.test.tsx`](../admin/src/tests/PlatformVerification.test.tsx)):**
+  - Added automatic inline `428 ADMIN_STEP_UP_REQUIRED` password confirmation and retry across External Integrations (Google OIDC, FCM Push, Telegram, WhatsApp, Viber propose/review) and Biometric Verification (policy propose/review and device control) while preserving all typed form state.
+  - Added clear Georgian/English inline validation hints in `PlatformMail.tsx` explaining disabled submit conditions (sender email format, secret length, SMTP username, `https://` public origin for real delivery) while preserving the fail-closed secret-clear invariant on failed password confirmation.
+- **Anti-Flicker & Backend Pool Resilience ([`Contribution.tsx`](../admin/src/pages/Contribution.tsx), [`Decisions.tsx`](../admin/src/pages/Decisions.tsx), [`Inbox.tsx`](../admin/src/pages/Inbox.tsx), [`client.ts`](../backend/src/db/client.ts)):**
+  - Removed background `revision`/focus `setData(null)` wipes in `Contribution.tsx`, `Decisions.tsx`, and `Inbox.tsx` while keeping scope-change and error/denial clearing intact.
+  - Removed `process.exit(-1)` on idle PostgreSQL client errors in `backend/src/db/client.ts` so `pg.Pool` self-heals on transient `57P01` disconnects without crashing the API process.
+- **Mobile Organization Switch & State Hygiene ([`shell_providers.dart`](../mobile/lib/core/state/shell_providers.dart)):**
+  - Persisted `activeOrgId` in `SharedPreferences` (cleared on `signOut`), cleared org-scoped lists/balance/referrals immediately on `selectOrganization`, queued a deferred refresh if `selectOrganization` fires during an in-flight refresh, defaulted missing points balance to `'0'`, and stopped copying a hardcoded dev persona unit label onto other organizations.
+- **Verified evidence:**
+  - `check:identity`, `tokens:check`, `typecheck` (backend & admin), `eslint --max-warnings 0`, backend foundation (`4/4`), Jest (`27/27` suites), Admin Vitest (`59/59` files / `360/360` tests including new `428` inline step-up tests), `scripts/tests` (`12/12`), production workspace builds (`vite build` `10.48s`), `check:workspace` (`920 eligible paths`), `npm run smoke` (PASS), and `npm run test:mobile-api` (PASS).
+  - Mobile: `flutter analyze --no-pub` (`No issues found!`), `flutter test --no-pub` (`86/86` passed), `npm run mobile:apk:tunnel` (`app-debug.apk` built cleanly; USB device not attached during run).
+  - Live headless Playwright E2E against `:15173` / `:13000`: verified Council Admin SPA navigation across all 8 operational modules + Create Group form (`0` page errors), Technical Operator inline `428` Step-Up proposal on Telegram Bot + Mail inline validation hint (`0` page errors), and Technical Reviewer inline `428` Step-Up rejection (`0` page errors).
+
 ## Web Admin Technical Console, Member Verification Directory, Group Creation UX & Stability (Migration 85, 2026-11-24)
 
 - **Technical Security Console & Dev Bootstrap ([`platform-fixture.ts`](../scripts/platform-fixture.ts), [`bootstrap-platform.ts`](../scripts/bootstrap-platform.ts), [`localDemo.ts`](../backend/src/localDemo.ts), [`DemoAccounts.tsx`](../admin/src/components/DemoAccounts.tsx)):**

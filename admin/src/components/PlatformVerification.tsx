@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { ShieldCheck, Smartphone, Trash2, Lock, CheckCircle2, XCircle } from "lucide-react";
+import { authApi } from "../api/client";
 import {
   platformApi,
   type MobileDevicesResponse,
@@ -41,6 +42,13 @@ export default function PlatformVerification({
     bindingId?: string;
     label: string;
   } | null>(null);
+  const [stepUpPassword, setStepUpPassword] = useState("");
+  const [pendingStepUp, setPendingStepUp] = useState<
+    | { kind: "propose" }
+    | { kind: "review"; proposal: VerificationProposalItem; action: "approve" | "reject" | "withdraw" }
+    | { kind: "device"; op: "hold" | "release" | "revoke" | "purge_biometrics"; bindingId?: string }
+    | null
+  >(null);
 
   const [draft, setDraft] = useState<VerificationPolicyValues>({
     authProfile: "google_hybrid",
@@ -178,6 +186,8 @@ export default function PlatformVerification({
         faceMatchProvider: "custom_biometric_matcher",
         reason,
       });
+      setPendingStepUp(null);
+      setStepUpPassword("");
       setNotice(
         t(
           "ცვლილების შეთავაზება გაიგზავნა დამოუკიდებელ დამტკიცებაზე.",
@@ -185,13 +195,24 @@ export default function PlatformVerification({
         ),
       );
       await load();
-    } catch {
-      setError(
-        t(
-          "შეთავაზების გაგზავნა ვერ მოხერხდა (საჭიროა ახალი step-up დადასტურება).",
-          "Failed to submit proposal (fresh step-up authentication required).",
-        ),
-      );
+    } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 428) {
+        setPendingStepUp({ kind: "propose" });
+        setError(
+          t(
+            "ამ ცვლილების შესანახად დაადასტურეთ თქვენი პაროლი ქვემოთ.",
+            "Confirm your password below to submit this proposal.",
+          ),
+        );
+      } else {
+        setError(
+          t(
+            "შეთავაზების გაგზავნა ვერ მოხერხდა (საჭიროა ახალი step-up დადასტურება).",
+            "Failed to submit proposal (fresh step-up authentication required).",
+          ),
+        );
+      }
     } finally {
       setBusy(false);
     }
@@ -210,6 +231,8 @@ export default function PlatformVerification({
         proposalId: proposal.id,
         action,
       });
+      setPendingStepUp(null);
+      setStepUpPassword("");
       setNotice(
         t(
           `შეთავაზებაზე ქმედება შესრულდა: ${action}.`,
@@ -217,13 +240,24 @@ export default function PlatformVerification({
         ),
       );
       await load();
-    } catch {
-      setError(
-        t(
-          "შეთავაზების განხილვა ვერ მოხერხდა (საჭიროა დამოუკიდებელი რევიუერი და step-up).",
-          "Review failed (independent reviewer and step-up required).",
-        ),
-      );
+    } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 428) {
+        setPendingStepUp({ kind: "review", proposal, action });
+        setError(
+          t(
+            "ამ მოქმედებისთვის დაადასტურეთ თქვენი პაროლი ქვემოთ.",
+            "Confirm your password below to complete this review.",
+          ),
+        );
+      } else {
+        setError(
+          t(
+            "შეთავაზების განხილვა ვერ მოხერხდა (საჭიროა დამოუკიდებელი რევიუერი და step-up).",
+            "Review failed (independent reviewer and step-up required).",
+          ),
+        );
+      }
     } finally {
       setBusy(false);
     }
@@ -243,6 +277,8 @@ export default function PlatformVerification({
         ...(bindingId ? { bindingId } : {}),
         ...(op === "hold" || op === "revoke" ? { reason: "operator_request" } : {}),
       });
+      setPendingStepUp(null);
+      setStepUpPassword("");
       setNotice(
         op === "purge_biometrics"
           ? t(
@@ -252,14 +288,55 @@ export default function PlatformVerification({
           : t("მოწყობილობის სტატუსი განახლდა.", "Device binding status updated."),
       );
       await load();
+    } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 428) {
+        setPendingStepUp({ kind: "device", op, bindingId });
+        setError(
+          t(
+            "მოწყობილობის მართვისთვის დაადასტურეთ თქვენი პაროლი ქვემოთ.",
+            "Confirm your password below to run this device action.",
+          ),
+        );
+      } else {
+        setError(
+          t(
+            "მოწყობილობის მართვის ქმედება ვერ შესრულდა.",
+            "Device control action failed.",
+          ),
+        );
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmStepUpAndRetry = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!pendingStepUp || !stepUpPassword || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await authApi.stepUp(stepUpPassword);
+      setStepUpPassword("");
+      const action = pendingStepUp;
+      setPendingStepUp(null);
+      setBusy(false);
+      if (action.kind === "propose") {
+        await handlePropose();
+      } else if (action.kind === "review") {
+        await handleReview(action.proposal, action.action);
+      } else {
+        await handleDeviceControl(action.op, action.bindingId);
+      }
     } catch {
+      setStepUpPassword("");
       setError(
         t(
-          "მოწყობილობის მართვის ქმედება ვერ შესრულდა.",
-          "Device control action failed.",
+          "პაროლის დადასტურება ვერ მოხერხდა. გადაამოწმეთ პაროლი და სცადეთ ხელახლა.",
+          "Password confirmation failed. Check your password and try again.",
         ),
       );
-    } finally {
       setBusy(false);
     }
   };
@@ -308,6 +385,43 @@ export default function PlatformVerification({
           >
             {notice}
           </div>
+        )}
+        {pendingStepUp && (
+          <form
+            onSubmit={confirmStepUpAndRetry}
+            className="mt-3 rounded-lg border border-[var(--primary)] bg-[var(--elevated)] p-3 space-y-3"
+          >
+            <p className="text-sm font-medium">
+              {t(
+                "უსაფრთხოების დადასტურება (Step-Up): შეიყვანეთ თქვენი ანგარიშის პაროლი ცვლილების გასაგრძელებლად.",
+                "Security step-up required: enter your account password to continue.",
+              )}
+            </p>
+            <Input
+              type="password"
+              autoComplete="current-password"
+              label={t("თქვენი პაროლი", "Your password")}
+              value={stepUpPassword}
+              disabled={busy}
+              onChange={(e) => setStepUpPassword(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <Button type="submit" disabled={busy || !stepUpPassword}>
+                {t("დადასტურება და გაგზავნა", "Confirm & submit")}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={busy}
+                onClick={() => {
+                  setPendingStepUp(null);
+                  setStepUpPassword("");
+                }}
+              >
+                {t("გაუქმება", "Cancel")}
+              </Button>
+            </div>
+          </form>
         )}
 
         {pendingDeviceAction && (

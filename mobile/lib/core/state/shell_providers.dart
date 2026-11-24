@@ -173,6 +173,7 @@ class ShellSessionState {
     bool? canCreateChannel,
     bool? canCreateDecision,
     Map<String, dynamic>? referralSummary,
+    bool clearReferralSummary = false,
     List<Map<String, dynamic>>? notificationChannels,
     Map<String, dynamic>? memberProfile,
   }) {
@@ -220,7 +221,9 @@ class ShellSessionState {
       canCreateWork: canCreateWork ?? this.canCreateWork,
       canCreateChannel: canCreateChannel ?? this.canCreateChannel,
       canCreateDecision: canCreateDecision ?? this.canCreateDecision,
-      referralSummary: referralSummary ?? this.referralSummary,
+      referralSummary: clearReferralSummary
+          ? null
+          : (referralSummary ?? this.referralSummary),
       notificationChannels: notificationChannels ?? this.notificationChannels,
       memberProfile: memberProfile ?? this.memberProfile,
     );
@@ -269,8 +272,10 @@ final mobileApiClientProvider = Provider<MobileApiClient>(
 
 /// Manages shared workspace context, privacy disclosure and live server sync.
 class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
+  static const String _activeOrgPrefKey = 'ertad_active_org_id';
   final MobileApiClient _api;
   bool _refreshing = false;
+  bool _pendingRefresh = false;
 
   ShellSessionNotifier(this._api, {bool autoConnect = false})
     : super(
@@ -347,9 +352,19 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
 
   /// Reloads single-round-trip bootstrap + domain snapshots from the database API.
   Future<void> refreshWorkspace() async {
-    if (_refreshing) return;
+    if (_refreshing) {
+      _pendingRefresh = true;
+      return;
+    }
     _refreshing = true;
     try {
+      String? persistedOrgId;
+      if (state.activeOrgId.startsWith('org-')) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          persistedOrgId = prefs.getString(_activeOrgPrefKey);
+        } catch (_) {}
+      }
       final boot = await _api.fetchWorkspaceBootstrap();
       final workOrgs = (boot['work'] as List? ?? const []);
       final decOrgs = (boot['decisions'] as List? ?? const []);
@@ -365,12 +380,13 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
 
       final List<OrgContextSummary> parsedOrgs = sourceOrgs.map((raw) {
         final m = Map<String, dynamic>.from(raw as Map);
+        final explicitUnit = m['unitName']?.toString().trim();
         return OrgContextSummary(
           id: m['id']?.toString() ?? '',
           name: m['name']?.toString() ?? 'ERTAD',
-          unitName: state.devPersonas.isNotEmpty
-              ? state.devPersonas.first.unitName
-              : 'Group',
+          unitName: (explicitUnit != null && explicitUnit.isNotEmpty)
+              ? explicitUnit
+              : '',
           roleLabel: state.isGroupManager ? 'Group Manager' : 'Member',
         );
       }).where((o) => o.id.isNotEmpty).toList();
@@ -378,6 +394,9 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
       final orgId = parsedOrgs.isNotEmpty
           ? (parsedOrgs.any((o) => o.id == state.activeOrgId)
                 ? state.activeOrgId
+                : (persistedOrgId != null &&
+                      parsedOrgs.any((o) => o.id == persistedOrgId))
+                ? persistedOrgId
                 : parsedOrgs.first.id)
           : state.activeOrgId;
 
@@ -489,9 +508,7 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
           reviewWork = results[12] as List<Map<String, dynamic>>;
           reviewsList = results[13] as List<Map<String, dynamic>>;
         }
-        if (ptsPayload['balance'] != null) {
-          pointsBalance = ptsPayload['balance'].toString();
-        }
+        pointsBalance = ptsPayload['balance']?.toString() ?? '0';
         pointsEntries = (ptsPayload['entries'] as List? ?? const [])
             .map((e) => Map<String, dynamic>.from(e as Map))
             .toList();
@@ -643,6 +660,10 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
       );
     } finally {
       _refreshing = false;
+      if (_pendingRefresh) {
+        _pendingRefresh = false;
+        Future<void>.microtask(refreshWorkspace);
+      }
     }
   }
 
@@ -711,8 +732,29 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
   }
 
   void selectOrganization(String orgId) {
-    if (state.organizations.any((o) => o.id == orgId)) {
-      state = state.copyWith(activeOrgId: orgId);
+    if (state.organizations.any((o) => o.id == orgId) &&
+        state.activeOrgId != orgId) {
+      state = state.copyWith(
+        activeOrgId: orgId,
+        isLoading: true,
+        urgentItems: const [],
+        livePolls: const [],
+        historyPolls: const [],
+        liveWorkItems: const [],
+        myWorkItems: const [],
+        historyWorkItems: const [],
+        reviewWorkItems: const [],
+        pendingReviews: const [],
+        liveEvents: const [],
+        liveChannels: const [],
+        liveInboxItems: const [],
+        contributionBalance: '0',
+        contributionEntries: const [],
+        clearReferralSummary: true,
+      );
+      SharedPreferences.getInstance()
+          .then((prefs) => prefs.setString(_activeOrgPrefKey, orgId))
+          .catchError((_) => false);
       if (state.isLiveConnected) {
         refreshWorkspace();
       }
@@ -751,6 +793,7 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
     try {
       await OfflineActionQueue().clear();
       final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_activeOrgPrefKey);
       for (final key in prefs.getKeys().toList()) {
         if (key.startsWith('ertad_offline_cache_') ||
             key.startsWith('ertad_vote_receipt_')) {

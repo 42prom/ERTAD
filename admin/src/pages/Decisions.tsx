@@ -177,7 +177,7 @@ export default function Decisions() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const readScope1Key = JSON.stringify([org, view, page, filter, revision]);
+  const readScope1Key = JSON.stringify([org, view, page, filter]);
   const [readScope1, setReadScope1] = useState(readScope1Key);
   if (readScope1 !== readScope1Key) {
     setReadScope1(readScope1Key);

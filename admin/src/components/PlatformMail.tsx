@@ -131,6 +131,64 @@ export default function PlatformMail({
           values.mode === "off" ||
           !!values.smtpUser) &&
         (values.mode === "off" || !!secret || retainsCredential);
+  const validationHint =
+    selection?.kind !== "new" || valid
+      ? ""
+      : values.provider === "none" && values.mode !== "off"
+        ? t(
+            "გამორთულ პროვაიდერზე რეჟიმი უნდა იყოს გამორთული.",
+            "Mode must be off when provider is disabled.",
+          )
+        : values.mode !== "off" &&
+            !/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(
+              values.senderEmail,
+            )
+          ? t(
+              "შეიყვანეთ გამგზავნის სწორი ელფოსტის მისამართი (მაგ. noreply@domain.ge).",
+              "Enter a valid sender email address (e.g. noreply@domain.ge).",
+            )
+          : values.provider === "smtp" &&
+              values.mode !== "off" &&
+              !values.smtpUser
+            ? t(
+                "SMTP რეჟიმისთვის მიუთითეთ SMTP მომხმარებელი.",
+                "Enter an SMTP username when SMTP mode is enabled.",
+              )
+            : values.mode !== "off" && !secret && !retainsCredential
+              ? t(
+                  values.provider === "smtp"
+                    ? "პირველი ჩართვისთვის შეიყვანეთ SMTP პაროლი (მინ. 10 სიმბოლო)."
+                    : "პირველი ჩართვისთვის შეიყვანეთ API გასაღები (მინ. 10 სიმბოლო).",
+                  values.provider === "smtp"
+                    ? "Enter an SMTP password (at least 10 characters)."
+                    : "Enter an API key (at least 10 characters).",
+                )
+              : secret &&
+                  !(values.provider === "smtp"
+                    ? secret.length >= 10 &&
+                      secret.length <= 256 &&
+                      [...secret].every(
+                        (char) =>
+                          char.charCodeAt(0) >= 32 &&
+                          char.charCodeAt(0) !== 127,
+                      )
+                    : /^[A-Za-z0-9._-]{10,256}$/.test(secret))
+                ? t(
+                    "გასაღები/პაროლი უნდა შეიცავდეს 10–256 დასაშვებ სიმბოლოს.",
+                    "Credential must be 10–256 valid characters.",
+                  )
+                : values.deliveryEnabled &&
+                    !(
+                      values.mode === "enabled" &&
+                      /^https:\/\/[a-z0-9][a-z0-9.-]*[a-z0-9]$/.test(
+                        values.publicOrigin ?? "",
+                      )
+                    )
+                  ? t(
+                      "რეალური მიწოდებისთვის რეჟიმი უნდა იყოს ჩართული და საჯარო მისამართი იწყებოდეს https://-ით.",
+                      "Real delivery requires enabled mode and a valid https:// public origin.",
+                    )
+                  : "";
   const allowed =
     !!resource.data &&
     (selection?.kind === "new"
@@ -738,6 +796,16 @@ export default function PlatformMail({
               disabled={busy}
               onChange={(e) => setPassword(e.target.value)}
             />
+            {validationHint && (
+              <p role="alert" className="text-sm text-[var(--danger)]">
+                {validationHint}
+              </p>
+            )}
+            {error && selection && (
+              <p role="alert" className="text-sm text-[var(--danger)]">
+                {error}
+              </p>
+            )}
             <div className="flex gap-3">
               <Button type="submit" disabled={busy || !password || !allowed}>
                 {t("დადასტურება", "Confirm")}
