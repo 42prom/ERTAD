@@ -102,6 +102,129 @@ async function ensurePermanentDevBiometrics(memberIds: string[]): Promise<void> 
   }
 }
 
+async function ensureWebDemoBridge(): Promise<void> {
+  const webOrgRes = await client.query<{ id: string }>(
+    "SELECT id FROM organizations WHERE name = 'ERTAD · ვებ-დემო' AND status = 'active' LIMIT 1"
+  );
+  const webOrgId = webOrgRes.rows[0]?.id;
+  if (!webOrgId) return;
+
+  const groupARes = await client.query<{ id: string }>(
+    "SELECT id FROM units WHERE organization_id = $1 AND name = 'ჯგუფი A' AND status = 'active' LIMIT 1",
+    [webOrgId]
+  );
+  const targetUnitId = groupARes.rows[0]?.id;
+  if (!targetUnitId) return;
+
+  const mobileMembersRes = await client.query<{ id: string; email: string }>(
+    `SELECT mu.id, au.email
+     FROM member_users mu
+     JOIN admin_users au ON au.id = mu.web_account_id
+     WHERE au.email IN ('member@mobile.ertad.local', 'manager@mobile.ertad.local')
+       AND mu.status = 'active'`
+  );
+  if (!mobileMembersRes.rowCount) return;
+
+  await client.query('BEGIN');
+  try {
+    const memberBundleId = 'a1b2c3d4-0001-4000-8000-000000000001';
+    const managerBundleId = 'a1b2c3d4-0002-4000-8000-000000000002';
+
+    const memberPerms = [
+      'unit.read',
+      'workitem.read',
+      'workitem.participate',
+      'decision.read',
+      'decision.vote',
+      'channel.read',
+      'channel.post',
+      'contribution.read',
+    ];
+    const managerPerms = [
+      ...memberPerms,
+      'member.read',
+      'workitem.create',
+      'workitem.verify',
+      'channel.manage',
+      'channel.moderate',
+      'decision.manage',
+      'decision.publish',
+    ];
+
+    for (const [bId, perms] of [
+      [memberBundleId, memberPerms],
+      [managerBundleId, managerPerms],
+    ] as const) {
+      const hasB = await client.query(
+        'SELECT 1 FROM permission_bundles WHERE organization_id = $1 AND id = $2',
+        [webOrgId, bId]
+      );
+      if (!hasB.rowCount) {
+        await client.query(
+          'INSERT INTO permission_bundles(organization_id, id, version) VALUES($1, $2, 1)',
+          [webOrgId, bId]
+        );
+        for (const p of perms) {
+          await client.query(
+            "INSERT INTO permission_grants VALUES($1, $2, 1, $3, 'unit') ON CONFLICT DO NOTHING",
+            [webOrgId, bId, p]
+          );
+        }
+        await client.query(
+          "UPDATE permission_bundles SET status = 'approved' WHERE organization_id = $1 AND id = $2",
+          [webOrgId, bId]
+        );
+      }
+    }
+
+    for (const row of mobileMembersRes.rows) {
+      const isMgr = row.email.startsWith('manager@');
+      const posName = isMgr ? 'მობილური ჯგუფის მენეჯერი' : 'მობილური წევრი';
+      const displayLabel = isMgr ? 'მობილური მენეჯერი (დემო)' : 'მობილური წევრი (დემო)';
+      const bundleId = isMgr ? managerBundleId : memberBundleId;
+
+      let posId = (
+        await client.query<{ id: string }>(
+          'SELECT id FROM positions WHERE organization_id = $1 AND unit_id = $2 AND name = $3 LIMIT 1',
+          [webOrgId, targetUnitId, posName]
+        )
+      ).rows[0]?.id;
+      if (!posId) {
+        posId = randomUUID();
+        await client.query(
+          'INSERT INTO positions(organization_id, id, unit_id, name, bundle_id, bundle_version) VALUES($1, $2, $3, $4, $5, 1)',
+          [webOrgId, posId, targetUnitId, posName, bundleId]
+        );
+      }
+
+      const hasMem = await client.query(
+        `SELECT 1 FROM memberships
+         WHERE organization_id = $1 AND user_id = $2 AND unit_id = $3 AND position_id = $4 AND status = 'active'`,
+        [webOrgId, row.id, targetUnitId, posId]
+      );
+      if (!hasMem.rowCount) {
+        await client.query(
+          `INSERT INTO memberships(organization_id, user_id, unit_id, position_id, bundle_version, valid_from, valid_until)
+           VALUES($1, $2, $3, $4, 1, now() - interval '1 minute', now() + interval '180 days')`,
+          [webOrgId, row.id, targetUnitId, posId]
+        );
+      }
+
+      await client.query(
+        `INSERT INTO organization_member_labels(organization_id, member_id, display_name)
+         VALUES($1, $2, $3)
+         ON CONFLICT (organization_id, member_id) DO UPDATE SET display_name = EXCLUDED.display_name`,
+        [webOrgId, row.id, displayLabel]
+      );
+    }
+
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  }
+}
+
 try {
   await client.query('BEGIN');
   await client.query('SELECT pg_advisory_xact_lock(42420070)');
@@ -300,6 +423,7 @@ try {
   }
 
   await ensurePermanentDevBiometrics(seedPersonaMemberIds);
+  await ensureWebDemoBridge();
 
   // Seed rich Georgian operational domain items via authentic SQL commands if manager was just created.
   if (managerCreds) {
