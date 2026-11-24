@@ -109,11 +109,12 @@ async function ensureWebDemoBridge(): Promise<void> {
   const webOrgId = webOrgRes.rows[0]?.id;
   if (!webOrgId) return;
 
-  const groupARes = await client.query<{ id: string }>(
-    "SELECT id FROM units WHERE organization_id = $1 AND name = 'ჯგუფი A' AND status = 'active' LIMIT 1",
+  const groupARes = await client.query<{ id: string; parent_id: string | null }>(
+    "SELECT id, parent_id FROM units WHERE organization_id = $1 AND name = 'ჯგუფი A' AND status = 'active' LIMIT 1",
     [webOrgId]
   );
   const targetUnitId = groupARes.rows[0]?.id;
+  const regionAUnitId = groupARes.rows[0]?.parent_id ?? null;
   if (!targetUnitId) return;
 
   const mobileMembersRes = await client.query<{ id: string; email: string }>(
@@ -149,6 +150,9 @@ async function ensureWebDemoBridge(): Promise<void> {
       'channel.moderate',
       'decision.manage',
       'decision.publish',
+      'governance.propose',
+      'governance.vote',
+      'contribution.award',
     ];
 
     for (const [bId, perms] of [
@@ -164,12 +168,12 @@ async function ensureWebDemoBridge(): Promise<void> {
           'INSERT INTO permission_bundles(organization_id, id, version) VALUES($1, $2, 1)',
           [webOrgId, bId]
         );
-        for (const p of perms) {
-          await client.query(
-            "INSERT INTO permission_grants VALUES($1, $2, 1, $3, 'unit') ON CONFLICT DO NOTHING",
-            [webOrgId, bId, p]
-          );
-        }
+        for (const perm of perms) {
+        await client.query(
+          "INSERT INTO permission_grants VALUES($1, $2, 1, $3, 'unit') ON CONFLICT DO NOTHING",
+          [webOrgId, bId, perm]
+        );
+      }
         await client.query(
           "UPDATE permission_bundles SET status = 'approved' WHERE organization_id = $1 AND id = $2",
           [webOrgId, bId]
@@ -177,37 +181,42 @@ async function ensureWebDemoBridge(): Promise<void> {
       }
     }
 
+    const unitsForRole = (isMgr: boolean) =>
+      !isMgr && regionAUnitId ? [targetUnitId, regionAUnitId] : [targetUnitId];
+
     for (const row of mobileMembersRes.rows) {
       const isMgr = row.email.startsWith('manager@');
       const posName = isMgr ? 'მობილური ჯგუფის მენეჯერი' : 'მობილური წევრი';
       const displayLabel = isMgr ? 'მობილური მენეჯერი (დემო)' : 'მობილური წევრი (დემო)';
       const bundleId = isMgr ? managerBundleId : memberBundleId;
 
-      let posId = (
-        await client.query<{ id: string }>(
-          'SELECT id FROM positions WHERE organization_id = $1 AND unit_id = $2 AND name = $3 LIMIT 1',
-          [webOrgId, targetUnitId, posName]
-        )
-      ).rows[0]?.id;
-      if (!posId) {
-        posId = randomUUID();
-        await client.query(
-          'INSERT INTO positions(organization_id, id, unit_id, name, bundle_id, bundle_version) VALUES($1, $2, $3, $4, $5, 1)',
-          [webOrgId, posId, targetUnitId, posName, bundleId]
-        );
-      }
+      for (const uId of unitsForRole(isMgr)) {
+        let posId = (
+          await client.query<{ id: string }>(
+            'SELECT id FROM positions WHERE organization_id = $1 AND unit_id = $2 AND name = $3 LIMIT 1',
+            [webOrgId, uId, posName]
+          )
+        ).rows[0]?.id;
+        if (!posId) {
+          posId = randomUUID();
+          await client.query(
+            'INSERT INTO positions(organization_id, id, unit_id, name, bundle_id, bundle_version) VALUES($1, $2, $3, $4, $5, 1)',
+            [webOrgId, posId, uId, posName, bundleId]
+          );
+        }
 
-      const hasMem = await client.query(
-        `SELECT 1 FROM memberships
-         WHERE organization_id = $1 AND user_id = $2 AND unit_id = $3 AND position_id = $4 AND status = 'active'`,
-        [webOrgId, row.id, targetUnitId, posId]
-      );
-      if (!hasMem.rowCount) {
-        await client.query(
-          `INSERT INTO memberships(organization_id, user_id, unit_id, position_id, bundle_version, valid_from, valid_until)
-           VALUES($1, $2, $3, $4, 1, now() - interval '1 minute', now() + interval '180 days')`,
-          [webOrgId, row.id, targetUnitId, posId]
+        const hasMem = await client.query(
+          `SELECT 1 FROM memberships
+           WHERE organization_id = $1 AND user_id = $2 AND unit_id = $3 AND position_id = $4 AND status = 'active'`,
+          [webOrgId, row.id, uId, posId]
         );
+        if (!hasMem.rowCount) {
+          await client.query(
+            `INSERT INTO memberships(organization_id, user_id, unit_id, position_id, bundle_version, valid_from, valid_until)
+             VALUES($1, $2, $3, $4, 1, now() - interval '1 minute', now() + interval '180 days')`,
+            [webOrgId, row.id, uId, posId]
+          );
+        }
       }
 
       await client.query(

@@ -200,6 +200,14 @@ export function createLocalDemoRouter(
           [account.id, account.email, account.memberId, fixture.organizationId]
         );
         if (!match.rows.length) throw createError('Demo account unavailable', 403);
+        if (
+          operation === 'step-up' &&
+          req.adminSession?.stepUpExpiresAt &&
+          req.adminSession.stepUpExpiresAt.getTime() > Date.now() + 60_000
+        ) {
+          res.json({ expiresAt: req.adminSession.stepUpExpiresAt.toISOString() });
+          return;
+        }
         // Reuse password verification, account lockout, session issuance, CSRF and strict audit.
         req.body = { email: account.email, password: account.password };
         req.url = `/${operation}`;
