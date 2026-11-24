@@ -296,8 +296,8 @@ export default function Platform() {
           </h1>
           <p>
             {t(
-              "ტექნიკური მდგომარეობა და უსაფრთხოების ჟურნალი.",
-              "Technical status and security audit.",
+              "ტექნიკური მდგომარეობა, ინტეგრაციები და უსაფრთხოების პოლიტიკა.",
+              "Technical status, integrations, and security policies.",
             )}
           </p>
         </div>
@@ -310,6 +310,89 @@ export default function Platform() {
           {t("განახლება", "Refresh")}
         </Button>
       </header>
+
+      {access && (
+        <Card className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="status-badge" data-status="approved">
+                {access.permissions.some((p) => p.endsWith(".propose"))
+                  ? t(
+                      "ტექნიკური ოპერატორი · ცვლილების შეთავაზება",
+                      "Technical operator · Propose changes",
+                    )
+                  : access.permissions.some((p) => p.endsWith(".approve"))
+                    ? t(
+                        "ტექნიკური მიმომხილველი · დამტკიცება / უარყოფა",
+                        "Technical reviewer · Approve / Reject",
+                      )
+                    : t("მხოლოდ წაკითხვა", "Read-only access")}
+              </span>
+              <span className="text-xs text-[var(--muted)]">
+                {access.permissions.some((p) => p.endsWith(".propose"))
+                  ? t(
+                      "ცვლილების შესანახად დაადასტურეთ პაროლი; საბოლოო გააქტიურებას ამტკიცებს მეორე ტექნიკური მიმომხილველი.",
+                      "Confirm your password to submit a change; a second independent reviewer approves activation.",
+                    )
+                  : t(
+                      "ამ ანგარიშით ამტკიცებთ ოპერატორის მიერ შეთავაზებულ ცვლილებებს. პარამეტრების რედაქტირებისთვის შედით როგორც ტექნიკური ადმინისტრატორი.",
+                      "Use this account to approve or reject operator proposals. Sign in as Technical Administrator to edit settings.",
+                    )}
+              </span>
+            </div>
+            {import.meta.env.DEV && (
+              <span className="text-xs font-mono text-[var(--muted)]">
+                {t(
+                  "ლოკალური პაროლი: .local/PLATFORM_ACCESS.md / PLATFORM_REVIEWER_ACCESS.md",
+                  "Local password: .local/PLATFORM_ACCESS.md / PLATFORM_REVIEWER_ACCESS.md",
+                )}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {(access.permissions.includes("platform.integrations.read") ||
+              access.permissions.includes("platform.verification.read")) && (
+              <Button
+                size="sm"
+                variant={tab === "integrations" ? "primary" : "secondary"}
+                onClick={() => setTab("integrations")}
+              >
+                {t(
+                  "Google / Push / Telegram / WhatsApp / Viber",
+                  "Google / Push / Telegram / WhatsApp / Viber",
+                )}
+              </Button>
+            )}
+            {access.permissions.includes("platform.providers.read") && (
+              <Button
+                size="sm"
+                variant={tab === "email" ? "primary" : "secondary"}
+                onClick={() => setTab("email")}
+              >
+                {t("ელფოსტა (SMTP / SendGrid)", "Email (SMTP / SendGrid)")}
+              </Button>
+            )}
+            {access.permissions.includes("platform.verification.read") && (
+              <Button
+                size="sm"
+                variant={tab === "verification" ? "primary" : "secondary"}
+                onClick={() => setTab("verification")}
+              >
+                {t("ბიომეტრია და მოწყობილობები", "Biometrics & devices")}
+              </Button>
+            )}
+            {access.permissions.includes("platform.network.read") && (
+              <Button
+                size="sm"
+                variant={tab === "network" ? "primary" : "secondary"}
+                onClick={() => setTab("network")}
+              >
+                {t("ქსელის დაცვა", "Network protection")}
+              </Button>
+            )}
+          </div>
+        </Card>
+      )}
 
       {tab === "email" && access?.permissions.includes("platform.providers.read") && <PlatformMail canPropose={access.permissions.includes("platform.providers.propose")} canApprove={access.permissions.includes("platform.providers.approve")} canTest={access.permissions.includes("platform.integrations.test")} refreshRevision={revision} />}
       {tab === "verification" &&
@@ -381,13 +464,6 @@ export default function Platform() {
         (access?.permissions.includes("platform.integrations.read") ||
           access?.permissions.includes("platform.verification.read")) && (
           <div className="space-y-6">
-            {access.permissions.includes("platform.integrations.read") && (
-              <PlatformIntegrations
-                onConfigure={access.permissions.includes("platform.providers.read") ? () => setTab("providers") : undefined}
-                canTest={access.permissions.includes("platform.integrations.test")}
-                refreshRevision={revision}
-              />
-            )}
             {access.permissions.includes("platform.verification.read") && (
               <PlatformExternalIntegrations
                 canPropose={access.permissions.includes(
@@ -396,6 +472,13 @@ export default function Platform() {
                 canApprove={access.permissions.includes(
                   "platform.verification.approve",
                 )}
+                refreshRevision={revision}
+              />
+            )}
+            {access.permissions.includes("platform.integrations.read") && (
+              <PlatformIntegrations
+                onConfigure={access.permissions.includes("platform.providers.read") ? () => setTab("providers") : undefined}
+                canTest={access.permissions.includes("platform.integrations.test")}
                 refreshRevision={revision}
               />
             )}
