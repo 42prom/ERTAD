@@ -9,8 +9,6 @@ import {
   ShieldCheck,
   Smartphone,
   UserCircle2,
-  Eye,
-  EyeOff,
 } from "lucide-react";
 import { downloadSafeCsv } from "../utils/safeCsv";
 import {
@@ -52,15 +50,12 @@ export default function Members() {
     [page, setPage] = useState(1),
     [selected, setSelected] = useState(""),
     [detail, setDetail] = useState<MemberDetail | null>(null),
-    [revealedMemberId, setRevealedMemberId] = useState(""),
-    [revealedDocIds, setRevealedDocIds] = useState<Record<string, boolean>>({}),
     [profileTab, setProfileTab] = useState<"overview" | "verification" | "logs">(
       "overview",
     ),
     [logFilter, setLogFilter] = useState<
       "all" | "verification" | "work" | "points" | "audit"
     >("all"),
-    [revealContact, setRevealContact] = useState(false),
     [workPage, setWorkPage] = useState(1);
   const [loading, setLoading] = useState(true),
     [error, setError] = useState("");
@@ -624,7 +619,6 @@ export default function Members() {
                 setDetail(null);
                 setProfileTab("overview");
                 setLogFilter("all");
-                setRevealContact(false);
               }}
             >
               <ArrowLeft size={18} />
@@ -640,42 +634,19 @@ export default function Members() {
                 : activityItems.filter((item) => item.category === logFilter);
             const verifiedBadge =
               detail.verification?.assuranceLevel === "biometric_verified";
-            const maskValue = (val: string) =>
-              revealContact || !val
-                ? val || "—"
-                : val.length <= 4
-                  ? "••••"
-                  : `${val.slice(0, 2)}••••${val.slice(-2)}`;
+            const latestDoc = detail.verification?.documents?.[0];
             return (
             <>
               <Card className="space-y-4">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="flex flex-wrap items-start gap-4 min-w-0 flex-1">
-                    {detail.verification?.portraitDataUrl ? (() => {
-                      const revealPortrait = revealedMemberId === detail.id;
-                      return (
-                        <div className="flex flex-col items-start gap-1.5">
-                          <img
-                            src={detail.verification.portraitDataUrl}
-                            alt={name(detail)}
-                            className={`h-20 w-20 rounded-xl border border-[var(--border)] object-cover transition ${revealPortrait ? "" : "blur-md"}`}
-                          />
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() =>
-                              setRevealedMemberId((id) =>
-                                id === detail.id ? "" : detail.id,
-                              )
-                            }
-                          >
-                            {revealPortrait
-                              ? t("ფოტოს დამალვა", "Hide photo")
-                              : t("ფოტოს ჩვენება", "Show photo")}
-                          </Button>
-                        </div>
-                      );
-                    })() : (
+                    {detail.verification?.portraitDataUrl ? (
+                      <img
+                        src={detail.verification.portraitDataUrl}
+                        alt={name(detail)}
+                        className="h-20 w-20 shrink-0 rounded-xl border border-[var(--border)] object-cover"
+                      />
+                    ) : (
                       <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--elevated)] text-xl font-bold text-[var(--primary)]">
                         {name(detail).slice(0, 1).toUpperCase()}
                       </div>
@@ -850,69 +821,97 @@ export default function Members() {
 
                 {profileTab === "overview" && (
                   <div className="space-y-4">
-                    {p360 && (
+                    {(p360 || latestDoc) && (
                       <div className="rounded-xl border border-[var(--border)] bg-[var(--elevated)] p-3.5 space-y-2.5">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-                            {t("პირადი მონაცემები და ანგარიშები", "Personal data & linked accounts")}
-                          </h3>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setRevealContact((v) => !v)}
-                          >
-                            {revealContact ? (
-                              <EyeOff size={14} aria-hidden="true" />
-                            ) : (
-                              <Eye size={14} aria-hidden="true" />
-                            )}
-                            {revealContact
-                              ? t("დამალვა", "Mask details")
-                              : t("დეტალების ჩვენება", "Reveal details")}
-                          </Button>
-                        </div>
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                          {t("პირადი მონაცემები, საბუთი და ანგარიშები", "Personal data, document & linked accounts")}
+                        </h3>
                         <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                          <div>
-                            <dt className="text-xs text-[var(--muted)]">
-                              {t("ტელეფონი", "Phone")}
-                            </dt>
-                            <dd className="font-medium text-[var(--text)]">
-                              {p360.hasPhone
-                                ? maskValue(p360.phoneHint || t("შენახულია", "Stored"))
-                                : t("არ არის მითითებული", "Not set")}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt className="text-xs text-[var(--muted)]">
-                              {t("ვებ-ანგარიში", "Web account")}
-                            </dt>
-                            <dd className="font-medium text-[var(--text)] break-all">
-                              {p360.hasWebAccount
-                                ? maskValue(p360.webEmail || t("აქტიურია", "Active"))
-                                : t("მხოლოდ მობილური", "Mobile only")}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt className="text-xs text-[var(--muted)]">
-                              {t("მიბმული Google ანგარიშები", "Linked Google accounts")}
-                            </dt>
-                            <dd className="font-medium text-[var(--text)]">
-                              {p360.linkedGoogleAccounts.length > 0
-                                ? p360.linkedGoogleAccounts
-                                    .map((g) => maskValue(g.emailHint))
-                                    .join(", ")
-                                : t("არ არის მიბმული", "None linked")}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt className="text-xs text-[var(--muted)]">
-                              {t("სანდო მოწყობილობები", "Trusted devices")}
-                            </dt>
-                            <dd className="font-medium text-[var(--text)]">
-                              {p360.devices.filter((d) => d.status === "active").length} /{" "}
-                              {p360.devices.length}
-                            </dd>
-                          </div>
+                          {latestDoc?.legalName && (
+                            <div>
+                              <dt className="text-xs text-[var(--muted)]">
+                                {t("სრული სახელი (საბუთით)", "Legal name")}
+                              </dt>
+                              <dd className="font-medium text-[var(--text)]">
+                                {latestDoc.legalName}
+                              </dd>
+                            </div>
+                          )}
+                          {latestDoc?.personalNumber && (
+                            <div>
+                              <dt className="text-xs text-[var(--muted)]">
+                                {t("პირადი ნომერი", "Personal number")}
+                              </dt>
+                              <dd className="font-mono font-medium text-[var(--text)]">
+                                {latestDoc.personalNumber}
+                              </dd>
+                            </div>
+                          )}
+                          {latestDoc?.documentNumber && (
+                            <div>
+                              <dt className="text-xs text-[var(--muted)]">
+                                {t("საბუთის ნომერი", "Document number")}
+                              </dt>
+                              <dd className="font-mono font-medium text-[var(--text)]">
+                                {latestDoc.documentNumber}
+                              </dd>
+                            </div>
+                          )}
+                          {latestDoc?.dateOfBirth && (
+                            <div>
+                              <dt className="text-xs text-[var(--muted)]">
+                                {t("დაბადების თარიღი", "Date of birth")}
+                              </dt>
+                              <dd className="font-medium text-[var(--text)]">
+                                {latestDoc.dateOfBirth}
+                              </dd>
+                            </div>
+                          )}
+                          {p360 && (
+                            <>
+                              <div>
+                                <dt className="text-xs text-[var(--muted)]">
+                                  {t("ტელეფონი", "Phone")}
+                                </dt>
+                                <dd className="font-medium text-[var(--text)]">
+                                  {p360.hasPhone
+                                    ? p360.phoneNumber || p360.phoneHint || t("შენახულია", "Stored")
+                                    : t("არ არის მითითებული", "Not set")}
+                                </dd>
+                              </div>
+                              <div>
+                                <dt className="text-xs text-[var(--muted)]">
+                                  {t("ვებ-ანგარიში", "Web account")}
+                                </dt>
+                                <dd className="font-medium text-[var(--text)] break-all">
+                                  {p360.hasWebAccount
+                                    ? p360.webEmail || t("აქტიურია", "Active")
+                                    : t("მხოლოდ მობილური", "Mobile only")}
+                                </dd>
+                              </div>
+                              <div>
+                                <dt className="text-xs text-[var(--muted)]">
+                                  {t("მიბმული Google ანგარიშები", "Linked Google accounts")}
+                                </dt>
+                                <dd className="font-medium text-[var(--text)] break-all">
+                                  {p360.linkedGoogleAccounts.length > 0
+                                    ? p360.linkedGoogleAccounts
+                                        .map((g) => g.emailHint || g.id)
+                                        .join(", ")
+                                    : t("არ არის მიბმული", "None linked")}
+                                </dd>
+                              </div>
+                              <div>
+                                <dt className="text-xs text-[var(--muted)]">
+                                  {t("სანდო მოწყობილობები", "Trusted devices")}
+                                </dt>
+                                <dd className="font-medium text-[var(--text)]">
+                                  {p360.devices.filter((d) => d.status === "active").length} /{" "}
+                                  {p360.devices.length}
+                                </dd>
+                              </div>
+                            </>
+                          )}
                         </dl>
                       </div>
                     )}
@@ -994,10 +993,8 @@ export default function Members() {
                             "Verified documents & portraits",
                           )}
                         </h3>
-                        <div className="grid gap-2 sm:grid-cols-2">
+                        <div className="grid gap-3 sm:grid-cols-2">
                           {detail.verification!.documents!.map((doc, idx) => {
-                            const docKey = `${detail.id}:${doc.id}`;
-                            const revealDoc = Boolean(revealedDocIds[docKey]);
                             const docLabel =
                               doc.documentKind === "passport"
                                 ? t("პასპორტი", "Passport")
@@ -1007,42 +1004,52 @@ export default function Members() {
                             return (
                               <div
                                 key={doc.id}
-                                className="flex items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--elevated)] p-2.5"
+                                className="flex items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--elevated)] p-3"
                               >
-                                {doc.portraitDataUrl ? (
-                                  <div className="flex shrink-0 flex-col items-start gap-1">
+                                <div className="flex shrink-0 gap-2">
+                                  {doc.portraitDataUrl ? (
                                     <img
                                       src={doc.portraitDataUrl}
                                       alt={`${name(detail)} #${idx + 1}`}
-                                      className={`h-14 w-14 rounded-lg border border-[var(--border)] object-cover transition ${revealDoc ? "" : "blur-md"}`}
+                                      className="h-16 w-16 rounded-lg border border-[var(--border)] object-cover"
                                     />
-                                    <Button
-                                      size="sm"
-                                      variant="secondary"
-                                      onClick={() =>
-                                        setRevealedDocIds((prev) => ({
-                                          ...prev,
-                                          [docKey]: !prev[docKey],
-                                        }))
-                                      }
-                                    >
-                                      {revealDoc
-                                        ? t("დამალვა", "Hide")
-                                        : t("ჩვენება", "Show")}
-                                    </Button>
-                                  </div>
-                                ) : (
-                                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] text-xs text-[var(--muted)]">
-                                    —
-                                  </div>
-                                )}
-                                <div className="min-w-0 flex-1 text-xs">
+                                  ) : (
+                                    <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] text-xs text-[var(--muted)]">
+                                      —
+                                    </div>
+                                  )}
+                                  {doc.selfieDataUrl && (
+                                    <img
+                                      src={doc.selfieDataUrl}
+                                      alt={`${name(detail)} selfie #${idx + 1}`}
+                                      className="h-16 w-16 rounded-lg border border-[var(--border)] object-cover"
+                                    />
+                                  )}
+                                </div>
+                                <div className="min-w-0 flex-1 space-y-0.5 text-xs">
                                   <p className="font-semibold text-[var(--text)]">
                                     {docLabel}
                                     {doc.issuingCountry
                                       ? ` · ${doc.issuingCountry}`
                                       : ""}
                                   </p>
+                                  {doc.legalName && (
+                                    <p className="text-[var(--text)]">
+                                      {doc.legalName}
+                                      {doc.dateOfBirth ? ` · ${doc.dateOfBirth}` : ""}
+                                    </p>
+                                  )}
+                                  {(doc.documentNumber || doc.personalNumber) && (
+                                    <p className="font-mono text-[var(--text)]">
+                                      {doc.documentNumber
+                                        ? `${t("საბუთი №", "Doc #")}: ${doc.documentNumber}`
+                                        : ""}
+                                      {doc.documentNumber && doc.personalNumber ? " · " : ""}
+                                      {doc.personalNumber
+                                        ? `${t("პ/ნ", "PIN")}: ${doc.personalNumber}`
+                                        : ""}
+                                    </p>
+                                  )}
                                   <p className="text-[var(--muted)]">
                                     {doc.sodCscaVerified
                                       ? t("SOD/CSCA: დადასტურებული", "SOD/CSCA: verified")
@@ -1050,7 +1057,15 @@ export default function Members() {
                                     {typeof doc.faceMatchScore === "number"
                                       ? ` · ${t("სახე", "Face")}: ${Math.round(doc.faceMatchScore * 100)}%`
                                       : ""}
+                                    {typeof doc.livenessScore === "number"
+                                      ? ` · ${t("Liveness", "Liveness")}: ${Math.round(doc.livenessScore * 100)}%`
+                                      : ""}
                                   </p>
+                                  {doc.documentFingerprint && (
+                                    <p className="font-mono text-[10px] text-[var(--muted)]">
+                                      FP: {doc.documentFingerprint.slice(0, 16)}…
+                                    </p>
+                                  )}
                                   <p className="text-[11px] text-[var(--muted)]">
                                     {doc.createdAt
                                       ? new Date(doc.createdAt).toLocaleString(

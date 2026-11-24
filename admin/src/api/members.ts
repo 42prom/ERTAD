@@ -44,11 +44,17 @@ export interface MemberListPage extends MemberPage<DirectoryMember> {
 export interface MemberVerificationDocument {
   id: string;
   documentKind: "eid_card" | "passport" | "other";
+  documentFingerprint?: string;
   issuingCountry: string;
   sodCscaVerified: boolean;
   livenessScore?: number | null;
   faceMatchScore?: number | null;
   portraitDataUrl: string | null;
+  selfieDataUrl?: string | null;
+  documentNumber?: string | null;
+  personalNumber?: string | null;
+  legalName?: string | null;
+  dateOfBirth?: string | null;
   createdAt: string;
 }
 export interface MemberVerificationLogEntry {
@@ -82,6 +88,7 @@ export interface MemberLinkedGoogle {
 }
 export interface MemberTrustedDevice {
   id: string;
+  deviceId?: string;
   platform: string;
   appId: string;
   verdict: string;
@@ -102,6 +109,7 @@ export interface MemberProfile360 {
   hasWebAccount: boolean;
   webEmail: string;
   hasPhone: boolean;
+  phoneNumber?: string;
   phoneHint: string;
   phoneUpdatedAt: string | null;
   linkedGoogleAccounts: MemberLinkedGoogle[];

@@ -77,11 +77,17 @@ export async function memberDirectoryCommand(
             documents?: Array<{
               id: string;
               documentKind?: 'eid_card' | 'passport' | 'other';
+              documentFingerprint?: string;
               issuingCountry?: string;
               sodCscaVerified?: boolean;
               livenessScore?: number | null;
               faceMatchScore?: number | null;
               portraitCipher?: string | null;
+              selfieCipher?: string | null;
+              documentNumberCipher?: string | null;
+              personalNumberCipher?: string | null;
+              legalNameCipher?: string | null;
+              dateOfBirthCipher?: string | null;
               createdAt?: string;
             }>;
             verificationLog?: Array<{
@@ -116,22 +122,31 @@ export async function memberDirectoryCommand(
               portraitDataUrl = null;
             }
           }
+          const decryptText = (cipher?: string | null): string | null => {
+            if (!cipher) return null;
+            try {
+              const dec = decryptSensitiveValue(cipher);
+              return dec ? dec : null;
+            } catch {
+              return null;
+            }
+          };
           const docs = Array.isArray(raw.documents)
             ? raw.documents.map((doc) => {
-                let docPortraitDataUrl: string | null = null;
-                if (doc.portraitCipher) {
-                  try {
-                    const dec = decryptSensitiveValue(doc.portraitCipher);
-                    if (dec && dec.length >= 16) {
-                      docPortraitDataUrl = `data:image/jpeg;base64,${dec}`;
-                    }
-                  } catch {
-                    docPortraitDataUrl = null;
-                  }
-                }
+                const rawDocPortrait = decryptText(doc.portraitCipher);
+                const docPortraitDataUrl =
+                  rawDocPortrait && rawDocPortrait.length >= 16
+                    ? `data:image/jpeg;base64,${rawDocPortrait}`
+                    : null;
+                const rawSelfie = decryptText(doc.selfieCipher);
+                const selfieDataUrl =
+                  rawSelfie && rawSelfie.length >= 16
+                    ? `data:image/jpeg;base64,${rawSelfie}`
+                    : null;
                 return {
                   id: doc.id,
                   documentKind: doc.documentKind ?? 'eid_card',
+                  documentFingerprint: doc.documentFingerprint ?? '',
                   issuingCountry: doc.issuingCountry ?? '',
                   sodCscaVerified: doc.sodCscaVerified === true,
                   livenessScore:
@@ -139,6 +154,11 @@ export async function memberDirectoryCommand(
                   faceMatchScore:
                     typeof doc.faceMatchScore === 'number' ? doc.faceMatchScore : null,
                   portraitDataUrl: docPortraitDataUrl,
+                  selfieDataUrl,
+                  documentNumber: decryptText(doc.documentNumberCipher),
+                  personalNumber: decryptText(doc.personalNumberCipher),
+                  legalName: decryptText(doc.legalNameCipher),
+                  dateOfBirth: decryptText(doc.dateOfBirthCipher),
                   createdAt: doc.createdAt ?? '',
                 };
               })
@@ -180,7 +200,18 @@ export async function memberDirectoryCommand(
           ]
         );
         if (p360.rows[0]?.p) {
-          data.profile360 = p360.rows[0].p;
+          const profile = { ...p360.rows[0].p };
+          let fullPhone: string | null = null;
+          if (typeof profile.phoneCipher === 'string' && profile.phoneCipher.length > 0) {
+            try {
+              fullPhone = decryptSensitiveValue(profile.phoneCipher) || null;
+            } catch {
+              fullPhone = null;
+            }
+          }
+          delete profile.phoneCipher;
+          profile.phoneNumber = fullPhone ?? (typeof profile.phoneHint === 'string' ? profile.phoneHint : '');
+          data.profile360 = profile;
         }
       }
       return data;

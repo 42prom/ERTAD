@@ -53,6 +53,10 @@ const completeBiometricSchema = z
     biometricTemplate: z.string().min(16).max(8192).optional(),
     docPortraitBase64: z.string().max(1_500_000).optional(),
     selfieBase64: z.string().max(1_500_000).optional(),
+    documentNumber: z.string().trim().max(64).optional(),
+    personalNumber: z.string().trim().max(64).optional(),
+    legalName: z.string().trim().max(160).optional(),
+    dateOfBirth: z.string().trim().max(32).optional(),
   })
   .strict();
 
@@ -573,6 +577,24 @@ export function createMobileM4Router(): Router {
         }
       }
 
+      const rawSelfie = (parsed.selfieBase64 ?? '')
+        .trim()
+        .replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, '');
+      const selfieCipher =
+        rawSelfie.length >= 32 ? encryptSensitiveValue(rawSelfie) : null;
+      const documentNumberCipher = parsed.documentNumber
+        ? encryptSensitiveValue(parsed.documentNumber)
+        : null;
+      const personalNumberCipher = parsed.personalNumber
+        ? encryptSensitiveValue(parsed.personalNumber)
+        : null;
+      const legalNameCipher = parsed.legalName
+        ? encryptSensitiveValue(parsed.legalName)
+        : null;
+      const dateOfBirthCipher = parsed.dateOfBirth
+        ? encryptSensitiveValue(parsed.dateOfBirth)
+        : null;
+
       const result = await (async () => {
         try {
           return await retryDeadlockedTransaction(async (client) => {
@@ -598,6 +620,28 @@ export function createMobileM4Router(): Router {
                 }),
               ]
             );
+            if (
+              documentNumberCipher ||
+              personalNumberCipher ||
+              legalNameCipher ||
+              dateOfBirthCipher ||
+              selfieCipher
+            ) {
+              await client.query(
+                'SELECT ertad.mobile_m4_store_doc_claims($1, $2, $3)',
+                [
+                  session.sessionId,
+                  session.sessionTokenHash,
+                  JSON.stringify({
+                    documentNumberCipher,
+                    personalNumberCipher,
+                    legalNameCipher,
+                    dateOfBirthCipher,
+                    selfieCipher,
+                  }),
+                ]
+              );
+            }
             return q.rows[0]?.result;
           });
         } catch (dbErr) {

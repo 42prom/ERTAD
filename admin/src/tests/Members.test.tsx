@@ -200,15 +200,44 @@ it("keeps a promptly opened card visible when unchanged filter debounce settles"
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)); });
   expect(screen.getByRole("heading", { name: row.displayName! })).toBeVisible();
 });
-it("renders Member 360 personal data, trusted devices, and unified View logs tab with filters", async () => {
+it("renders unmasked Member 360 personal data, document claims, trusted devices, and unified View logs tab with filters", async () => {
   vi.mocked(membersApi.detail).mockResolvedValue({
     ...detail,
+    verification: {
+      assuranceLevel: "biometric_verified",
+      citizenshipCountry: "GE",
+      sodCscaVerified: true,
+      livenessScore: 0.98,
+      faceMatchScore: 0.92,
+      verifiedAt: "2026-11-24T11:00:00Z",
+      portraitDataUrl: "data:image/jpeg;base64,/9j/4AAQSkZJRg==",
+      documentCount: 1,
+      activeDeviceCount: 1,
+      linkedGoogleCount: 1,
+      documents: [
+        {
+          id: "doc-1",
+          documentKind: "eid_card",
+          issuingCountry: "GE",
+          sodCscaVerified: true,
+          livenessScore: 0.98,
+          faceMatchScore: 0.92,
+          portraitDataUrl: "data:image/jpeg;base64,/9j/4AAQSkZJRg==",
+          documentNumber: "SYN123456",
+          personalNumber: "00000000001",
+          legalName: "Synthetic Citizen",
+          dateOfBirth: "1990-01-01",
+          createdAt: "2026-11-24T11:00:00Z",
+        },
+      ],
+    },
     profile360: {
       anonCode: "#K4M9P2",
       hasWebAccount: true,
       webEmail: "member@example.test",
       hasPhone: true,
-      phoneHint: "+995 5** ** ** 89",
+      phoneNumber: "+995599000001",
+      phoneHint: "+995 5** ** ** 01",
       phoneUpdatedAt: "2026-11-24T10:00:00Z",
       linkedGoogleAccounts: [
         {
@@ -252,8 +281,10 @@ it("renders Member 360 personal data, trusted devices, and unified View logs tab
   mount();
   fireEvent.click(await screen.findByRole("button", { name: row.displayName! }));
   await screen.findByText("#K4M9P2");
-  fireEvent.click(screen.getByRole("button", { name: /Reveal details/i }));
-  expect(screen.getByText("+995 5** ** ** 89")).toBeVisible();
+  expect(screen.getByText("+995599000001")).toBeVisible();
+  expect(screen.getByText("SYN123456")).toBeVisible();
+  expect(screen.getByText("00000000001")).toBeVisible();
+  expect(screen.getByText("member@example.test")).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: /View logs/i }));
   expect(screen.getByText("eid_verification")).toBeVisible();
   expect(screen.getByText("award:manual")).toBeVisible();

@@ -2,6 +2,16 @@
 
 > Last updated: 2026-11-24 · Branch: `feat/ertad-development` · Not deployed to production
 
+## Unmasked Council Member Identity View & Encrypted Document Claims (Migration 87, 2026-11-24)
+
+- **DB & Backend ([`0087_council_full_member_identity_view.sql`](../backend/db/foundation/0087_council_full_member_identity_view.sql), [`m4Auth.ts`](../backend/src/modules/mobile/m4Auth.ts), [`members.ts`](../backend/src/modules/organization/members.ts)):**
+  - Added encrypted `document_number_cipher`, `personal_number_cipher`, `legal_name_cipher`, `date_of_birth_cipher`, and `selfie_cipher` columns to `ertad.member_verification_documents` with `SECURITY DEFINER` helper `ertad.mobile_m4_store_doc_claims` wired into `POST /api/v1/mobile/m4/biometric/complete`.
+  - Extended `ertad.member_directory_verification_summary` and `ertad.member_directory_profile_360` to return encrypted document claims, `phoneCipher`, and `deviceId` to authorized scoped directory readers; `members.ts` decrypts full E.164 `phoneNumber`, `documentNumber`, `personalNumber`, `legalName`, `dateOfBirth`, `portraitDataUrl`, and `selfieDataUrl` server-side (stripping all `*Cipher` keys) while retaining strict `42501` scope denial and audit logging.
+- **Web Admin ([`members.ts`](../admin/src/api/members.ts), [`Members.tsx`](../admin/src/pages/Members.tsx), [`Members.test.tsx`](../admin/src/tests/Members.test.tsx)):**
+  - Removed default `blur-md` and contact masking (`••••`) for authorized Council/Admin viewers in Member 360° profile so portraits, selfies, full phone, web email, linked Google accounts, document number, personal number, legal name, date of birth, biometric scores, and device IDs render immediately without click barriers.
+- **Verified evidence:**
+  - `db:migrate` (`0087`), `npm run test:members` (`8/8`), `npm run test:m4` (PASS), `npm run restore:drill` (`107 tables, 87 migrations`, `8.5s`), `Members.test.tsx` (`8/8`), `check:identity`, `tokens:check`, `typecheck`, `eslint --max-warnings 0`, `npm run build` (`9.39s`), and `check:workspace` (`922 eligible paths`).
+
 ## Flagship Web Admin UX: Member 360° Profile, Activity Logs, Grouped Navigation & Tech Step-Up Bar (Migration 86, 2026-11-24)
 
 - **Member 360° Profile & Unified Activity/Audit Log ([`0086_member_profile_360_and_activity_log.sql`](../backend/db/foundation/0086_member_profile_360_and_activity_log.sql), [`members.ts`](../backend/src/modules/organization/members.ts), [`members.ts` (Admin API)](../admin/src/api/members.ts), [`Members.tsx`](../admin/src/pages/Members.tsx), [`Members.test.tsx`](../admin/src/tests/Members.test.tsx)):**
