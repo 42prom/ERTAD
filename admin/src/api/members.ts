@@ -74,10 +74,45 @@ export interface MemberVerificationSummary {
   documents?: MemberVerificationDocument[];
   verificationLog?: MemberVerificationLogEntry[];
 }
+export interface MemberLinkedGoogle {
+  id: string;
+  emailHint: string;
+  isPrimary: boolean;
+  linkedAt: string;
+}
+export interface MemberTrustedDevice {
+  id: string;
+  platform: string;
+  appId: string;
+  verdict: string;
+  status: string;
+  lastAttestedAt: string | null;
+  createdAt: string;
+}
+export interface MemberActivityLogEntry {
+  id: string;
+  category: "verification" | "work" | "points" | "audit";
+  action: string;
+  status: string;
+  summary: string;
+  occurredAt: string;
+}
+export interface MemberProfile360 {
+  anonCode: string;
+  hasWebAccount: boolean;
+  webEmail: string;
+  hasPhone: boolean;
+  phoneHint: string;
+  phoneUpdatedAt: string | null;
+  linkedGoogleAccounts: MemberLinkedGoogle[];
+  devices: MemberTrustedDevice[];
+  activityLog: MemberActivityLogEntry[];
+}
 export interface MemberDetail extends DirectoryMember {
   canPropose: boolean;
   pointsScopes: MemberUnit[];
   verification?: MemberVerificationSummary | null;
+  profile360?: MemberProfile360 | null;
   work: MemberPage<{
     id: string;
     title: string;

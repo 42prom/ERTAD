@@ -3,8 +3,9 @@ import { platformSections, platformPath, type PlatformSection } from "../compone
 import PlatformProviders from "../components/PlatformProviders";
 import PlatformMail from "../components/PlatformMail";
 import PlatformSecurityLimits from "../components/PlatformSecurityLimits";
-import { useEffect, useState } from "react";
-import { Shield, RefreshCw } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { Shield, RefreshCw, Lock, Unlock } from "lucide-react";
+import { authApi } from "../api/client";
 import {
   platformApi,
   type AuditChainVerification,
@@ -15,6 +16,7 @@ import {
 import { useConsolePreferences } from "../components/useConsolePreferences";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
+import Input from "../components/ui/Input";
 import Select from "../components/ui/Select";
 import PlatformSessions from "../components/PlatformSessions";
 import PlatformAccounts from '../components/PlatformAccounts';
@@ -49,6 +51,34 @@ export default function Platform() {
     useState<AuditChainVerification | null>(null);
   const [verifyingChain, setVerifyingChain] = useState(false);
   const [verifyError, setVerifyError] = useState("");
+  const [stepUpOpen, setStepUpOpen] = useState(false);
+  const [stepUpPassword, setStepUpPassword] = useState("");
+  const [stepUpBusy, setStepUpBusy] = useState(false);
+  const [stepUpExpiresAt, setStepUpExpiresAt] = useState<string | null>(null);
+  const [stepUpError, setStepUpError] = useState("");
+
+  async function unlockStepUp(e: FormEvent) {
+    e.preventDefault();
+    if (!stepUpPassword || stepUpBusy) return;
+    setStepUpBusy(true);
+    setStepUpError("");
+    try {
+      const res = await authApi.stepUp(stepUpPassword);
+      setStepUpExpiresAt(res.expiresAt ?? new Date(Date.now() + 15 * 60_000).toISOString());
+      setStepUpPassword("");
+      setStepUpOpen(false);
+    } catch {
+      setStepUpPassword("");
+      setStepUpError(
+        t(
+          "პაროლი არასწორია. შეამოწმეთ და სცადეთ ხელახლა.",
+          "Incorrect password. Check and try again.",
+        ),
+      );
+    } finally {
+      setStepUpBusy(false);
+    }
+  }
   const cursor = cursors[cursors.length - 1];
   const scopeKey = JSON.stringify([tab, category, cursor]);
   const resourceKey = JSON.stringify([tab, category, cursor, revision]);
@@ -349,6 +379,7 @@ export default function Platform() {
               </span>
             )}
           </div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap gap-2">
             {(access.permissions.includes("platform.integrations.read") ||
               access.permissions.includes("platform.verification.read")) && (
@@ -391,6 +422,71 @@ export default function Platform() {
               </Button>
             )}
           </div>
+          {access.permissions.some(
+            (p) => p.endsWith(".propose") || p.endsWith(".approve"),
+          ) && (
+            <div className="flex items-center gap-2">
+              {stepUpExpiresAt ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                  <Unlock size={13} aria-hidden="true" />
+                  {t("Step-Up აქტიურია (15 წთ)", "Step-Up active (15 min)")}
+                </span>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    setStepUpOpen((v) => !v);
+                    setStepUpError("");
+                  }}
+                >
+                  <Lock size={13} aria-hidden="true" />
+                  {t("სესიის გახსნა (15 წთ)", "Unlock session (15 min)")}
+                </Button>
+              )}
+            </div>
+          )}
+          </div>
+          {stepUpOpen && (
+            <form
+              onSubmit={unlockStepUp}
+              className="flex flex-wrap items-end gap-2 rounded-lg border border-[var(--primary)] bg-[var(--elevated)] p-3"
+            >
+              <div className="min-w-[220px] flex-1">
+                <Input
+                  type="password"
+                  autoComplete="current-password"
+                  label={t(
+                    "ტექნიკური ანგარიშის პაროლი (15 წთ-ით გასახსნელად)",
+                    "Technical account password (15 min unlock)",
+                  )}
+                  value={stepUpPassword}
+                  disabled={stepUpBusy}
+                  onChange={(e) => setStepUpPassword(e.target.value)}
+                />
+              </div>
+              <Button type="submit" size="sm" disabled={stepUpBusy || !stepUpPassword}>
+                {t("გახსნა", "Unlock")}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={stepUpBusy}
+                onClick={() => {
+                  setStepUpOpen(false);
+                  setStepUpPassword("");
+                }}
+              >
+                {t("გაუქმება", "Cancel")}
+              </Button>
+              {stepUpError && (
+                <p role="alert" className="w-full text-xs text-[var(--danger)]">
+                  {stepUpError}
+                </p>
+              )}
+            </form>
+          )}
         </Card>
       )}
 

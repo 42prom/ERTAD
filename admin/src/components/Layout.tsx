@@ -355,18 +355,81 @@ export default function Layout() {
 
   const breadcrumbs = getBreadcrumbs();
 
-  const navItems = [
+  type NavGroupKey =
+    | "home"
+    | "org"
+    | "activity"
+    | "comms"
+    | "tech_integrations"
+    | "tech_security"
+    | "tech_monitoring";
+
+  const techGroupFor = (key: string): NavGroupKey =>
+    key === "integrations" || key === "email"
+      ? "tech_integrations"
+      : key === "verification" ||
+          key === "network" ||
+          key === "limits" ||
+          key === "providers" ||
+          key === "policy"
+        ? "tech_security"
+        : "tech_monitoring";
+
+  const groupLabels: Record<NavGroupKey, string> = {
+    home: language === "ka" ? "მთავარი" : "Overview",
+    org: language === "ka" ? "ორგანიზაცია" : "Organization",
+    activity: language === "ka" ? "აქტივობა" : "Engagement",
+    comms: language === "ka" ? "კომუნიკაცია და დამტკიცება" : "Comms & Approvals",
+    tech_integrations:
+      language === "ka" ? "ინტეგრაციები და ელფოსტა" : "Integrations & Email",
+    tech_security:
+      language === "ka" ? "ბიომეტრია და დაცვა" : "Biometrics & Protection",
+    tech_monitoring:
+      language === "ka" ? "მონიტორინგი და აუდიტი" : "Monitoring & Audit",
+  };
+
+  const navItems: Array<{
+    path: string;
+    label: string;
+    icon: typeof LayoutDashboard;
+    visible: boolean;
+    group: NavGroupKey;
+  }> = [
     {
       path: "/dashboard",
       label: language === "ka" ? "სამუშაო სივრცე" : "Workspace",
       icon: LayoutDashboard,
       visible: !platformAccess?.technicalAccount,
+      group: "home" as NavGroupKey,
+    },
+    {
+      path: "/members",
+      label: language === "ka" ? "წევრები" : "Members",
+      icon: Users,
+      visible: !!memberContexts.length,
+      group: "org" as NavGroupKey,
     },
     {
       path: "/units",
       label: language === "ka" ? "ჯგუფები და რეგიონები" : "Groups and regions",
       icon: Users,
       visible: !!unitContexts.length,
+      group: "org" as NavGroupKey,
+    },
+    {
+      path: "/positions",
+      label:
+        language === "ka" ? "პოზიციები და უფლებები" : "Positions and permissions",
+      icon: BadgeCheck,
+      visible: !!positionContexts.length,
+      group: "org" as NavGroupKey,
+    },
+    {
+      path: "/invitations",
+      label: language === "ka" ? "ვებმოწვევები" : "Web invitations",
+      icon: Users,
+      visible: invitationContexts.length > 0,
+      group: "org" as NavGroupKey,
     },
     ...platformSections.map((section) => ({
       path: platformPath(section.key),
@@ -375,7 +438,43 @@ export default function Layout() {
       visible:
         !!platformAccess?.technicalAccount &&
         platformAccess.permissions.includes(section.permission),
+      group: techGroupFor(section.key),
     })),
+    {
+      path: "/tasks",
+      label: language === "ka" ? "დავალებები" : "Tasks",
+      icon: ListTodo,
+      visible: !!workContexts.length,
+      group: "activity" as NavGroupKey,
+    },
+    {
+      path: "/events",
+      label: language === "ka" ? "ღონისძიებები" : "Events",
+      icon: CalendarDays,
+      visible: !!workContexts.length,
+      group: "activity" as NavGroupKey,
+    },
+    {
+      path: "/decisions",
+      label: language === "ka" ? "პულები" : "Polls",
+      icon: Vote,
+      visible: !!decisionContexts.length,
+      group: "activity" as NavGroupKey,
+    },
+    {
+      path: "/contribution",
+      label: language === "ka" ? "კონტრიბუცია" : "Contribution",
+      icon: Award,
+      visible: !!pointContexts.length,
+      group: "activity" as NavGroupKey,
+    },
+    {
+      path: "/channels",
+      label: language === "ka" ? "ჯგუფის არხები" : "Group channels",
+      icon: MessageSquare,
+      visible: !!channelContexts.length,
+      group: "comms" as NavGroupKey,
+    },
     {
       path: "/inbox",
       label: language === "ka" ? "შემოსული მოთხოვნები" : "Inbox",
@@ -383,69 +482,34 @@ export default function Layout() {
       visible:
         !platformAccess?.technicalAccount &&
         (!!inboxSummary?.contexts.length || inboxError),
-    },
-    {
-      path: "/channels",
-      label: language === "ka" ? "ჯგუფის არხები" : "Group channels",
-      icon: MessageSquare,
-      visible: !!channelContexts.length,
-    },
-    {
-      path: "/tasks",
-      label: language === "ka" ? "დავალებები" : "Tasks",
-      icon: ListTodo,
-      visible: !!workContexts.length,
-    },
-    {
-      path: "/invitations",
-      label: language === "ka" ? "ვებმოწვევები" : "Web invitations",
-      icon: Users,
-      visible: invitationContexts.length > 0,
-    },
-    {
-      path: "/members",
-      label: language === "ka" ? "წევრები" : "Members",
-      icon: Users,
-      visible: !!memberContexts.length,
-    },
-    {
-      path: "/events",
-      label: language === "ka" ? "ღონისძიებები" : "Events",
-      icon: CalendarDays,
-      visible: !!workContexts.length,
-    },
-    {
-      path: "/positions",
-      label:
-        language === "ka" ? "პოზიციები და უფლებები" : "Positions and permissions",
-      icon: BadgeCheck,
-      visible: !!positionContexts.length,
-    },
-    {
-      path: "/approvals",
-      label: language === "ka" ? "დამტკიცებები" : "Approvals",
-      icon: BadgeCheck,
-      visible: !!collectiveContexts.length,
-    },
-    {
-      path: "/contribution",
-      label: language === "ka" ? "კონტრიბუცია" : "Contribution",
-      icon: Award,
-      visible: !!pointContexts.length,
-    },
-    {
-      path: "/decisions",
-      label: language === "ka" ? "პულები" : "Polls",
-      icon: Vote,
-      visible: !!decisionContexts.length,
+      group: "comms" as NavGroupKey,
     },
     {
       path: "/reviews",
       label: language === "ka" ? "მოთხოვნები" : "Requests",
       icon: UserCheck,
       visible: reviewCount !== null,
+      group: "comms" as NavGroupKey,
+    },
+    {
+      path: "/approvals",
+      label: language === "ka" ? "დამტკიცებები" : "Approvals",
+      icon: BadgeCheck,
+      visible: !!collectiveContexts.length,
+      group: "comms" as NavGroupKey,
     },
   ].filter((item) => item.visible);
+
+  const navGroupOrder: NavGroupKey[] = platformAccess?.technicalAccount
+    ? ["tech_integrations", "tech_security", "tech_monitoring"]
+    : ["home", "org", "activity", "comms"];
+  const groupedNav = navGroupOrder
+    .map((key) => ({
+      key,
+      title: groupLabels[key],
+      items: navItems.filter((item) => item.group === key),
+    }))
+    .filter((g) => g.items.length > 0);
 
   const paletteItems: CommandPaletteNavItem[] = navItems.map((item) => ({
     path: item.path,
@@ -497,42 +561,38 @@ export default function Layout() {
           className="console-nav"
           aria-label={language === "ka" ? "მთავარი მენიუ" : "Main navigation"}
         >
-          <p className="console-nav-caption">
-            {platformAccess?.technicalAccount
-              ? language === "ka"
-                ? "ტექნიკური მართვა"
-                : "Technical administration"
-              : language === "ka"
-                ? "მართვა"
-                : "Management"}
-          </p>
-          {navItems.map(({ path, label, icon: Icon }) => (
-            <Link
-              key={path}
-              to={path}
-              className="console-nav-item"
-              aria-current={location.pathname === path ? "page" : undefined}
-            >
-              <Icon size={19} aria-hidden="true" />
-              <span>{label}</span>
-              {path === "/inbox" && !!inboxSummary?.unread && (
-                <span className="console-count" aria-hidden="true">
-                  {inboxSummary.unread}
-                </span>
-              )}
-              {path === "/reviews" && !!reviewCount && (
-                <span
-                  className="console-count"
-                  aria-label={
-                    language === "ka"
-                      ? "დასადასტურებელი დანიშვნები"
-                      : "Pending appointments"
-                  }
+          {groupedNav.map((group) => (
+            <div key={group.key} className="mb-3 last:mb-0">
+              <p className="console-nav-caption">{group.title}</p>
+              {group.items.map(({ path, label, icon: Icon }) => (
+                <Link
+                  key={path}
+                  to={path}
+                  className="console-nav-item"
+                  aria-current={location.pathname === path ? "page" : undefined}
                 >
-                  {reviewCount}
-                </span>
-              )}
-            </Link>
+                  <Icon size={18} aria-hidden="true" />
+                  <span>{label}</span>
+                  {path === "/inbox" && !!inboxSummary?.unread && (
+                    <span className="console-count" aria-hidden="true">
+                      {inboxSummary.unread}
+                    </span>
+                  )}
+                  {path === "/reviews" && !!reviewCount && (
+                    <span
+                      className="console-count"
+                      aria-label={
+                        language === "ka"
+                          ? "დასადასტურებელი დანიშვნები"
+                          : "Pending appointments"
+                      }
+                    >
+                      {reviewCount}
+                    </span>
+                  )}
+                </Link>
+              ))}
+            </div>
           ))}
         </nav>
         <div className="console-sidebar-tools">

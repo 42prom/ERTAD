@@ -200,6 +200,67 @@ it("keeps a promptly opened card visible when unchanged filter debounce settles"
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)); });
   expect(screen.getByRole("heading", { name: row.displayName! })).toBeVisible();
 });
+it("renders Member 360 personal data, trusted devices, and unified View logs tab with filters", async () => {
+  vi.mocked(membersApi.detail).mockResolvedValue({
+    ...detail,
+    profile360: {
+      anonCode: "#K4M9P2",
+      hasWebAccount: true,
+      webEmail: "member@example.test",
+      hasPhone: true,
+      phoneHint: "+995 5** ** ** 89",
+      phoneUpdatedAt: "2026-11-24T10:00:00Z",
+      linkedGoogleAccounts: [
+        {
+          id: "g-1",
+          emailHint: "m***@gmail.com",
+          isPrimary: true,
+          linkedAt: "2026-11-24T10:00:00Z",
+        },
+      ],
+      devices: [
+        {
+          id: "d-1",
+          platform: "android",
+          appId: "ge.ertad.mobile",
+          verdict: "strong",
+          status: "active",
+          lastAttestedAt: "2026-11-24T12:00:00Z",
+          createdAt: "2026-11-24T10:00:00Z",
+        },
+      ],
+      activityLog: [
+        {
+          id: "ver:1",
+          category: "verification",
+          action: "eid_verification",
+          status: "passed",
+          summary: "face=92% · liveness=98%",
+          occurredAt: "2026-11-24T11:00:00Z",
+        },
+        {
+          id: "pts:1",
+          category: "points",
+          action: "award:manual",
+          status: "+15",
+          summary: "Field support",
+          occurredAt: "2026-11-24T12:00:00Z",
+        },
+      ],
+    },
+  });
+  mount();
+  fireEvent.click(await screen.findByRole("button", { name: row.displayName! }));
+  await screen.findByText("#K4M9P2");
+  fireEvent.click(screen.getByRole("button", { name: /Reveal details/i }));
+  expect(screen.getByText("+995 5** ** ** 89")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: /View logs/i }));
+  expect(screen.getByText("eid_verification")).toBeVisible();
+  expect(screen.getByText("award:manual")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Points" }));
+  expect(screen.queryByText("eid_verification")).toBeNull();
+  expect(screen.getByText("award:manual")).toBeVisible();
+});
 it("distinguishes denied access from an authorized empty result", async () => {
   vi.mocked(membersApi.contexts).mockResolvedValue([]);
   mount();

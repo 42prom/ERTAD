@@ -170,6 +170,18 @@ export async function memberDirectoryCommand(
             verificationLog: Array.isArray(raw.verificationLog) ? raw.verificationLog : [],
           };
         }
+        const p360 = await client.query<{ p: Record<string, unknown> | null }>(
+          'SELECT ertad.member_directory_profile_360($1,$2,$3,$4) AS p',
+          [
+            session.sessionId,
+            session.sessionTokenHash,
+            args.organizationId,
+            args.memberId,
+          ]
+        );
+        if (p360.rows[0]?.p) {
+          data.profile360 = p360.rows[0].p;
+        }
       }
       return data;
     });

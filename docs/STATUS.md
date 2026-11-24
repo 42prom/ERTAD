@@ -2,6 +2,19 @@
 
 > Last updated: 2026-11-24 · Branch: `feat/ertad-development` · Not deployed to production
 
+## Flagship Web Admin UX: Member 360° Profile, Activity Logs, Grouped Navigation & Tech Step-Up Bar (Migration 86, 2026-11-24)
+
+- **Member 360° Profile & Unified Activity/Audit Log ([`0086_member_profile_360_and_activity_log.sql`](../backend/db/foundation/0086_member_profile_360_and_activity_log.sql), [`members.ts`](../backend/src/modules/organization/members.ts), [`members.ts` (Admin API)](../admin/src/api/members.ts), [`Members.tsx`](../admin/src/pages/Members.tsx), [`Members.test.tsx`](../admin/src/tests/Members.test.tsx)):**
+  - Added `SECURITY DEFINER` function `ertad.member_directory_profile_360` returning scoped alphanumeric handle (`#XXXXXX`), web account status, masked phone hint, linked Google accounts, trusted mobile devices, and a 40-entry unified chronological activity/audit timeline (`verification`, `work`, `points`, `audit`) without exposing ballot choices or unencrypted secrets.
+  - Upgraded `Members.tsx` member detail view into a 3-tab 360° profile (`Overview & personal data` with mask/reveal toggle, `Verification & devices` with blur-to-reveal portraits & trusted device table, and `Activity & audit logs` with 5 category filter chips + top-level `View logs` button).
+- **Streamlined Grouped Navigation & Technical Console 15-Min Step-Up Unlock Bar ([`Layout.tsx`](../admin/src/components/Layout.tsx), [`Platform.tsx`](../admin/src/pages/Platform.tsx)):**
+  - Grouped sidebar links into clear operational (`Overview`, `Organization`, `Engagement`, `Comms & Approvals`) and technical (`Integrations & Email`, `Biometrics & Protection`, `Monitoring & Audit`) sections while preserving all deep links, `aria-current`, and permission revocation guards.
+  - Added a 15-minute `Unlock session (15 min)` Step-Up unlock bar in the Technical Console header so operators/reviewers can authenticate once per 15-minute window instead of hitting repeated `428` prompts.
+- **Verified evidence:**
+  - `db:migrate` (`0086`), `npm run test:members` (`8/8` scenarios), `npm run restore:drill` (`107 tables, 86 migrations`, `8.3s`).
+  - Targeted Vitest (`Members.test.tsx` `8/8` including new Member 360 & View Logs test, `Platform.test.tsx` `5/5`, `PlatformNavigation.test.tsx` `1/1`), `check:identity`, `tokens:check`, `typecheck` (backend & admin), `eslint --max-warnings 0`, production workspace builds (`vite build` `10.21s`), `check:workspace` (`921 eligible paths`), and `npm run smoke` (PASS).
+  - Live headless Playwright E2E against `:15173` / `:13000`: verified operational 4-group sidebar + Member 360 personal data card + `View logs` 5-filter timeline (`0` page errors) and technical 3-group sidebar + 15-min Step-Up unlock bar (`stepUpUnlocked: true`, `0` page errors).
+
 ## Sell-Ready Web Admin, Backend Pool Resilience & Mobile Org Sync Polish (2026-11-24)
 
 - **Technical Manager Inline Step-Up & Validation UX ([`PlatformExternalIntegrations.tsx`](../admin/src/components/PlatformExternalIntegrations.tsx), [`PlatformVerification.tsx`](../admin/src/components/PlatformVerification.tsx), [`PlatformMail.tsx`](../admin/src/components/PlatformMail.tsx), [`PlatformExternalIntegrations.test.tsx`](../admin/src/tests/PlatformExternalIntegrations.test.tsx), [`PlatformVerification.test.tsx`](../admin/src/tests/PlatformVerification.test.tsx)):**

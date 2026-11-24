@@ -1,6 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, ArrowLeft, Download, RefreshCw } from "lucide-react";
+import {
+  Users,
+  ArrowLeft,
+  Download,
+  RefreshCw,
+  ScrollText,
+  ShieldCheck,
+  Smartphone,
+  UserCircle2,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { downloadSafeCsv } from "../utils/safeCsv";
 import {
   membersApi,
@@ -43,6 +54,13 @@ export default function Members() {
     [detail, setDetail] = useState<MemberDetail | null>(null),
     [revealedMemberId, setRevealedMemberId] = useState(""),
     [revealedDocIds, setRevealedDocIds] = useState<Record<string, boolean>>({}),
+    [profileTab, setProfileTab] = useState<"overview" | "verification" | "logs">(
+      "overview",
+    ),
+    [logFilter, setLogFilter] = useState<
+      "all" | "verification" | "work" | "points" | "audit"
+    >("all"),
+    [revealContact, setRevealContact] = useState(false),
     [workPage, setWorkPage] = useState(1);
   const [loading, setLoading] = useState(true),
     [error, setError] = useState("");
@@ -604,352 +622,585 @@ export default function Members() {
               onClick={() => {
                 setSelected("");
                 setDetail(null);
+                setProfileTab("overview");
+                setLogFilter("all");
+                setRevealContact(false);
               }}
             >
               <ArrowLeft size={18} />
               {t("სიაში დაბრუნება", "Back to list")}
             </Button>
           )}
-          {detail && (
+          {detail && (() => {
+            const p360 = detail.profile360;
+            const activityItems = p360?.activityLog ?? [];
+            const filteredLogs =
+              logFilter === "all"
+                ? activityItems
+                : activityItems.filter((item) => item.category === logFilter);
+            const verifiedBadge =
+              detail.verification?.assuranceLevel === "biometric_verified";
+            const maskValue = (val: string) =>
+              revealContact || !val
+                ? val || "—"
+                : val.length <= 4
+                  ? "••••"
+                  : `${val.slice(0, 2)}••••${val.slice(-2)}`;
+            return (
             <>
-              <Card>
-                <div className="flex flex-wrap items-start gap-4">
-                  {detail.verification?.portraitDataUrl && (() => {
-                    const revealPortrait = revealedMemberId === detail.id;
-                    return (
-                      <div className="flex flex-col items-start gap-1.5">
-                        <img
-                          src={detail.verification.portraitDataUrl}
-                          alt={name(detail)}
-                          className={`h-20 w-20 rounded-xl border border-[var(--border)] object-cover transition ${revealPortrait ? "" : "blur-md"}`}
-                        />
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() =>
-                            setRevealedMemberId((id) =>
-                              id === detail.id ? "" : detail.id,
-                            )
-                          }
-                        >
-                          {revealPortrait
-                            ? t("ფოტოს დამალვა", "Hide photo")
-                            : t("ფოტოს ჩვენება", "Show photo")}
-                        </Button>
+              <Card className="space-y-4">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="flex flex-wrap items-start gap-4 min-w-0 flex-1">
+                    {detail.verification?.portraitDataUrl ? (() => {
+                      const revealPortrait = revealedMemberId === detail.id;
+                      return (
+                        <div className="flex flex-col items-start gap-1.5">
+                          <img
+                            src={detail.verification.portraitDataUrl}
+                            alt={name(detail)}
+                            className={`h-20 w-20 rounded-xl border border-[var(--border)] object-cover transition ${revealPortrait ? "" : "blur-md"}`}
+                          />
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() =>
+                              setRevealedMemberId((id) =>
+                                id === detail.id ? "" : detail.id,
+                              )
+                            }
+                          >
+                            {revealPortrait
+                              ? t("ფოტოს დამალვა", "Hide photo")
+                              : t("ფოტოს ჩვენება", "Show photo")}
+                          </Button>
+                        </div>
+                      );
+                    })() : (
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--elevated)] text-xl font-bold text-[var(--primary)]">
+                        {name(detail).slice(0, 1).toUpperCase()}
                       </div>
-                    );
-                  })()}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2
-                        tabIndex={-1}
-                        ref={heading}
-                        className="text-xl font-semibold"
-                      >
-                        {name(detail)}
-                      </h2>
-                      {detail.verification?.assuranceLevel ===
-                        "biometric_verified" && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                          {t(
-                            "eID ბიომეტრიულად დადასტურებული",
-                            "eID Biometrically Verified",
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2
+                          tabIndex={-1}
+                          ref={heading}
+                          className="text-xl font-semibold"
+                        >
+                          {name(detail)}
+                        </h2>
+                        {p360?.anonCode && (
+                          <span className="rounded-md border border-[var(--border)] bg-[var(--elevated)] px-2 py-0.5 font-mono text-xs font-semibold text-[var(--text)]">
+                            {p360.anonCode}
+                          </span>
+                        )}
+                        {verifiedBadge ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                            <ShieldCheck size={13} aria-hidden="true" />
+                            {t(
+                              "eID ბიომეტრიულად დადასტურებული",
+                              "eID Biometrically Verified",
+                            )}
+                            {detail.verification?.citizenshipCountry
+                              ? ` · ${detail.verification.citizenshipCountry}`
+                              : ""}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-[var(--elevated)] px-2.5 py-0.5 text-xs font-medium text-[var(--muted)]">
+                            {t("არავერიფიცირებული", "Unverified")}
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 break-all text-xs text-[var(--muted)]">
+                        {t("წევრის კოდი", "Member code")}: {detail.id}
+                      </p>
+                      {verifiedBadge && detail.verification && (
+                        <p className="mt-1 text-xs text-[var(--muted)]">
+                          {typeof detail.verification.faceMatchScore ===
+                            "number" && (
+                            <>
+                              {t("სახის თანხვედრა", "Face match")}:{" "}
+                              <strong>
+                                {Math.round(
+                                  detail.verification.faceMatchScore * 100,
+                                )}
+                                %
+                              </strong>
+                              {" · "}
+                            </>
                           )}
-                          {detail.verification.citizenshipCountry
-                            ? ` · ${detail.verification.citizenshipCountry}`
+                          {typeof detail.verification.livenessScore ===
+                            "number" && (
+                            <>
+                              {t("სიცოცხლისუნარიანობა", "Liveness")}:{" "}
+                              <strong>
+                                {Math.round(
+                                  detail.verification.livenessScore * 100,
+                                )}
+                                %
+                              </strong>
+                              {" · "}
+                            </>
+                          )}
+                          {detail.verification.sodCscaVerified
+                            ? t("NFC SOD/CSCA: დადასტურებული", "NFC SOD/CSCA: verified")
+                            : t("NFC SOD/CSCA: არ არის", "NFC SOD/CSCA: unverified")}
+                          {detail.verification.verifiedAt
+                            ? ` · ${new Date(detail.verification.verifiedAt).toLocaleDateString(
+                                language === "ka" ? "ka-GE" : "en-GB",
+                              )}`
                             : ""}
-                        </span>
+                        </p>
                       )}
                     </div>
-                    <p className="break-all text-sm text-[var(--muted)]">
-                      {t("წევრის კოდი", "Member code")}: {detail.id}
-                    </p>
-                    {detail.verification?.assuranceLevel ===
-                      "biometric_verified" && (
-                      <p className="mt-1 text-xs text-[var(--muted)]">
-                        {typeof detail.verification.faceMatchScore ===
-                          "number" && (
-                          <>
-                            {t("სახის თანხვედრა", "Face match")}:{" "}
-                            <strong>
-                              {Math.round(
-                                detail.verification.faceMatchScore * 100,
-                              )}
-                              %
-                            </strong>
-                            {" · "}
-                          </>
-                        )}
-                        {typeof detail.verification.livenessScore ===
-                          "number" && (
-                          <>
-                            {t("სიცოცხლისუნარიანობა", "Liveness")}:{" "}
-                            <strong>
-                              {Math.round(
-                                detail.verification.livenessScore * 100,
-                              )}
-                              %
-                            </strong>
-                            {" · "}
-                          </>
-                        )}
-                        {detail.verification.sodCscaVerified
-                          ? t("NFC SOD/CSCA: დადასტურებული", "NFC SOD/CSCA: verified")
-                          : t("NFC SOD/CSCA: არ არის", "NFC SOD/CSCA: unverified")}
-                        {detail.verification.verifiedAt
-                          ? ` · ${new Date(detail.verification.verifiedAt).toLocaleDateString(
-                              language === "ka" ? "ka-GE" : "en-GB",
-                            )}`
-                          : ""}
-                      </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant={profileTab === "logs" ? "primary" : "secondary"}
+                      onClick={() => setProfileTab("logs")}
+                    >
+                      <ScrollText size={15} aria-hidden="true" />
+                      {t("ლოგების ნახვა", "View logs")}
+                      {activityItems.length > 0 && ` (${activityItems.length})`}
+                    </Button>
+                    {detail.canPropose && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() =>
+                          navigate("/reviews", {
+                            state: {
+                              memberDirectory: {
+                                organizationId: org,
+                                memberId: detail.id,
+                              },
+                            },
+                          })
+                        }
+                      >
+                        {t("პოზიციის შეთავაზება", "Propose position")}
+                      </Button>
                     )}
+                    {detail.pointsScopes.map((u) => (
+                      <Button
+                        size="sm"
+                        key={u.id}
+                        variant="secondary"
+                        onClick={() =>
+                          navigate("/contribution", {
+                            state: {
+                              memberDirectory: {
+                                organizationId: org,
+                                memberId: detail.id,
+                                unitId: u.id,
+                              },
+                            },
+                          })
+                        }
+                      >
+                        {t("ქულები და ჯილდო", "Points and recognition")} ·{" "}
+                        {u.name}
+                      </Button>
+                    ))}
                   </div>
                 </div>
-                {(typeof detail.verification?.documentCount === "number" ||
-                  typeof detail.verification?.activeDeviceCount === "number" ||
-                  typeof detail.verification?.linkedGoogleCount === "number") && (
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--muted)]">
-                    {typeof detail.verification?.documentCount === "number" && (
-                      <span className="rounded-lg border border-[var(--border)] bg-[var(--elevated)] px-2.5 py-1">
-                        {t("საბუთები", "Documents")}:{" "}
-                        <strong className="text-[var(--text)]">
-                          {detail.verification.documentCount}
-                        </strong>
-                      </span>
+
+                {/* Flagship 360 Profile Tabs */}
+                <div
+                  role="tablist"
+                  aria-label={t("წევრის პროფილის განყოფილებები", "Member profile sections")}
+                  className="flex flex-wrap gap-2 border-b border-[var(--border)] pb-3"
+                >
+                  <Button
+                    size="sm"
+                    role="tab"
+                    aria-selected={profileTab === "overview"}
+                    variant={profileTab === "overview" ? "primary" : "ghost"}
+                    onClick={() => setProfileTab("overview")}
+                  >
+                    <UserCircle2 size={15} aria-hidden="true" />
+                    {t("მიმოხილვა და პირადი მონაცემები", "Overview & personal data")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    role="tab"
+                    aria-selected={profileTab === "verification"}
+                    variant={profileTab === "verification" ? "primary" : "ghost"}
+                    onClick={() => setProfileTab("verification")}
+                  >
+                    <Smartphone size={15} aria-hidden="true" />
+                    {t("ვერიფიკაცია და მოწყობილობები", "Verification & devices")}
+                    {(detail.verification?.documentCount || p360?.devices?.length)
+                      ? ` (${(detail.verification?.documentCount ?? 0) + (p360?.devices?.length ?? 0)})`
+                      : ""}
+                  </Button>
+                  <Button
+                    size="sm"
+                    role="tab"
+                    aria-selected={profileTab === "logs"}
+                    variant={profileTab === "logs" ? "primary" : "ghost"}
+                    onClick={() => setProfileTab("logs")}
+                  >
+                    <ScrollText size={15} aria-hidden="true" />
+                    {t("ლოგები და აუდიტი", "Activity & audit logs")}
+                    {activityItems.length > 0 ? ` (${activityItems.length})` : ""}
+                  </Button>
+                </div>
+
+                {profileTab === "overview" && (
+                  <div className="space-y-4">
+                    {p360 && (
+                      <div className="rounded-xl border border-[var(--border)] bg-[var(--elevated)] p-3.5 space-y-2.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                            {t("პირადი მონაცემები და ანგარიშები", "Personal data & linked accounts")}
+                          </h3>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setRevealContact((v) => !v)}
+                          >
+                            {revealContact ? (
+                              <EyeOff size={14} aria-hidden="true" />
+                            ) : (
+                              <Eye size={14} aria-hidden="true" />
+                            )}
+                            {revealContact
+                              ? t("დამალვა", "Mask details")
+                              : t("დეტალების ჩვენება", "Reveal details")}
+                          </Button>
+                        </div>
+                        <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                          <div>
+                            <dt className="text-xs text-[var(--muted)]">
+                              {t("ტელეფონი", "Phone")}
+                            </dt>
+                            <dd className="font-medium text-[var(--text)]">
+                              {p360.hasPhone
+                                ? maskValue(p360.phoneHint || t("შენახულია", "Stored"))
+                                : t("არ არის მითითებული", "Not set")}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs text-[var(--muted)]">
+                              {t("ვებ-ანგარიში", "Web account")}
+                            </dt>
+                            <dd className="font-medium text-[var(--text)] break-all">
+                              {p360.hasWebAccount
+                                ? maskValue(p360.webEmail || t("აქტიურია", "Active"))
+                                : t("მხოლოდ მობილური", "Mobile only")}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs text-[var(--muted)]">
+                              {t("მიბმული Google ანგარიშები", "Linked Google accounts")}
+                            </dt>
+                            <dd className="font-medium text-[var(--text)]">
+                              {p360.linkedGoogleAccounts.length > 0
+                                ? p360.linkedGoogleAccounts
+                                    .map((g) => maskValue(g.emailHint))
+                                    .join(", ")
+                                : t("არ არის მიბმული", "None linked")}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs text-[var(--muted)]">
+                              {t("სანდო მოწყობილობები", "Trusted devices")}
+                            </dt>
+                            <dd className="font-medium text-[var(--text)]">
+                              {p360.devices.filter((d) => d.status === "active").length} /{" "}
+                              {p360.devices.length}
+                            </dd>
+                          </div>
+                        </dl>
+                      </div>
                     )}
-                    {typeof detail.verification?.activeDeviceCount ===
-                      "number" && (
-                      <span className="rounded-lg border border-[var(--border)] bg-[var(--elevated)] px-2.5 py-1">
-                        {t("აქტიური მოწყობილობები", "Active devices")}:{" "}
-                        <strong className="text-[var(--text)]">
-                          {detail.verification.activeDeviceCount}
-                        </strong>
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2.5">
+                      <p className="text-sm font-medium">
+                        {t("ქულები ხილულ ფარგლებში", "Points in visible scope")}:{" "}
+                        {detail.points ?? t("შეზღუდულია", "Restricted")}
+                      </p>
+                      <span className="text-xs text-[var(--muted)]">
+                        {t(
+                          "სტატუსი ეხება წევრობას. ქულები არ განსაზღვრავს უფლებებს ან თანამდებობას.",
+                          "Status describes membership. Points do not determine authority or position.",
+                        )}
                       </span>
-                    )}
-                    {typeof detail.verification?.linkedGoogleCount ===
-                      "number" && (
-                      <span className="rounded-lg border border-[var(--border)] bg-[var(--elevated)] px-2.5 py-1">
-                        {t("მიბმული Google", "Linked Google")}:{" "}
-                        <strong className="text-[var(--text)]">
-                          {detail.verification.linkedGoogleCount}
-                        </strong>
-                      </span>
-                    )}
+                    </div>
+                    <div className="space-y-3">
+                      {detail.memberships.map((m) => (
+                        <div
+                          key={m.id}
+                          className="border-t border-[var(--border)] pt-3"
+                        >
+                          <strong>
+                            {m.unitName} · {m.positionName}
+                          </strong>
+                          <p className="text-sm text-[var(--muted)]">
+                            {label(m.status)} · {date(m.validFrom)} —{" "}
+                            {date(m.validUntil)}
+                          </p>
+                          {m.canChange && (
+                            <MembershipChange
+                              key={org + m.id}
+                              organizationId={org}
+                              membershipId={m.id}
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
-                {(detail.verification?.documents?.length ?? 0) > 0 && (
-                  <div className="mt-4 border-t border-[var(--border)] pt-3">
-                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-                      {t(
-                        "გამოყენებული საბუთები და პორტრეტები",
-                        "Verified documents & portraits",
-                      )}
-                    </h3>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {detail.verification!.documents!.map((doc, idx) => {
-                        const docKey = `${detail.id}:${doc.id}`;
-                        const revealDoc = Boolean(revealedDocIds[docKey]);
-                        const docLabel =
-                          doc.documentKind === "passport"
-                            ? t("პასპორტი", "Passport")
-                            : doc.documentKind === "eid_card"
-                              ? t("ID ბარათი / eID", "eID Card")
-                              : t("სხვა საბუთი", "Other document");
-                        return (
-                          <div
-                            key={doc.id}
-                            className="flex items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--elevated)] p-2.5"
-                          >
-                            {doc.portraitDataUrl ? (
-                              <div className="flex shrink-0 flex-col items-start gap-1">
-                                <img
-                                  src={doc.portraitDataUrl}
-                                  alt={`${name(detail)} #${idx + 1}`}
-                                  className={`h-14 w-14 rounded-lg border border-[var(--border)] object-cover transition ${revealDoc ? "" : "blur-md"}`}
-                                />
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  onClick={() =>
-                                    setRevealedDocIds((prev) => ({
-                                      ...prev,
-                                      [docKey]: !prev[docKey],
-                                    }))
+
+                {profileTab === "verification" && (
+                  <div className="space-y-4">
+                    {(typeof detail.verification?.documentCount === "number" ||
+                      typeof detail.verification?.activeDeviceCount === "number" ||
+                      typeof detail.verification?.linkedGoogleCount === "number") && (
+                      <div className="flex flex-wrap gap-2 text-xs text-[var(--muted)]">
+                        {typeof detail.verification?.documentCount === "number" && (
+                          <span className="rounded-lg border border-[var(--border)] bg-[var(--elevated)] px-2.5 py-1">
+                            {t("საბუთები", "Documents")}:{" "}
+                            <strong className="text-[var(--text)]">
+                              {detail.verification.documentCount}
+                            </strong>
+                          </span>
+                        )}
+                        {typeof detail.verification?.activeDeviceCount === "number" && (
+                          <span className="rounded-lg border border-[var(--border)] bg-[var(--elevated)] px-2.5 py-1">
+                            {t("აქტიური მოწყობილობები", "Active devices")}:{" "}
+                            <strong className="text-[var(--text)]">
+                              {detail.verification.activeDeviceCount}
+                            </strong>
+                          </span>
+                        )}
+                        {typeof detail.verification?.linkedGoogleCount === "number" && (
+                          <span className="rounded-lg border border-[var(--border)] bg-[var(--elevated)] px-2.5 py-1">
+                            {t("მიბმული Google", "Linked Google")}:{" "}
+                            <strong className="text-[var(--text)]">
+                              {detail.verification.linkedGoogleCount}
+                            </strong>
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {(detail.verification?.documents?.length ?? 0) > 0 ? (
+                      <div>
+                        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                          {t(
+                            "გამოყენებული საბუთები და პორტრეტები",
+                            "Verified documents & portraits",
+                          )}
+                        </h3>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {detail.verification!.documents!.map((doc, idx) => {
+                            const docKey = `${detail.id}:${doc.id}`;
+                            const revealDoc = Boolean(revealedDocIds[docKey]);
+                            const docLabel =
+                              doc.documentKind === "passport"
+                                ? t("პასპორტი", "Passport")
+                                : doc.documentKind === "eid_card"
+                                  ? t("ID ბარათი / eID", "eID Card")
+                                  : t("სხვა საბუთი", "Other document");
+                            return (
+                              <div
+                                key={doc.id}
+                                className="flex items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--elevated)] p-2.5"
+                              >
+                                {doc.portraitDataUrl ? (
+                                  <div className="flex shrink-0 flex-col items-start gap-1">
+                                    <img
+                                      src={doc.portraitDataUrl}
+                                      alt={`${name(detail)} #${idx + 1}`}
+                                      className={`h-14 w-14 rounded-lg border border-[var(--border)] object-cover transition ${revealDoc ? "" : "blur-md"}`}
+                                    />
+                                    <Button
+                                      size="sm"
+                                      variant="secondary"
+                                      onClick={() =>
+                                        setRevealedDocIds((prev) => ({
+                                          ...prev,
+                                          [docKey]: !prev[docKey],
+                                        }))
+                                      }
+                                    >
+                                      {revealDoc
+                                        ? t("დამალვა", "Hide")
+                                        : t("ჩვენება", "Show")}
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] text-xs text-[var(--muted)]">
+                                    —
+                                  </div>
+                                )}
+                                <div className="min-w-0 flex-1 text-xs">
+                                  <p className="font-semibold text-[var(--text)]">
+                                    {docLabel}
+                                    {doc.issuingCountry
+                                      ? ` · ${doc.issuingCountry}`
+                                      : ""}
+                                  </p>
+                                  <p className="text-[var(--muted)]">
+                                    {doc.sodCscaVerified
+                                      ? t("SOD/CSCA: დადასტურებული", "SOD/CSCA: verified")
+                                      : t("SOD/CSCA: არ არის", "SOD/CSCA: unverified")}
+                                    {typeof doc.faceMatchScore === "number"
+                                      ? ` · ${t("სახე", "Face")}: ${Math.round(doc.faceMatchScore * 100)}%`
+                                      : ""}
+                                  </p>
+                                  <p className="text-[11px] text-[var(--muted)]">
+                                    {doc.createdAt
+                                      ? new Date(doc.createdAt).toLocaleString(
+                                          language === "ka" ? "ka-GE" : "en-GB",
+                                        )
+                                      : ""}
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-[var(--muted)]">
+                        {t(
+                          "ვერიფიცირებული დოკუმენტები ჯერ არ არის რეგისტრირებული.",
+                          "No verified identity documents recorded yet.",
+                        )}
+                      </p>
+                    )}
+                    <div className="border-t border-[var(--border)] pt-3">
+                      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                        {t("მობილური მოწყობილობები", "Trusted mobile devices")}
+                      </h3>
+                      {(p360?.devices?.length ?? 0) > 0 ? (
+                        <div className="space-y-2">
+                          {p360!.devices.map((dev) => (
+                            <div
+                              key={dev.id}
+                              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--elevated)] px-3 py-2 text-xs"
+                            >
+                              <div>
+                                <span className="font-semibold uppercase text-[var(--text)]">
+                                  {dev.platform}
+                                </span>
+                                {" · "}
+                                <span className="text-[var(--muted)]">
+                                  {dev.appId}
+                                </span>
+                                {" · "}
+                                <span className="font-medium">
+                                  {dev.verdict}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 text-[var(--muted)]">
+                                <span
+                                  className={
+                                    dev.status === "active"
+                                      ? "font-semibold text-emerald-600 dark:text-emerald-400"
+                                      : "font-semibold text-amber-600 dark:text-amber-400"
                                   }
                                 >
-                                  {revealDoc
-                                    ? t("დამალვა", "Hide")
-                                    : t("ჩვენება", "Show")}
-                                </Button>
-                              </div>
-                            ) : (
-                              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] text-xs text-[var(--muted)]">
-                                —
-                              </div>
-                            )}
-                            <div className="min-w-0 flex-1 text-xs">
-                              <p className="font-semibold text-[var(--text)]">
-                                {docLabel}
-                                {doc.issuingCountry
-                                  ? ` · ${doc.issuingCountry}`
-                                  : ""}
-                              </p>
-                              <p className="text-[var(--muted)]">
-                                {doc.sodCscaVerified
-                                  ? t(
-                                      "SOD/CSCA: დადასტურებული",
-                                      "SOD/CSCA: verified",
-                                    )
-                                  : t(
-                                      "SOD/CSCA: არ არის",
-                                      "SOD/CSCA: unverified",
-                                    )}
-                                {typeof doc.faceMatchScore === "number"
-                                  ? ` · ${t("სახე", "Face")}: ${Math.round(doc.faceMatchScore * 100)}%`
-                                  : ""}
-                              </p>
-                              <p className="text-[11px] text-[var(--muted)]">
-                                {doc.createdAt
-                                  ? new Date(doc.createdAt).toLocaleString(
+                                  {dev.status}
+                                </span>
+                                {dev.lastAttestedAt && (
+                                  <span>
+                                    ·{" "}
+                                    {new Date(dev.lastAttestedAt).toLocaleString(
                                       language === "ka" ? "ka-GE" : "en-GB",
-                                    )
-                                  : ""}
-                              </p>
+                                    )}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-                {(detail.verification?.verificationLog?.length ?? 0) > 0 && (
-                  <div className="mt-4 border-t border-[var(--border)] pt-3">
-                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-                      {t("ვერიფიკაციის აუდიტის ლოგი", "Verification audit log")}
-                    </h3>
-                    <div className="space-y-1.5 text-xs">
-                      {detail.verification!.verificationLog!.map((entry) => {
-                        const passed = entry.status === "passed";
-                        return (
-                          <div
-                            key={entry.id}
-                            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--elevated)] px-2.5 py-1.5"
-                          >
-                            <span className="font-medium text-[var(--text)]">
-                              {entry.sessionKind === "reauth"
-                                ? t(
-                                    "სელფით მოწყობილობის დადასტურება",
-                                    "Selfie device confirmation",
-                                  )
-                                : t(
-                                    "eID საწყისი ვერიფიკაცია",
-                                    "Initial eID verification",
-                                  )}
-                              {" · "}
-                              <span
-                                className={
-                                  passed
-                                    ? "text-emerald-600 dark:text-emerald-400"
-                                    : "text-red-600 dark:text-red-400"
-                                }
-                              >
-                                {passed
-                                  ? t("წარმატებული", "Passed")
-                                  : entry.status}
-                              </span>
-                            </span>
-                            <span className="text-[var(--muted)]">
-                              {typeof entry.faceMatchScore === "number"
-                                ? `${t("სახე", "Face")}: ${Math.round(entry.faceMatchScore * 100)}%`
-                                : ""}
-                              {typeof entry.livenessScore === "number"
-                                ? `${typeof entry.faceMatchScore === "number" ? " · " : ""}${t("სიცოცხლისუნარიანობა", "Liveness")}: ${Math.round(entry.livenessScore * 100)}%`
-                                : ""}
-                              {entry.createdAt
-                                ? ` · ${new Date(entry.createdAt).toLocaleString(
-                                    language === "ka" ? "ka-GE" : "en-GB",
-                                  )}`
-                                : ""}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-                <p className="mt-3">
-                  {t("ქულები ხილულ ფარგლებში", "Points in visible scope")}:{" "}
-                  {detail.points ?? t("შეზღუდულია", "Restricted")}
-                </p>
-                <p className="text-sm text-[var(--muted)]">
-                  {t(
-                    "სტატუსი ეხება წევრობას. ქულები არ განსაზღვრავს უფლებებს ან თანამდებობას.",
-                    "Status describes membership. Points do not determine authority or position.",
-                  )}
-                </p>
-                <div className="mt-4 space-y-3">
-                  {detail.memberships.map((m) => (
-                    <div
-                      key={m.id}
-                      className="border-t border-[var(--border)] pt-3"
-                    >
-                      <strong>
-                        {m.unitName} · {m.positionName}
-                      </strong>
-                      <p>
-                        {label(m.status)} · {date(m.validFrom)} —{" "}
-                        {date(m.validUntil)}
-                      </p>
-                      {m.canChange && (
-                        <MembershipChange
-                          key={org + m.id}
-                          organizationId={org}
-                          membershipId={m.id}
-                        />
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-[var(--muted)]">
+                          {t(
+                            "მიბმული მოწყობილობები არ მოიძებნა.",
+                            "No bound mobile devices found.",
+                          )}
+                        </p>
                       )}
                     </div>
-                  ))}
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {detail.canPropose && (
-                    <Button
-                      variant="secondary"
-                      onClick={() =>
-                        navigate("/reviews", {
-                          state: {
-                            memberDirectory: {
-                              organizationId: org,
-                              memberId: detail.id,
-                            },
-                          },
-                        })
-                      }
-                    >
-                      {t("პოზიციის შეთავაზება", "Propose position")}
-                    </Button>
-                  )}
-                  {detail.pointsScopes.map((u) => (
-                    <Button
-                      key={u.id}
-                      variant="secondary"
-                      onClick={() =>
-                        navigate("/contribution", {
-                          state: {
-                            memberDirectory: {
-                              organizationId: org,
-                              memberId: detail.id,
-                              unitId: u.id,
-                            },
-                          },
-                        })
-                      }
-                    >
-                      {t("ქულები და ჯილდო", "Points and recognition")} ·{" "}
-                      {u.name}
-                    </Button>
-                  ))}
-                </div>
+                  </div>
+                )}
+
+                {profileTab === "logs" && (
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap gap-1.5">
+                      {(
+                        [
+                          ["all", t("ყველა", "All")],
+                          ["verification", t("ვერიფიკაცია", "Verification")],
+                          ["work", t("დავალებები", "Tasks")],
+                          ["points", t("ქულები", "Points")],
+                          ["audit", t("აუდიტი", "Audit")],
+                        ] as const
+                      ).map(([key, caption]) => (
+                        <Button
+                          key={key}
+                          size="sm"
+                          variant={logFilter === key ? "primary" : "secondary"}
+                          onClick={() => setLogFilter(key)}
+                        >
+                          {caption}
+                        </Button>
+                      ))}
+                    </div>
+                    {filteredLogs.length > 0 ? (
+                      <div className="space-y-1.5 text-xs">
+                        {filteredLogs.map((entry) => (
+                          <div
+                            key={entry.id}
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--elevated)] px-3 py-2"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <span className="mr-2 inline-block rounded bg-[var(--surface)] px-1.5 py-0.5 text-[10px] font-semibold uppercase text-[var(--muted)]">
+                                {entry.category}
+                              </span>
+                              <span className="font-semibold text-[var(--text)]">
+                                {entry.action}
+                              </span>
+                              {entry.summary && (
+                                <span className="text-[var(--muted)]">
+                                  {" · "}
+                                  {entry.summary}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-[var(--muted)]">
+                              <span className="font-medium text-[var(--text)]">
+                                {entry.status}
+                              </span>
+                              {entry.occurredAt && (
+                                <span>
+                                  ·{" "}
+                                  {new Date(entry.occurredAt).toLocaleString(
+                                    language === "ka" ? "ka-GE" : "en-GB",
+                                  )}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-[var(--muted)]">
+                        {t(
+                          "ამ ფილტრით ჩანაწერები არ მოიძებნა.",
+                          "No log entries found for this filter.",
+                        )}
+                      </p>
+                    )}
+                  </div>
+                )}
               </Card>
+              {profileTab === "overview" && (
               <Card>
                 <h3 className="text-lg font-semibold">
                   {t("დავალებებში მონაწილეობა", "Task participation")}
@@ -1001,8 +1252,10 @@ export default function Members() {
                 </ul>
                 {pagination(detail.work, setWorkPage)}
               </Card>
+              )}
             </>
-          )}
+            );
+          })()}
         </>
       )}
     </div>
