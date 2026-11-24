@@ -6,6 +6,7 @@ import {
   membersApi,
   type DirectoryMember,
   type MemberDetail,
+  type MemberListPage,
   type MemberPage,
   type MemberUnit,
 } from "../api/members";
@@ -26,14 +27,17 @@ export default function Members() {
   const [search, setSearch] = useState(""),
     [role, setRole] = useState(""),
     [query, setQuery] = useState({ search: "", role: "" }),
-    [status, setStatus] = useState("active");
+    [status, setStatus] = useState("active"),
+    [verification, setVerification] = useState<
+      "all" | "verified" | "unverified"
+    >("all");
   const [scope, setScope] = useState<MemberUnit | null>(null),
     [unitSearch, setUnitSearch] = useState(""),
     [unitQuery, setUnitQuery] = useState(""),
     [unitPage, setUnitPage] = useState(1);
   const [units, setUnits] = useState<MemberPage<MemberUnit> | null>(null),
     [unitError, setUnitError] = useState(false);
-  const [rows, setRows] = useState<MemberPage<DirectoryMember> | null>(null),
+  const [rows, setRows] = useState<MemberListPage | null>(null),
     [page, setPage] = useState(1),
     [selected, setSelected] = useState(""),
     [detail, setDetail] = useState<MemberDetail | null>(null),
@@ -53,16 +57,6 @@ export default function Members() {
           "მონაცემები ვერ ჩაიტვირთა. სცადეთ ხელახლა.",
           "Could not load records. Please retry.",
         );
-  const readScope1Key = JSON.stringify([revision]);
-  const [readScope1, setReadScope1] = useState(readScope1Key);
-  // Reconcile scope before committing children, so previous-scope records cannot flash.
-  if (readScope1 !== readScope1Key) {
-    setReadScope1(readScope1Key);
-    setLoading(true);
-    setError("");
-    setRows(null);
-    setDetail(null);
-  }
   useEffect(() => {
     let live = true;
     membersApi
@@ -103,7 +97,7 @@ export default function Members() {
     }, 300);
     return () => clearTimeout(timer);
   }, [unitSearch, unitQuery]);
-  const readScope2Key = JSON.stringify([org, unitQuery, unitPage, revision]);
+  const readScope2Key = JSON.stringify([org, unitQuery, unitPage]);
   const [readScope2, setReadScope2] = useState(readScope2Key);
   // Reconcile scope before committing children, so previous-scope records cannot flash.
   if (readScope2 !== readScope2Key) {
@@ -131,10 +125,10 @@ export default function Members() {
     scope?.id,
     query,
     status,
+    verification,
     page,
     selected,
     workPage,
-    revision,
   ]);
   const [readScope3, setReadScope3] = useState(readScope3Key);
   // Reconcile scope before committing children, so previous-scope records cannot flash.
@@ -155,6 +149,7 @@ export default function Members() {
           unitId: scope?.id,
           ...query,
           status,
+          verification,
           page,
         });
     read
@@ -181,15 +176,22 @@ export default function Members() {
     return () => {
       live = false;
     };
-  }, [org, scope?.id, query, status, page, selected, workPage, revision]);
+  }, [org, scope?.id, query, status, verification, page, selected, workPage, revision]);
   useEffect(() => {
     if (detail) heading.current?.focus();
   }, [detail]);
   useEffect(() => {
+    let lastRefresh = Date.now();
     const refresh = () => {
+      const now = Date.now();
+      if (now - lastRefresh < 30_000) return;
+      lastRefresh = now;
       setRevision((v) => v + 1);
     };
-    const timer = window.setInterval(refresh, 60000);
+    const timer = window.setInterval(() => {
+      lastRefresh = Date.now();
+      setRevision((v) => v + 1);
+    }, 120_000);
     window.addEventListener("focus", refresh);
     return () => {
       clearInterval(timer);
@@ -316,6 +318,33 @@ export default function Members() {
                     ].map((value) => ({ value, label: label(value) })),
                   ]}
                 />
+                <Select
+                  label={t(
+                    "ვერიფიკაციის სტატუსი",
+                    "Verification status",
+                  )}
+                  value={verification}
+                  onChange={(e) => {
+                    setVerification(
+                      e.target.value as "all" | "verified" | "unverified",
+                    );
+                    setPage(1);
+                  }}
+                  options={[
+                    { value: "all", label: t("ყველა წევრი", "All members") },
+                    {
+                      value: "verified",
+                      label: t(
+                        "ბიომეტრიულად ვერიფიცირებული",
+                        "Biometrically verified",
+                      ),
+                    },
+                    {
+                      value: "unverified",
+                      label: t("არავერიფიცირებული", "Unverified"),
+                    },
+                  ]}
+                />
                 <div>
                   <Input
                     label={t(
@@ -372,6 +401,7 @@ export default function Members() {
                   setSearch("");
                   setRole("");
                   setStatus("active");
+                  setVerification("all");
                   setScope(null);
                   setUnitSearch("");
                   setPage(1);
@@ -385,9 +415,23 @@ export default function Members() {
           {!selected && rows && (
             <Card>
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <p>
-                  {t("წევრების რაოდენობა", "Members found")}: {rows.total}
-                </p>
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <span>
+                    {t("წევრების რაოდენობა", "Members found")}:{" "}
+                    <strong>{rows.total}</strong>
+                  </span>
+                  {typeof rows.verifiedTotal === "number" && (
+                    <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                      {t("ვერიფიცირებული", "Verified")}: {rows.verifiedTotal}
+                    </span>
+                  )}
+                  {typeof rows.unverifiedTotal === "number" && (
+                    <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                      {t("არავერიფიცირებული", "Unverified")}:{" "}
+                      {rows.unverifiedTotal}
+                    </span>
+                  )}
+                </div>
                 {rows.items.length > 0 && (
                   <Button
                     type="button"
@@ -396,9 +440,18 @@ export default function Members() {
                     onClick={() =>
                       downloadSafeCsv(
                         `ertad-members-page-${page}.csv`,
-                        ["Member", "Roles", "Visible Points"],
+                        [
+                          "Member",
+                          "Verification",
+                          "Roles",
+                          "Visible Points",
+                        ],
                         rows.items.map((m) => [
                           name(m),
+                          m.verificationStatus?.assuranceLevel ===
+                          "biometric_verified"
+                            ? `Verified (${m.verificationStatus.citizenshipCountry || "GE"}, docs:${m.verificationStatus.documentCount}, devices:${m.verificationStatus.activeDeviceCount})`
+                            : "Unverified",
                           m.memberships
                             .map(
                               (x) =>
@@ -429,6 +482,10 @@ export default function Members() {
                       <tr>
                         {[
                           t("წევრი", "Member"),
+                          t(
+                            "ვერიფიკაცია და ავტორიზაცია",
+                            "Verification & auth",
+                          ),
                           t("წევრობა და სტატუსი", "Membership and status"),
                           t(
                             "ქულები ხილულ ფარგლებში",
@@ -442,37 +499,98 @@ export default function Members() {
                       </tr>
                     </thead>
                     <tbody>
-                      {rows.items.map((m) => (
-                        <tr
-                          key={m.id}
-                          className="border-t border-[var(--border)]"
-                        >
-                          <td className="p-3">
-                            <Button
-                              variant="ghost"
-                              onClick={() => {
-                                setSelected(m.id);
-                                setWorkPage(1);
-                              }}
-                            >
-                              {name(m)}
-                            </Button>
-                          </td>
-                          <td className="p-3">
-                            <ul>
-                              {m.memberships.map((x) => (
-                                <li key={x.id}>
-                                  {x.unitName} · {x.positionName} ·{" "}
-                                  {label(x.status)}
-                                </li>
-                              ))}
-                            </ul>
-                          </td>
-                          <td className="p-3">
-                            {m.points ?? t("შეზღუდულია", "Restricted")}
-                          </td>
-                        </tr>
-                      ))}
+                      {rows.items.map((m) => {
+                        const vs = m.verificationStatus;
+                        const isBio =
+                          vs?.assuranceLevel === "biometric_verified";
+                        const uniqueRoles = Array.from(
+                          new Map(
+                            m.memberships.map((x) => [
+                              `${x.unitName}|${x.positionName}|${x.status}`,
+                              x,
+                            ]),
+                          ).values(),
+                        );
+                        return (
+                          <tr
+                            key={m.id}
+                            className="border-t border-[var(--border)]"
+                          >
+                            <td className="p-3 align-top">
+                              <Button
+                                variant="ghost"
+                                onClick={() => {
+                                  setSelected(m.id);
+                                  setWorkPage(1);
+                                }}
+                              >
+                                {name(m)}
+                              </Button>
+                            </td>
+                            <td className="p-3 align-top">
+                              <div className="flex flex-col items-start gap-1">
+                                <span
+                                  className={
+                                    isBio
+                                      ? "inline-flex items-center rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400"
+                                      : "inline-flex items-center rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400"
+                                  }
+                                >
+                                  {isBio
+                                    ? t(
+                                        "eID ვერიფიცირებული",
+                                        "eID Verified",
+                                      )
+                                    : t("არავერიფიცირებული", "Unverified")}
+                                  {isBio && vs?.citizenshipCountry
+                                    ? ` · ${vs.citizenshipCountry}`
+                                    : ""}
+                                </span>
+                                {vs && (
+                                  <span className="text-xs text-[var(--muted)]">
+                                    {[
+                                      vs.hasWebAccount
+                                        ? t("ვებ-ანგარიში", "Web account")
+                                        : null,
+                                      vs.documentCount > 0
+                                        ? `${t("საბუთი", "Docs")}: ${vs.documentCount}`
+                                        : null,
+                                      vs.activeDeviceCount > 0
+                                        ? `${t("მოწყობილობა", "Devices")}: ${vs.activeDeviceCount}`
+                                        : null,
+                                      vs.linkedGoogleCount > 0
+                                        ? `Google: ${vs.linkedGoogleCount}`
+                                        : null,
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" · ") ||
+                                      t("მობილური წევრი", "Mobile member")}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-3 align-top">
+                              <ul className="space-y-0.5">
+                                {uniqueRoles.slice(0, 4).map((x) => (
+                                  <li key={x.id}>
+                                    {x.unitName} · {x.positionName} ·{" "}
+                                    {label(x.status)}
+                                  </li>
+                                ))}
+                                {uniqueRoles.length > 4 && (
+                                  <li className="text-xs text-[var(--muted)]">
+                                    +{uniqueRoles.length - 4}{" "}
+                                    {t("დამატებითი როლი", "more roles")}
+                                  </li>
+                                )}
+                              </ul>
+                            </td>
+                            <td className="p-3 align-top">
+                              {m.points ?? t("შეზღუდულია", "Restricted")}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

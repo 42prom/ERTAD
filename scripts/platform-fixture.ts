@@ -192,3 +192,18 @@ export async function enablePlatformProviders(client: Client, accountId: string,
   return changed.rowCount === 1;
 }
 
+/** Local explicit upgrade for M4 biometric & mobile device security governance. */
+export async function enablePlatformVerification(client: Client, accountId: string, kind: "operator" | "reviewer" = "operator") {
+  if (!["development", "test"].includes(process.env.NODE_ENV ?? "")) throw new Error("Local installer only");
+  await client.query("SELECT pg_advisory_xact_lock(42420031)");
+  const permissions = kind === 'reviewer'
+    ? ['platform.verification.read', 'platform.verification.approve', 'platform.mobile_devices.control']
+    : ['platform.verification.read', 'platform.verification.propose', 'platform.mobile_devices.control'];
+  const changed = await client.query(`UPDATE platform_accounts p SET permissions=(SELECT array_agg(DISTINCT permission) FROM unnest(p.permissions || $2::text[]) permission)
+    WHERE p.admin_user_id=$1 AND p.revoked_at IS NULL AND p.valid_from<=clock_timestamp() AND p.valid_until>clock_timestamp()
+    AND 'platform.read'=ANY(p.permissions) AND NOT ($2::text[] <@ p.permissions)
+    AND EXISTS(SELECT 1 FROM admin_users a WHERE a.id=p.admin_user_id AND a.is_active) RETURNING admin_user_id`, [accountId, permissions]);
+  if (changed.rowCount) await SecurityService.logAuditEventInTransaction(client, 'PLATFORM_VERIFICATION_ACCESS_ENABLED', { adminUserId: accountId, local: true });
+  return changed.rowCount === 1;
+}
+

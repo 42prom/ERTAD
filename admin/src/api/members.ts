@@ -20,11 +20,26 @@ export interface DirectoryMembership {
   validFrom: string;
   validUntil: string | null;
 }
+export interface MemberVerificationBadge {
+  assuranceLevel: string;
+  sodCscaVerified: boolean;
+  citizenshipCountry: string;
+  verifiedAt: string | null;
+  hasWebAccount: boolean;
+  documentCount: number;
+  activeDeviceCount: number;
+  linkedGoogleCount: number;
+}
 export interface DirectoryMember {
   id: string;
   displayName: string | null;
   memberships: DirectoryMembership[];
   points: string | null;
+  verificationStatus?: MemberVerificationBadge | null;
+}
+export interface MemberListPage extends MemberPage<DirectoryMember> {
+  verifiedTotal?: number;
+  unverifiedTotal?: number;
 }
 export interface MemberVerificationDocument {
   id: string;
@@ -82,8 +97,9 @@ export const membersApi = {
     search: string;
     role: string;
     status: string;
+    verification?: "all" | "verified" | "unverified";
     page: number;
-  }) => get<MemberPage<DirectoryMember>>("list", params),
+  }) => get<MemberListPage>("list", params),
   detail: (
     organizationId: string,
     memberId: string,

@@ -127,7 +127,6 @@ export default function Units() {
     page,
     tab,
     filter,
-    revision,
     unitStatus,
   ]);
   const [readScope1, setReadScope1] = useState(readScope1Key);
@@ -163,7 +162,12 @@ export default function Units() {
     };
   }, [org, page, tab, filter, revision, unitStatus]);
   useEffect(() => {
-    if (parent || detail || change) formTitle.current?.focus();
+    if (parent || detail || change) {
+      formTitle.current?.focus();
+      if (typeof formTitle.current?.scrollIntoView === "function") {
+        formTitle.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    }
   }, [parent, detail, change]);
   useEffect(() => {
     if (!parent && !detail && !change && !retry) return;
@@ -326,19 +330,38 @@ export default function Units() {
       rejected: label("Rejected", "უარყოფილი"),
       expired: label("Expired", "ვადაგასული"),
     })[s] ?? s;
+  const proposableUnits =
+    tab === "units" && data
+      ? (data.items as UnitRow[]).filter((u) => "canPropose" in u && u.canPropose)
+      : [];
   return (
     <section className="review-page">
-      <header>
-        <h1>{label("Groups and regions", "ჯგუფები და რეგიონები")}</h1>
-        <p>
-          {label(
-            "Create, rename or archive units within your scope through independent approval.",
-            "ერთეულების შექმნა, სახელის შეცვლა და არქივირება თქვენს ფარგლებში დამოუკიდებელი დამტკიცებით.",
-          )}
-        </p>
-        <Link className="subtle-link" to="/reviews">
-          {label("Membership requests", "დანიშვნის მოთხოვნები")}
-        </Link>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1>{label("Groups and regions", "ჯგუფები და რეგიონები")}</h1>
+          <p>
+            {label(
+              "Create, rename or archive units within your scope through independent approval.",
+              "ერთეულების შექმნა, სახელის შეცვლა და არქივირება თქვენს ფარგლებში დამოუკიდებელი დამტკიცებით.",
+            )}
+          </p>
+          <Link className="subtle-link" to="/reviews">
+            {label("Membership requests", "დანიშვნის მოთხოვნები")}
+          </Link>
+        </div>
+        {proposableUnits.length > 0 && !parent && !change && !detail && (
+          <Button
+            type="button"
+            disabled={editing}
+            onClick={() => {
+              clear();
+              setParent(proposableUnits[0]);
+              setNotice("");
+            }}
+          >
+            {label("+ Create group", "+ ახალი ჯგუფის შექმნა")}
+          </Button>
+        )}
       </header>
       {error && (
         <div role="alert">
@@ -794,13 +817,33 @@ export default function Units() {
                 >
                   <fieldset disabled={busy || !!retry}>
                     {(parent || change?.kind === "rename") && (
-                      <Input
-                        label={label("Unit name", "ერთეულის სახელი")}
-                        required
-                        maxLength={160}
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                      />
+                      <>
+                        {parent && !change && proposableUnits.length > 1 && (
+                          <Select
+                            label={label("Parent region / group", "ზედა რეგიონი / ჯგუფი")}
+                            value={parent.id}
+                            onChange={(e) => {
+                              const next = proposableUnits.find(
+                                (u) => u.id === e.target.value,
+                              );
+                              if (next) setParent(next);
+                            }}
+                            options={proposableUnits.map((u) => ({
+                              value: u.id,
+                              label: u.parent_name
+                                ? `${u.name} (${u.parent_name})`
+                                : u.name,
+                            }))}
+                          />
+                        )}
+                        <Input
+                          label={label("Unit name", "ერთეულის სახელი")}
+                          required
+                          maxLength={160}
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                        />
+                      </>
                     )}
                     <Input
                       label={label(
@@ -813,6 +856,14 @@ export default function Units() {
                       value={reason}
                       onChange={(e) => setReason(e.target.value)}
                     />
+                    {reason.trim().length < 10 && (
+                      <p className="text-xs text-[var(--muted)]">
+                        {label(
+                          `Enter at least 10 characters for reason (${reason.trim().length}/10).`,
+                          `მიზეზი უნდა შეიცავდეს მინიმუმ 10 სიმბოლოს (${reason.trim().length}/10).`,
+                        )}
+                      </p>
+                    )}
                     {!demo && (
                       <Input
                         label={label(

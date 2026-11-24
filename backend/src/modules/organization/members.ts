@@ -22,6 +22,7 @@ const schemas = {
       status: z
         .enum(['all', 'active', 'suspended', 'ended', 'expired', 'scheduled', 'inactive'])
         .default('active'),
+      verification: z.enum(['all', 'verified', 'unverified']).default('all'),
     })
     .strict(),
   detail: org.extend({ memberId: uuid, unitId: uuid.optional(), page }).strict(),

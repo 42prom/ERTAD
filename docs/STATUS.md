@@ -1,6 +1,21 @@
 # Verified development status
 
-> Last updated: 2026-11-23 · Branch: `feat/ertad-development` · Not deployed to production
+> Last updated: 2026-11-24 · Branch: `feat/ertad-development` · Not deployed to production
+
+## Web Admin Technical Console, Member Verification Directory, Group Creation UX & Stability (Migration 85, 2026-11-24)
+
+- **Technical Security Console & Dev Bootstrap ([`platform-fixture.ts`](../scripts/platform-fixture.ts), [`bootstrap-platform.ts`](../scripts/bootstrap-platform.ts), [`localDemo.ts`](../backend/src/localDemo.ts), [`DemoAccounts.tsx`](../admin/src/components/DemoAccounts.tsx)):**
+  - Added `enablePlatformVerification`, `--verification`, and `--all` options to `scripts/bootstrap-platform.ts`, enabling all 12 technical security console sections (`overview`, `network`, `monitoring`, `limits`, `sessions`, `accounts`, `policy`, `integrations`, `providers`, `audit`, `email`, `verification`) on local `platform@ertad.local` (`20` operator permissions) and provisioning `platform-reviewer@ertad.local` (`16` reviewer/approver permissions) in local dev Quick Login for two-person `Propose -> Approve` testing.
+- **Members Directory Verification Visibility & Filtering ([`0085_member_directory_verification_and_perf.sql`](../backend/db/foundation/0085_member_directory_verification_and_perf.sql), [`members.ts`](../backend/src/modules/organization/members.ts), [`members.ts` (Admin API)](../admin/src/api/members.ts), [`Members.tsx`](../admin/src/pages/Members.tsx)):**
+  - Extended `ertad.member_summary` and `ertad.member_directory_command` with privacy-safe `verificationStatus` (`assuranceLevel`, `sodCscaVerified`, `citizenshipCountry`, `verifiedAt`, `hasWebAccount`, `documentCount`, `activeDeviceCount`, `linkedGoogleCount`), `verification` filter (`all | verified | unverified`), and `verifiedTotal` / `unverifiedTotal` counters.
+  - Added the **Verification & auth** column, verification filter dropdown, summary pills, deduplicated compact membership display, and verification status CSV export in `Members.tsx`.
+- **Group Creation UX, Dashboard Streamlining & Anti-Flicker Stability ([`Units.tsx`](../admin/src/pages/Units.tsx), [`Workspace.tsx`](../admin/src/pages/Workspace.tsx), [`Layout.tsx`](../admin/src/components/Layout.tsx), [`Platform.tsx`](../admin/src/pages/Platform.tsx), [`Tasks.tsx`](../admin/src/pages/Tasks.tsx), [`PRODUCTION_CHECKLIST.md`](PRODUCTION_CHECKLIST.md)):**
+  - Added a top-level `+ Create group` CTA, in-form parent region/group selector, smooth scroll-to-form (`scrollIntoView` guarded), and live 10-character reason counter in `Units.tsx`.
+  - Replaced redundant dashboard shortcut cards and open 43-row position dumps in `Workspace.tsx` with a compact quick-actions strip and collapsed `<details>` panels.
+  - Removed background `revision` state wipes (`setData(null)` / `setRows(null)` / `setSnapshot(null)`) across `Members.tsx`, `Units.tsx`, `Tasks.tsx`, and `Platform.tsx` (retaining immediate state clear on access denial/error) and raised background polling intervals to `120s` alongside `30s` focus throttling on `Members.tsx`/`Platform.tsx`.
+- **Verified evidence:**
+  - `npm run db:migrate` (`0085`), `bootstrap-platform.ts --all` & `--reviewer --all` (PASS), live API verification (`ALL_12_PLATFORM_ENDPOINTS_200=PASS`, `MEMBERS_VERIFICATION_FILTER` PASS), `npm run smoke` (PASS against `:13000` & `:15173`), `npm run test:members` (`8/8` scenarios), `npm run test:units` (`25/25` scenarios), `npm run restore:drill` (`107 tables, 85 migrations`, `22.9s`).
+  - `check:identity`, `tokens:check`, `typecheck` (backend & admin), `eslint --max-warnings 0`, backend foundation (`4/4`), Jest (`27/27` suites / `232/232` tests), Admin Vitest (`56/56` passed in full run + `3/3` fixed suites `25/25` tests passed: `Units.test.tsx`, `Tasks.test.tsx`, `PlatformNavigation.test.tsx`), `scripts/tests`, production builds, and `check:workspace`.
 
 ## Universal Auditable Biometric Identity, Multi-Gmail & E.164 Phone UX (Migration 84, 2026-11-23)
 

@@ -50,12 +50,14 @@ export default function Platform() {
   const [verifyingChain, setVerifyingChain] = useState(false);
   const [verifyError, setVerifyError] = useState("");
   const cursor = cursors[cursors.length - 1];
+  const scopeKey = JSON.stringify([tab, category, cursor]);
   const resourceKey = JSON.stringify([tab, category, cursor, revision]);
-  const loading = snapshot?.key !== resourceKey || snapshot.pending;
+  const sameScope = snapshot?.key.startsWith(scopeKey.slice(0, -1)) ?? false;
+  const loading = !sameScope && (snapshot?.key !== resourceKey || snapshot.pending);
   // Confirmation dialogs retain their existing grant while a refresh is pending;
   // a denied response clears it. Every action rechecks current server authority.
   const access =
-    snapshot?.key === resourceKey || !["overview", "audit"].includes(tab)
+    sameScope || snapshot?.key === resourceKey || !["overview", "audit"].includes(tab)
       ? (snapshot?.access ?? null)
       : null;
   const overview = loading ? null : snapshot?.overview;
@@ -77,14 +79,14 @@ export default function Platform() {
       try {
         const current = await platformApi.access();
         if (!live) return;
-        setSnapshot({
+        setSnapshot((prev) => ({
           key: resourceKey,
           access: current,
-          overview: null,
-          audit: null,
+          overview: prev && prev.key.startsWith(scopeKey.slice(0, -1)) ? prev.overview : null,
+          audit: prev && prev.key.startsWith(scopeKey.slice(0, -1)) ? prev.audit : null,
           failed: false,
           pending: true,
-        });
+        }));
         let overview: PlatformOverview | null = null,
           audit: PlatformAudit | null = null;
         if (current.permissions.includes("platform.read")) {
@@ -120,12 +122,19 @@ export default function Platform() {
     return () => {
       live = false;
     };
-  }, [tab, category, cursor, resourceKey, activeSection]);
+  }, [tab, category, cursor, resourceKey, scopeKey, activeSection]);
   useEffect(() => {
+    let lastRefresh = Date.now();
     const refresh = () => {
+      const now = Date.now();
+      if (now - lastRefresh < 30_000) return;
+      lastRefresh = now;
       setRevision((v) => v + 1);
     };
-    const timer = window.setInterval(refresh, 60000);
+    const timer = window.setInterval(() => {
+      lastRefresh = Date.now();
+      setRevision((v) => v + 1);
+    }, 120_000);
     window.addEventListener("focus", refresh);
     return () => {
       clearInterval(timer);

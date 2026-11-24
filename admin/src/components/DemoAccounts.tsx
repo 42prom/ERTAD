@@ -68,9 +68,13 @@ export default function DemoAccounts({
           >
             <span>
               {a.kind === "technical"
-                ? ka
-                  ? "ტექნიკური ადმინისტრატორი"
-                  : "Technical administrator"
+                ? a.email === "platform-reviewer@ertad.local"
+                  ? ka
+                    ? "ტექნიკური მიმომხილველი"
+                    : "Technical reviewer"
+                  : ka
+                    ? "ტექნიკური ადმინისტრატორი"
+                    : "Technical administrator"
                 : a.label}
               <small>{a.email}</small>
             </span>

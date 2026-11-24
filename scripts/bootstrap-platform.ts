@@ -31,16 +31,19 @@ const {
   enablePlatformLimits,
   enablePlatformProviders,
   enablePlatformAccountSecurity,
+  enablePlatformVerification,
 } = await import("./platform-fixture");
-const sessions = process.argv.includes("--sessions");
-const accounts = process.argv.includes('--accounts');
-const providers = process.argv.includes("--providers");
-const limits = process.argv.includes("--limits");
-const network = process.argv.includes("--network");
-const integrations = process.argv.includes("--integrations");
-const policy = process.argv.includes("--policy"),
-  reviewer = process.argv.includes("--reviewer");
-if (reviewer && (sessions || integrations || policy))
+const all = process.argv.includes("--all");
+const reviewer = process.argv.includes("--reviewer");
+const sessions = process.argv.includes("--sessions") || (all && !reviewer);
+const accounts = process.argv.includes("--accounts") || all;
+const providers = process.argv.includes("--providers") || all;
+const limits = process.argv.includes("--limits") || all;
+const network = process.argv.includes("--network") || all;
+const integrations = process.argv.includes("--integrations") || (all && !reviewer);
+const policy = process.argv.includes("--policy") || (all && !reviewer);
+const verification = process.argv.includes("--verification") || all;
+if (reviewer && !all && (sessions || integrations || policy))
   throw new Error(
     "Reviewer bootstrap cannot be combined with operator upgrades",
   );
@@ -49,9 +52,18 @@ if (
     .slice(2)
     .some(
       (arg) =>
-        !["--sessions", "--integrations", "--policy", "--reviewer", "--network", "--limits", "--providers",'--accounts'].includes(
-          arg,
-        ),
+        ![
+          "--all",
+          "--sessions",
+          "--integrations",
+          "--policy",
+          "--reviewer",
+          "--network",
+          "--limits",
+          "--providers",
+          "--accounts",
+          "--verification",
+        ].includes(arg),
     )
 )
   throw new Error("Unknown installer option");
@@ -97,6 +109,7 @@ try {
     if (limits) await enablePlatformLimits(client, saved.id, reviewer ? "reviewer" : "operator");
     if (providers) await enablePlatformProviders(client, saved.id, reviewer ? "reviewer" : "operator");
     if (network) await enablePlatformNetwork(client, saved.id, reviewer ? "reviewer" : "operator");
+    if (verification) await enablePlatformVerification(client, saved.id, reviewer ? "reviewer" : "operator");
     await client.query("COMMIT");
     committed = true;
     console.log(
@@ -116,6 +129,7 @@ try {
     if (limits) await enablePlatformLimits(client, account.id, reviewer ? "reviewer" : "operator");
     if (providers) await enablePlatformProviders(client, account.id, reviewer ? "reviewer" : "operator");
     if (network) await enablePlatformNetwork(client, account.id, reviewer ? "reviewer" : "operator");
+    if (verification) await enablePlatformVerification(client, account.id, reviewer ? "reviewer" : "operator");
     mkdirSync(".local", { recursive: true });
     writeFileSync(jsonPath, JSON.stringify(account, null, 2) + "\n", {
       flag: "wx",

@@ -234,7 +234,6 @@ export default function Tasks() {
     page,
     filter,
     selected,
-    revision,
     scopeUnit,
   ]);
   const [readScope1, setReadScope1] = useState(readScope1Key);
@@ -272,7 +271,12 @@ export default function Tasks() {
         }
       })
       .catch((e) => {
-        if (seq === generation.current) setError(failure(e));
+        if (seq === generation.current) {
+          setError(failure(e));
+          setData(null);
+          setDetail(null);
+          setOverview(null);
+        }
       })
       .finally(() => {
         if (seq === generation.current) setLoading(false);

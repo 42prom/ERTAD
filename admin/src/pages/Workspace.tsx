@@ -307,150 +307,89 @@ export default function Workspace() {
             </Card>
           )}
 
-          {workContexts.length > 0 && (
-            <Card>
-              <h2>
-                {ka ? "დავალებები და შესრულება" : "Tasks and completion"}
-              </h2>
-              <p>
-                {ka
-                  ? "გადაანაწილე სამუშაო, ნახე მონაწილეები და დაადასტურე შესრულება."
-                  : "Delegate work, track volunteers and verify completion."}
-              </p>
-              <div className="workspace-actions">
-                <Link className="workspace-primary-action" to="/tasks">
-                  {ka ? "დავალებების მართვა" : "Manage tasks"}
-                </Link>
-              </div>
-            </Card>
-          )}
-          {decisionContexts.length > 0 && (
-            <Card>
-              <h2>{ka ? "პულები და გამოკითხვები" : "Polls and surveys"}</h2>
-              <p>
-                {ka
-                  ? "შექმენი დრაფტი, გამოაქვეყნე არჩეულ რეგიონში ან ჯგუფში და ნახე შედეგები დასრულების შემდეგ."
-                  : "Create a draft, publish to a region or group, and view results after closing."}
-              </p>
-              <div className="workspace-actions">
-                <Link className="workspace-primary-action" to="/decisions">
-                  {ka ? "პულების მართვა" : "Manage polls"}
-                </Link>
-              </div>
-            </Card>
-          )}
-          {unitContexts.length > 0 && (
-            <Card>
-              <h2>{ka ? "ჯგუფების მართვა" : "Manage groups"}</h2>
-              <p>
-                {ka
-                  ? "შექმენი ჯგუფის მოთხოვნა, აირჩიე რეგიონი ან ზედა ჯგუფი და გაუგზავნე სხვა უფლებამოსილ ადმინისტრატორს დასამტკიცებად."
-                  : "Request a new group, choose its region or parent group, and have another authorized administrator approve it."}
-              </p>
-              <div className="review-toolbar workspace-actions">
-                <Link
-                  className="workspace-primary-action"
-                  to="/units?create=group"
-                >
-                  {ka ? "ჯგუფის შექმნა" : "Create group"}
-                </Link>
-                <Link to="/units">{ka ? "ჯგუფების ნახვა" : "View groups"}</Link>
-                <Link to="/units?view=pending">
-                  {ka
-                    ? "ჯგუფების დასადასტურებელი მოთხოვნები"
-                    : "Group requests awaiting approval"}
-                </Link>
-              </div>
-            </Card>
-          )}
-          <Card>
-            <h2>
-              {ka
-                ? "დასადასტურებელი დანიშვნები"
-                : "Appointments awaiting your decision"}
-            </h2>
-            <p className="workspace-count">{count}</p>
-            {contexts.length > 0 ? (
-              <div className="review-toolbar">
-                <Link to="/reviews">
-                  {ka ? "მოთხოვნების გახსნა" : "Open requests"}
-                </Link>
-                <Link to="/reviews?view=mine">
-                  {ka ? "ჩემი მოთხოვნები" : "My requests"}
-                </Link>
-              </div>
-            ) : (
-              <p>
-                {import.meta.env.DEV
-                  ? ka
-                    ? "ამ ანგარიშს დანიშვნის მოთხოვნებზე წვდომა ჯერ არ აქვს. ლოკალური დემოს სანახავად გამოდი და აირჩიე საბჭოს ან რეგიონის ერთ-ერთი სატესტო ანგარიში."
-                    : "This account has no appointment-review access. To explore the local demo, sign out and choose a council or regional demo account."
-                  : ka
-                    ? "ამ ანგარიშს დანიშვნის მოთხოვნების განხილვის უფლება მინიჭებული არ აქვს."
-                    : "This account has no appointment-review access assigned."}
-              </p>
+          <div
+            className="review-toolbar workspace-actions"
+            style={{ gridColumn: "1 / -1" }}
+            aria-label={ka ? "სწრაფი მოქმედებები" : "Quick actions"}
+          >
+            {unitContexts.length > 0 && (
+              <Link
+                className="workspace-primary-action"
+                to="/units?create=group"
+              >
+                {ka ? "+ ჯგუფის შექმნა" : "+ Create group"}
+              </Link>
             )}
-          </Card>
-          {contexts.map((c) => (
-            <Card key={c.id}>
-              <h2>{c.name}</h2>
-              <p>
+            {workContexts.length > 0 && (
+              <Link className="workspace-primary-action" to="/tasks">
+                {ka ? "დავალებების მართვა" : "Manage tasks"}
+              </Link>
+            )}
+            {decisionContexts.length > 0 && (
+              <Link className="workspace-primary-action" to="/decisions">
+                {ka ? "პულების მართვა" : "Manage polls"}
+              </Link>
+            )}
+            {contexts.length > 0 && (
+              <Link to="/reviews">
                 {ka
-                  ? "ხელმისაწვდომი ერთეულები და პოზიციები"
-                  : "Permitted units and positions"}
-              </p>
-              <ul className="workspace-units">
-                {Array.from(
-                  new Map(c.positions.map((p) => [p.unitId, p.unitName])),
-                ).map(([id, name]) => (
-                  <li key={id}>
-                    <strong>{name}</strong>
-                    <ul>
-                      {c.positions
-                        .filter((p) => p.unitId === id)
-                        .map((p) => (
-                          <li key={p.id}>
-                            {p.name} ·{" "}
-                            {p.canPropose
-                              ? ka
-                                ? "დანიშვნის მოთხოვნა"
-                                : "Can propose appointment"
-                              : ka
-                                ? "მიმოხილვა"
-                                : "Review"}
-                          </li>
-                        ))}
-                    </ul>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          ))}
-          {people.length > 0 && (
-            <details>
+                  ? `დასადასტურებელი დანიშვნები (${count})`
+                  : `Pending appointments (${count})`}
+              </Link>
+            )}
+          </div>
+          {contexts.length > 0 && (
+            <details style={{ gridColumn: "1 / -1" }}>
               <summary>
                 {ka
-                  ? "სატესტო ანგარიშები და მუშაობის ინსტრუქცია"
-                  : "Demo accounts and instructions"}
+                  ? "ჩემი უფლებამოსილი ერთეულები და პოზიციები"
+                  : "My permitted units and positions"}
               </summary>
-              <p>
+              <div className="mt-3 grid gap-3">
+                {contexts.map((c) => (
+                  <Card key={c.id}>
+                    <h2>{c.name}</h2>
+                    <ul className="workspace-units">
+                      {Array.from(
+                        new Map(c.positions.map((p) => [p.unitId, p.unitName])),
+                      ).map(([id, name]) => (
+                        <li key={id}>
+                          <strong>{name}</strong>
+                          <ul>
+                            {c.positions
+                              .filter((p) => p.unitId === id)
+                              .map((p) => (
+                                <li key={p.id}>
+                                  {p.name} ·{" "}
+                                  {p.canPropose
+                                    ? ka
+                                      ? "დანიშვნის მოთხოვნა"
+                                      : "Can propose appointment"
+                                    : ka
+                                      ? "მიმოხილვა"
+                                      : "Review"}
+                                </li>
+                              ))}
+                          </ul>
+                        </li>
+                      ))}
+                    </ul>
+                  </Card>
+                ))}
+              </div>
+            </details>
+          )}
+          {import.meta.env.DEV && people.length > 0 && (
+            <details style={{ gridColumn: "1 / -1" }}>
+              <summary>
                 {ka
-                  ? "საბჭოს პირველმა ანგარიშმა თითო რეგიონში მოთხოვნა შექმნა. შესაბამისი რეგიონის მეორე ადმინისტრატორი ან საბჭოს მეორე ანგარიში ადასტურებს; მოთხოვნის ავტორი და ბენეფიციარი საკუთარ მოთხოვნას ვერ ადასტურებენ."
-                  : "Council account 1 created a request in each region. Regional administrator 2 or council account 2 can decide. The requester and beneficiary cannot approve their own request."}
-              </p>
-              <p>
-                {ka
-                  ? "ანგარიშის შესაცვლელად გამოდი და შესვლის გვერდზე სხვა ანგარიში აირჩიე. სხვადასხვა ანგარიშით ერთდროულად მუშაობისთვის გამოიყენე ბრაუზერის ცალკე პროფილები."
-                  : "Sign out to switch accounts. Use separate browser profiles for simultaneous sessions."}
-              </p>
-              <ul className="workspace-units">
+                  ? "სატესტო დემო ანგარიშები"
+                  : "Demo accounts"}
+              </summary>
+              <ul className="workspace-units mt-2">
                 {people.map((p) => (
                   <li key={p.id}>
-                    {p.label}
-                    <small>
-                      {ka ? "სატესტო წევრის ID" : "Demo member ID"}:{" "}
-                      <code>{p.memberId}</code>
-                    </small>
+                    {p.label} · <small>{p.region}</small>
                   </li>
                 ))}
               </ul>

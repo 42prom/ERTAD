@@ -166,7 +166,7 @@ export default function Layout() {
     }, 0);
     const timer = window.setInterval(() => {
       void refreshBootstrap();
-    }, 60_000);
+    }, 120_000);
     const onRefresh = () => void refreshBootstrap();
     window.addEventListener("focus", onRefresh);
     window.addEventListener("ertad-reviews-changed", onRefresh);

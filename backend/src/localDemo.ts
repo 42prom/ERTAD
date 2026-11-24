@@ -36,10 +36,13 @@ export type DemoAccess = z.infer<typeof demoSchema>;
 const platformDemoFile = fileURLToPath(
   new URL('../../.local/platform-access.json', import.meta.url)
 );
+const platformReviewerDemoFile = fileURLToPath(
+  new URL('../../.local/platform-reviewer-access.json', import.meta.url)
+);
 const platformDemoSchema = z
   .object({
     id: z.string().uuid(),
-    email: z.literal('platform@ertad.local'),
+    email: z.enum(['platform@ertad.local', 'platform-reviewer@ertad.local']),
     password: z.string().min(24).max(128),
     validUntil: z.string().datetime(),
   })
@@ -49,6 +52,14 @@ function readPlatformDemo(): unknown {
   if (process.env.NODE_ENV !== 'development') return null;
   try {
     return JSON.parse(readFileSync(platformDemoFile, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+function readPlatformReviewerDemo(): unknown {
+  if (process.env.NODE_ENV !== 'development') return null;
+  try {
+    return JSON.parse(readFileSync(platformReviewerDemoFile, 'utf8'));
   } catch {
     return null;
   }
@@ -108,13 +119,20 @@ export function createLocalDemoRouter(
       throw new Error('Invalid demo account set');
     return fixture;
   };
-  const loadPlatform = () => {
-    try {
-      const parsed = platformDemoSchema.safeParse(platformReader());
-      return parsed.success ? parsed.data : null;
-    } catch {
-      return null;
+  const loadPlatformAccounts = () => {
+    const list: z.infer<typeof platformDemoSchema>[] = [];
+    for (const raw of [platformReader(), platformReader === readPlatformDemo ? readPlatformReviewerDemo() : null]) {
+      if (!raw) continue;
+      try {
+        const parsed = platformDemoSchema.safeParse(raw);
+        if (parsed.success && !list.some((x) => x.id === parsed.data.id)) {
+          list.push(parsed.data);
+        }
+      } catch {
+        // Ignore malformed optional technical fixture
+      }
     }
+    return list;
   };
   router.get('/accounts', (_req, res, next) => {
     try {
@@ -125,15 +143,20 @@ export function createLocalDemoRouter(
         region: string;
         kind?: 'technical';
       }[] = load().accounts.map(({ id, email, label, region }) => ({ id, email, label, region }));
-      const technical = loadPlatform();
-      if (technical && !accounts.some((a) => a.id === technical.id))
-        accounts.push({
-          id: technical.id,
-          email: technical.email,
-          label: 'ტექნიკური ადმინისტრატორი',
-          region: 'სისტემა',
-          kind: 'technical',
-        });
+      for (const technical of loadPlatformAccounts()) {
+        if (!accounts.some((a) => a.id === technical.id)) {
+          accounts.push({
+            id: technical.id,
+            email: technical.email,
+            label:
+              technical.email === 'platform-reviewer@ertad.local'
+                ? 'ტექნიკური მიმომხილველი'
+                : 'ტექნიკური ადმინისტრატორი',
+            region: 'სისტემა',
+            kind: 'technical',
+          });
+        }
+      }
       res.json({ enabled: true, accounts });
     } catch (error) {
       next(error);
@@ -150,8 +173,11 @@ export function createLocalDemoRouter(
             : req.adminUser?.id;
         const account = fixture.accounts.find((a) => a.id === id);
         if (!account) {
-          const technical = operation === 'login' ? loadPlatform() : null;
-          if (!technical || technical.id !== id) throw createError('Demo account unavailable', 403);
+          const technical =
+            operation === 'login'
+              ? loadPlatformAccounts().find((t) => t.id === id) ?? null
+              : null;
+          if (!technical) throw createError('Demo account unavailable', 403);
           const match = await query(
             `SELECT a.id FROM admin_users a WHERE a.id=$1 AND a.email=$2 AND a.is_active
           AND NOT EXISTS(SELECT 1 FROM member_users m WHERE m.web_account_id=a.id)`,
