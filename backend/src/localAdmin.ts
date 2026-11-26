@@ -4,6 +4,7 @@ import { requireAdmin } from './middleware/auth';
 import { createReviewRouter } from './modules/governance/reviews';
 import { createLocalDemoRouter } from './localDemo';
 import { createUnitRouter } from './modules/organization/units';
+import { createTerritoryRouter } from './modules/organization/territory';
 import { createMemberDirectoryRouter } from './modules/organization/members';
 import { createPlatformRouter } from './modules/security/platform';
 import { createDecisionRouter } from './modules/decisions/polls';
@@ -55,6 +56,7 @@ export function createLocalAdminRouter(
   router.use('/platform', createPlatformRouter());
   router.use('/reviews', createReviewRouter());
   router.use('/units', createUnitRouter());
+  router.use('/territory', createTerritoryRouter());
   router.use('/members', createMemberDirectoryRouter());
   router.use('/decisions', createDecisionRouter());
   router.use('/work', createWorkRouter());

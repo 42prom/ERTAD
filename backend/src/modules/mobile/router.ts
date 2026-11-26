@@ -22,6 +22,7 @@ import { createWorkspaceRouter } from '../governance/workspace';
 import { createInvitationsRouter } from '../identity/invitations';
 import { createSelfAccountRouter } from '../identity/selfAccount';
 import { createMemberDirectoryRouter } from '../organization/members';
+import { createTerritoryRouter } from '../organization/territory';
 import { createUnitRouter } from '../organization/units';
 import { createEvidenceRouter } from '../work/evidence';
 import { createMaterialFilesRouter } from '../work/materialFiles';
@@ -393,6 +394,7 @@ export function createLocalMobileRouter(
   router.use('/inbox', createInboxRouter());
   router.use('/invitations', createInvitationsRouter());
   router.use('/reviews', createReviewRouter());
+  router.use('/territory', createTerritoryRouter());
   router.use('/units', createUnitRouter());
   router.use('/members', createMemberDirectoryRouter());
   router.use('/account', createSelfAccountRouter([origin]));

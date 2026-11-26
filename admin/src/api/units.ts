@@ -40,6 +40,10 @@ export interface UnitRow {
   geographic_area_id?: string | null;
   geography?: GeographicLabel | null;
   main_channel_id?: string | null;
+  admission_open?: boolean;
+  admission_position_id?: string | null;
+  admission_position_name?: string | null;
+  canConfigureAdmission?: boolean;
   canClassify?: boolean;
   child_types?: OperationalType[];
   classify_types?: Exclude<OperationalType, "unclassified">[];

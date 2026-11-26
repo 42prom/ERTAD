@@ -65,6 +65,7 @@
     "demo:bootstrap": "tsx scripts/bootstrap-web-demo.ts",
     "test:demo": "tsx scripts/test-web-demo.ts",
     "test:units": "tsx scripts/test-units.ts",
+    "test:territory": "tsx scripts/test-territorial-admission.ts",
     "test:units:lifecycle:browser": "tsx scripts/test-units.ts --browser --lifecycle",
     "demo:unit-changes": "tsx scripts/bootstrap-web-demo.ts --unit-changes",
     "demo:hierarchy": "tsx scripts/bootstrap-web-demo.ts --hierarchy",

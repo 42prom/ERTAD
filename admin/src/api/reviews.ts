@@ -36,7 +36,7 @@ export interface ReviewContext {
 }
 export type ReviewStatus = "pending" | "approved" | "rejected" | "expired";
 export interface ReviewRow {
-  kind?: "grant" | "transfer" | "revoke" | "suspend" | "resume" | "revision";
+  kind?: "grant" | "transfer" | "revoke" | "suspend" | "resume" | "revision" | "admission";
   id: string;
   requester_id: string;
   unit_id: string;

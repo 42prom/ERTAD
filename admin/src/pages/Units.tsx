@@ -10,6 +10,7 @@ import { useConsolePreferences } from "../components/useConsolePreferences";
 import { useInboxTarget } from "../components/useInboxTarget";
 import { authApi } from "../api/client";
 import { demoApi } from "../api/demo";
+import { territoryApi, type GroupAdmissionOptions } from "../api/territory";
 import {
   territoryTypeLabel,
   unitApi,
@@ -64,6 +65,10 @@ export default function Units() {
   const [demo, setDemo] = useState(false),
     [busy, setBusy] = useState(false),
     [retry, setRetry] = useState<Submission | null>(null);
+  const [admissionTarget, setAdmissionTarget] = useState<UnitRow | null>(null);
+  const [admissionOptions, setAdmissionOptions] = useState<GroupAdmissionOptions | null>(null);
+  const [admissionOpen, setAdmissionOpen] = useState(false);
+  const [admissionPositionId, setAdmissionPositionId] = useState("");
   const generation = useRef(0),
     formTitle = useRef<HTMLHeadingElement>(null),
     busyRef = useRef(false);
@@ -167,29 +172,83 @@ export default function Units() {
     };
   }, [org, page, tab, filter, revision, unitStatus]);
   useEffect(() => {
-    if (parent || detail || change) {
+    if (parent || detail || change || admissionTarget) {
       formTitle.current?.focus();
       if (typeof formTitle.current?.scrollIntoView === "function") {
         formTitle.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
     }
-  }, [parent, detail, change]);
+  }, [parent, detail, change, admissionTarget]);
   useEffect(() => {
-    if (!parent && !detail && !change && !retry) return;
+    if (!parent && !detail && !change && !admissionTarget && !retry) return;
     const guard = (e: BeforeUnloadEvent) => e.preventDefault();
     window.addEventListener("beforeunload", guard);
     return () => window.removeEventListener("beforeunload", guard);
-  }, [parent, detail, change, retry]);
+  }, [parent, detail, change, admissionTarget, retry]);
   function clear() {
     generation.current++;
     setParent(null);
     setDetail(null);
     setChange(null);
+    setAdmissionTarget(null);
+    setAdmissionOptions(null);
+    setAdmissionOpen(false);
+    setAdmissionPositionId("");
     setName("");
     setReason("");
     setPassword("");
     setConfirmed(false);
     setTerritory({ type: "unclassified", area: "" });
+  }
+  async function openAdmission(row: UnitRow) {
+    clear();
+    const version = ++generation.current;
+    setAdmissionTarget(row);
+    setError("");
+    setNotice("");
+    try {
+      const options = await territoryApi.groupOptions(org, row.id);
+      if (version === generation.current) {
+        setAdmissionOptions(options);
+        setAdmissionOpen(options.admissionOpen);
+        setAdmissionPositionId(
+          options.admissionPositionId ?? options.eligiblePositions[0]?.id ?? "",
+        );
+      }
+    } catch (e) {
+      if (version === generation.current) {
+        setAdmissionTarget(null);
+        setError(fail(e));
+      }
+    }
+  }
+  async function saveAdmission(e: FormEvent) {
+    e.preventDefault();
+    if (!admissionTarget || busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      if (demo) await demoApi.stepUp();
+      else await authApi.stepUp(password);
+      setPassword("");
+      await territoryApi.configureGroup({
+        organizationId: org,
+        unitId: admissionTarget.id,
+        admissionOpen,
+        admissionPositionId: admissionOpen ? admissionPositionId : null,
+      });
+      clear();
+      setNotice(label("Saved.", "შენახულია."));
+      setRevision((v) => v + 1);
+      window.dispatchEvent(new Event("ertad-reviews-changed"));
+    } catch (err) {
+      setError(fail(err));
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+    }
   }
   function startGroup(row: UnitRow) {
     clear();
@@ -320,7 +379,7 @@ export default function Units() {
       },
     });
   }
-  const editing = !!parent || !!detail || !!change || !!retry || busy;
+  const editing = !!parent || !!detail || !!change || !!admissionTarget || !!retry || busy;
   const kindLabel = (kind: string) =>
     ({
       create: label("Create", "შექმნა"),
@@ -584,8 +643,20 @@ export default function Units() {
                                   <span className="status-badge" data-status={node.status === "active" ? "approved" : undefined}>
                                     {statusLabel(node.status)}
                                   </span>
+                                  {node.operational_type === "group" && node.admission_open !== undefined && (
+                                    <span className="status-badge" data-status={node.admission_open ? "approved" : undefined}>
+                                      {node.admission_open
+                                        ? label("Admission open", "მიღება ღიაა")
+                                        : label("Admission closed", "მიღება დახურულია")}
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="flex flex-wrap gap-2">
+                                  {node.canConfigureAdmission && (
+                                    <Button size="sm" variant="ghost" disabled={editing} onClick={() => void openAdmission(node)}>
+                                      {label("Admission", "მიღების პარამეტრები")}
+                                    </Button>
+                                  )}
                                   {node.canPropose && (
                                     <Button
                                       size="sm"
@@ -664,6 +735,13 @@ export default function Units() {
                           <td>
                             {row.name}
                             {row.geography && <div className="text-xs text-[var(--muted)]">{ka ? row.geography.nameKa : row.geography.nameEn}</div>}
+                            {"canPropose" in row && row.operational_type === "group" && row.admission_open !== undefined && (
+                              <div className="text-xs text-[var(--muted)]">
+                                {row.admission_open
+                                  ? `${label("Admission open", "მიღება ღიაა")}${row.admission_position_name ? ` · ${row.admission_position_name}` : ""}`
+                                  : label("Admission closed", "მიღება დახურულია")}
+                              </div>
+                            )}
                             {!("canPropose" in row) && (
                               <p className="text-sm">{kindLabel(row.kind)}</p>
                             )}
@@ -759,6 +837,11 @@ export default function Units() {
                                     {kindLabel("territory")}
                                   </Button>
                                 )}
+                                {row.canConfigureAdmission && (
+                                  <Button variant="ghost" disabled={editing} onClick={() => void openAdmission(row)}>
+                                    {label("Admission", "მიღების პარამეტრები")}
+                                  </Button>
+                                )}
                                 {row.main_channel_id && (
                                   <Link
                                     to="/channels"
@@ -808,6 +891,76 @@ export default function Units() {
                   {label("Refresh", "განახლება")}
                 </Button>
               </div>
+            </Card>
+          )}
+          {admissionTarget && (
+            <Card>
+              <h2 ref={formTitle} tabIndex={-1}>
+                {label("Group admission settings: ", "ჯგუფში მიღების პარამეტრები: ") + admissionTarget.name}
+              </h2>
+              {!admissionOptions ? (
+                <p role="status">{label("Loading…", "იტვირთება…")}</p>
+              ) : (
+                <form className="review-form" onSubmit={(e) => void saveAdmission(e)}>
+                  <fieldset disabled={busy}>
+                    <label className="review-confirm">
+                      <input
+                        type="checkbox"
+                        checked={admissionOpen}
+                        onChange={(e) => setAdmissionOpen(e.target.checked)}
+                      />
+                      {label(
+                        "Publish this group for member admission requests in its area",
+                        "ჯგუფის გამოქვეყნება წევრების გაწევრიანების მოთხოვნებისთვის ამ ტერიტორიაზე",
+                      )}
+                    </label>
+                    {admissionOpen && (
+                      admissionOptions.eligiblePositions.length > 0 ? (
+                        <Select
+                          label={label("Default member position", "ნაგულისხმევი წევრის პოზიცია")}
+                          value={admissionPositionId}
+                          onChange={(e) => setAdmissionPositionId(e.target.value)}
+                          options={admissionOptions.eligiblePositions.map((p) => ({
+                            value: p.id,
+                            label: `${p.name} (v${p.bundleVersion})`,
+                          }))}
+                        />
+                      ) : (
+                        <p role="status" className="text-sm text-[var(--muted)]">
+                          {label(
+                            "No eligible least-privilege member position exists under this group yet. Create and approve an ordinary member position first.",
+                            "ამ ჯგუფში მინიმალური უფლებების მქონე წევრის პოზიცია ჯერ არ არსებობს. თავდაპირველად შექმენით და დაამტკიცეთ წევრის პოზიცია.",
+                          )}
+                        </p>
+                      )
+                    )}
+                    {!demo && (
+                      <Input
+                        label={label("Password confirmation", "პაროლის დადასტურება")}
+                        type="password"
+                        autoComplete="current-password"
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                      />
+                    )}
+                    <div className="review-toolbar">
+                      <Button
+                        type="submit"
+                        disabled={
+                          (admissionOpen && (!admissionPositionId || admissionOptions.eligiblePositions.length === 0)) ||
+                          (!demo && !password)
+                        }
+                      >
+                        {label("Save admission settings", "მიღების პარამეტრების შენახვა")}
+                      </Button>
+                      <Button type="button" variant="secondary" disabled={busy} onClick={clear}>
+                        {label("Close", "დახურვა")}
+                      </Button>
+                    </div>
+                  </fieldset>
+                </form>
+              )}
             </Card>
           )}
           {(parent || detail || change) && (

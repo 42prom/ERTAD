@@ -2,6 +2,18 @@
 
 > Last updated: 2026-11-26 · Branch: `feat/ertad-development` · Not deployed to production
 
+## Territorial Groups T3: Governed Member Admission & Primary Local Membership (Migration 90, 2026-11-26)
+
+- **DB, Backend & Admin UI ([`0090_territorial_admission_and_primary_workspace.sql`](../backend/db/foundation/0090_territorial_admission_and_primary_workspace.sql), [`territory.ts`](../backend/src/modules/organization/territory.ts), [`localAdmin.ts`](../backend/src/localAdmin.ts), [`router.ts` (Mobile)](../backend/src/modules/mobile/router.ts), [`territory.ts` (Admin API)](../admin/src/api/territory.ts), [`units.ts` (Admin API)](../admin/src/api/units.ts), [`reviews.ts` (Admin API)](../admin/src/api/reviews.ts), [`membershipChangeLabel.ts`](../admin/src/components/membershipChangeLabel.ts), [`Units.tsx`](../admin/src/pages/Units.tsx), [`Units.test.tsx`](../admin/src/tests/Units.test.tsx), [`test-territorial-admission.ts`](../scripts/test-territorial-admission.ts)):**
+  - Added opt-in bounded group admission settings (`admission_open`, `admission_position_id`) on `ertad.units` with `ertad.position_is_admission_eligible` restricting publishable positions strictly to active approved least-privilege ordinary-member bundles, and clearing admission publication on group archival.
+  - Extended `ertad.membership_reviews` cleanly with `kind = 'admission'` (allowing requester = target at submission while preserving strict independent reviewer decision `decision_by <> requester_id AND decision_by <> target_id` in table CHECKs, `ertad.membership_review_command`, and `ertad.review_finish`), preventing self-approval, key-tamper conflicts, duplicate pending admissions, and retirement of published admission positions.
+  - Added `ertad.member_primary_groups` (`PRIMARY KEY (organization_id, user_id)`, zero runtime DML) with `z_clear_inactive_primary_group` trigger automatically clearing primary designation on suspension/termination without silently promoting another group, exposed `ertad.territory_command` across `/admin/territory` and `/mobile/territory`, added `groups` projections to `ertad.workspace_bootstrap`, and wired Web Admin group admission controls in `Units.tsx`.
+  - Pre-existing unrelated finding noted during regression sweep: `npm run test:members:lifecycle` (`scripts/membership-suspension-tests.ts:136`) fails on `ertad.member_summary` because earlier migration `0085_member_directory_verification_and_perf.sql` replaced `member_summary` without `canChange` on memberships (retained untouched outside Stage T3 scope).
+  - Stages T4–T6 (scoped announcements, mobile group switcher, and multi-region E2E acceptance) remain pending.
+- **Verified evidence:**
+  - `npm run db:migrate` (`0090_territorial_admission_and_primary_workspace.sql` + local checksum sync PASS), `npm run test:territory` (`9/9` checks PASS), `npm run test:units` (PASS), `npm run test:reviews` (PASS), `npm run test:workspace` (`4/4` checks PASS), `npm run restore:drill` (`109 tables, 90 migrations`, `9.5s` PASS).
+  - `npm run check` PASS (`check:identity`, `tokens:check`, `typecheck`, `eslint --max-warnings 0`, backend foundation `4/4`, Jest `27/27` suites, Admin Vitest `59/59` files / `363/363` tests including `Units.test.tsx` `12/12`, `scripts/tests` `12/12`, Vite build `10.16s`), `npm run check:workspace` (`931 eligible paths` PASS), and `npm run smoke` (PASS against `:13000` & `:15173`).
+
 ## Territorial Groups T2: Atomic Local Group + Main Chat Provisioning (Migration 89, 2026-11-26)
 
 - **DB, Backend & Admin UI ([`0089_territorial_group_main_channel.sql`](../backend/db/foundation/0089_territorial_group_main_channel.sql), [`units.ts`](../backend/src/modules/organization/units.ts), [`units.ts` (Admin API)](../admin/src/api/units.ts), [`Units.tsx`](../admin/src/pages/Units.tsx), [`unit-territory-tests.ts`](../scripts/unit-territory-tests.ts), [`Units.test.tsx`](../admin/src/tests/Units.test.tsx)):**
@@ -416,7 +428,6 @@ Validation: `npm run check` passes **473 tests** (4 foundation, 219 backend, 242
 Smoke and the workspace publication/whitespace checks pass. Restore drill passes for **68 tables and 40 migrations**, including runtime protections and corruption detection. The npm high-severity audit gate passes; 29 moderate and 1 low dependency findings remain. No production deployment, hosted CI, physical-device acceptance, independent security audit or scale certification is claimed. Changes remain local, uncommitted and unpushed.
 
 Remaining: position retirement/controlled rollout is separate from definition revisions; broader mobile credential/device lifecycle and production identity/MFA, signed checkpoints and operational release gates remain open. Existing members are not migrated automatically to revised positions.
-
 
 ## Reviewed membership transfer and termination (2026-11-01)
 
@@ -953,18 +964,18 @@ Dependency review on October 8: upgraded pinned `compression` from 1.8.1 to 1.8.
 
 ## Applied migrations
 
-| # | Migration | Purpose |
-|---|-----------|---------|
-| 1–2 | Foundation schema | Base tables |
-| 3 | `0003_scoped_membership.sql` | Organizations, units, bundles, grants, positions, memberships |
-| 4 | `0004_governance_bootstrap.sql` | Installation-wide immutable plan, append-only history |
-| 5 | `0005_membership_reviews.sql` | Membership review/approval workflow |
-| 6 | `0006_unit_creation_reviews.sql` | Scoped child-unit creation requests and independent approval |
-| 7 | `0007_named_decisions.sql` | Scoped named advisory polls, frozen eligibility and immutable votes/retry receipts |
-| 8 | `0008_decision_formats.sql` | Referendum definitions/outcomes and validated immutable multi-question survey responses/results |
-| 9 | `0009_decision_authoring.sql` | Option-based elections and bounded survey rating/text presentation metadata |
-| 10 | `0010_hierarchical_work.sql` | Hierarchical tasks, capacity-safe assignments, verified Activity, immutable history and scoped notifications |
-| 11 | `0011_work_oversight.sql` | Coordinators, weighted independently verified criteria, blockers and scope-safe oversight summaries |
+| #   | Migration                        | Purpose                                                                                                      |
+| --- | -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| 1–2 | Foundation schema                | Base tables                                                                                                  |
+| 3   | `0003_scoped_membership.sql`     | Organizations, units, bundles, grants, positions, memberships                                                |
+| 4   | `0004_governance_bootstrap.sql`  | Installation-wide immutable plan, append-only history                                                        |
+| 5   | `0005_membership_reviews.sql`    | Membership review/approval workflow                                                                          |
+| 6   | `0006_unit_creation_reviews.sql` | Scoped child-unit creation requests and independent approval                                                 |
+| 7   | `0007_named_decisions.sql`       | Scoped named advisory polls, frozen eligibility and immutable votes/retry receipts                           |
+| 8   | `0008_decision_formats.sql`      | Referendum definitions/outcomes and validated immutable multi-question survey responses/results              |
+| 9   | `0009_decision_authoring.sql`    | Option-based elections and bounded survey rating/text presentation metadata                                  |
+| 10  | `0010_hierarchical_work.sql`     | Hierarchical tasks, capacity-safe assignments, verified Activity, immutable history and scoped notifications |
+| 11  | `0011_work_oversight.sql`        | Coordinators, weighted independently verified criteria, blockers and scope-safe oversight summaries          |
 
 All checksums verified. Earlier checksums unchanged by later migrations.
 Local database has six synthetic members, one demo organization, zero production-bootstrap ceremonies and two initial pending reviews. Test suites use separate disposable databases and preserve these demonstration outcomes.
@@ -1044,14 +1055,14 @@ Password in ignored `.local/ADMIN_ACCESS.md`. No authenticator code in developme
 
 ## Previous checkpoint verification (2026-10-05)
 
-| Check | Result |
-|---|---|
-| `npm run check` | ✅ 260 tests (3 foundation, 181 backend, 72 web, 4 palette), typechecks, builds |
-| `npm run test:integration` | ✅ 5 migration checksums, dependency controls, auth suite, 29 scoped-access, 20 bootstrap, 18 review scenarios |
-| `npm run test:reviews -- --browser` | ✅ Chrome, two sessions, disposable API/DB; Georgian/English, light/dark, 360–1440px |
-| Compose / smoke / restore | ✅ Apps-profile validation, host smoke, disposable 5-migration restore |
-| Dependency audit | ✅ 0 vulnerabilities |
-| Publication / provenance | ✅ 454 eligible paths, whitespace pass, source HEAD/hashes unchanged |
+| Check                               | Result                                                                                                         |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `npm run check`                     | ✅ 260 tests (3 foundation, 181 backend, 72 web, 4 palette), typechecks, builds                                |
+| `npm run test:integration`          | ✅ 5 migration checksums, dependency controls, auth suite, 29 scoped-access, 20 bootstrap, 18 review scenarios |
+| `npm run test:reviews -- --browser` | ✅ Chrome, two sessions, disposable API/DB; Georgian/English, light/dark, 360–1440px                           |
+| Compose / smoke / restore           | ✅ Apps-profile validation, host smoke, disposable 5-migration restore                                         |
+| Dependency audit                    | ✅ 0 vulnerabilities                                                                                           |
+| Publication / provenance            | ✅ 454 eligible paths, whitespace pass, source HEAD/hashes unchanged                                           |
 
 Not rerun for this batch: Flutter/device builds, hosted CI.
 

@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import Units from "../pages/Units";
 import { unitApi } from "../api/units";
+import { territoryApi } from "../api/territory";
 import { demoApi } from "../api/demo";
 vi.mock("../components/useConsolePreferences", () => ({
   useConsolePreferences: () => ({ language: "en" }),
@@ -25,6 +26,9 @@ vi.mock("../api/units", async (importOriginal) => {
 });
 vi.mock("../api/demo", () => ({
   demoApi: { scenario: vi.fn(), stepUp: vi.fn() },
+}));
+vi.mock("../api/territory", () => ({
+  territoryApi: { groupOptions: vi.fn(), configureGroup: vi.fn() },
 }));
 vi.mock("../api/client", () => ({ authApi: { stepUp: vi.fn() } }));
 const unit = {
@@ -325,5 +329,45 @@ describe("Reviewed unit changes", () => {
     mount();
     const link = await screen.findByRole("link", { name: "Main chat" });
     expect(link).toHaveAttribute("href", "/channels");
+  });
+  it("configures group admission settings when authorized", async () => {
+    vi.mocked(unitApi.units).mockResolvedValue({
+      items: [
+        {
+          ...unit,
+          operational_type: "group",
+          admission_open: false,
+          admission_position_id: null,
+          canConfigureAdmission: true,
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 25,
+    });
+    vi.mocked(territoryApi.groupOptions).mockResolvedValue({
+      unitId: unit.id,
+      admissionOpen: false,
+      admissionPositionId: null,
+      eligiblePositions: [{ id: "pos-1", name: "Group Member", bundleVersion: 1 }],
+    });
+    vi.mocked(territoryApi.configureGroup).mockResolvedValue({
+      unitId: unit.id,
+      admissionOpen: true,
+      admissionPositionId: "pos-1",
+    });
+    mount();
+    expect(await screen.findByText("Admission closed")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Admission" }));
+    await screen.findByText(/Publish this group for member admission requests/i);
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "Save admission settings" }));
+    await screen.findByText("Saved.");
+    expect(territoryApi.configureGroup).toHaveBeenCalledWith({
+      organizationId: "org-a",
+      unitId: unit.id,
+      admissionOpen: true,
+      admissionPositionId: "pos-1",
+    });
   });
 });
