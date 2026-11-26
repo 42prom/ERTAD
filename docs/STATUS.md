@@ -2,6 +2,20 @@
 
 > Last updated: 2026-11-26 · Branch: `feat/ertad-development` · Not deployed to production
 
+## Territorial Groups T6: End-to-End Multi-Region & Sibling Acceptance Suite (2026-11-26)
+
+- Added [`scripts/test-territorial-e2e.ts`](scripts/test-territorial-e2e.ts) and [`package.json`](package.json) script `test:territory:e2e` covering Stages T1–T5 end to end against a freshly migrated disposable PostgreSQL database (`91` migrations, `109` tables) and real MinIO object storage across full HTTP Admin (`/api/v1/admin`) and Mobile (`/api/v1/mobile`) routers:
+  - **Multi-region & sibling creation (`GE-TB` / `GE-TB-SABURTALO` Groups A & B, `GE-KA` / `GE-KA-TELAVI` Group C):** independent dual-control approval provisions `mainChannelId` atomically only on `group` units (`region`/`locality` return `null`), enforces territorial parent/area containment, and leaves creators/approvers without implicit group membership or chat access (`403`).
+  - **Admission & workspace switching:** unpublished sibling Group B stays hidden and denies self-admission (`403`), published Group A and Group C allow admission requests + independent review approval, primary-group switching (`Group A` -> `Group C`) scopes channels, tasks, events, and polls cleanly across regions, and ancestor `Tbilisi` regional announcements (`kind = 'global'`) reach descendant groups read-only (`participants = []`, `post` `403`, attachment download `200`).
+  - **Revocation & boundary isolation:** revoking `Group C` immediately clears `primaryMembershipId` to `null` without silent promotion to `Group A`, rejects stale Group C writes/reads (`403`/`409`), and verifies sibling (`Group B` vs `Group A`), cross-region (`Kakheti` vs `Tbilisi`/`Group A`), and cross-tenant (`Foreign Org`) isolation.
+- Verification run on 2026-11-26 (all passed after final edits):
+  - `npm run test:territory:e2e` — `ALL 6 TERRITORIAL E2E CHECKS PASSED`
+  - `npm run test:territory` — `9` passed; `npm run test:territory:content` — `6` passed
+  - `npm run restore:drill` — PASS (`109 tables, 91 migrations`, `8.1s`)
+  - `npm run check` (`check:identity`, `tokens:check`, `typecheck`, `eslint --max-warnings 0`, `foundation.test.ts` `4/4`, Jest `27` suites / `232` tests, Admin Vitest `59` files, workspace scripts `12/12`, `build`) — PASS
+  - `npm run check:workspace` — `PASS workspace publication guard (935 eligible paths)`; `npm run smoke` — PASS (`13000`/`15173` ready, same-origin API proxy, unauthenticated denial)
+- Remaining external/device check: physical Android/iOS device E2E test remains pending until a physical device or emulator target is attached; Flutter mobile contract/build checks (`88/88` tests, debug APK) were verified in Stage T5 commit `419b7eb`.
+
 ## Territorial Groups T5: Mobile Group Workspace & Switcher (2026-11-26)
 
 - **Mobile API, State & UI ([`mobile_api_client.dart`](../mobile/lib/core/network/mobile_api_client.dart), [`shell_providers.dart`](../mobile/lib/core/state/shell_providers.dart), [`territory_admission_sheet.dart`](../mobile/lib/widgets/territory_admission_sheet.dart), [`org_context_sheet.dart`](../mobile/lib/core/shell/org_context_sheet.dart), [`adaptive_header.dart`](../mobile/lib/core/shell/adaptive_header.dart), [`shell_l10n.dart`](../mobile/lib/core/shell/shell_l10n.dart), [`phase_a_contracts_test.dart`](../mobile/test/phase_a_contracts_test.dart)):**
