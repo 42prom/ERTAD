@@ -309,4 +309,21 @@ describe("Reviewed unit changes", () => {
       ),
     );
   });
+  it("renders a Main chat link for units with a provisioned main channel", async () => {
+    vi.mocked(unitApi.units).mockResolvedValue({
+      items: [
+        {
+          ...unit,
+          operational_type: "group",
+          main_channel_id: "chan-main-1",
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 25,
+    });
+    mount();
+    const link = await screen.findByRole("link", { name: "Main chat" });
+    expect(link).toHaveAttribute("href", "/channels");
+  });
 });

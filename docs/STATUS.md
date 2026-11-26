@@ -2,6 +2,17 @@
 
 > Last updated: 2026-11-26 · Branch: `feat/ertad-development` · Not deployed to production
 
+## Territorial Groups T2: Atomic Local Group + Main Chat Provisioning (Migration 89, 2026-11-26)
+
+- **DB, Backend & Admin UI ([`0089_territorial_group_main_channel.sql`](../backend/db/foundation/0089_territorial_group_main_channel.sql), [`units.ts`](../backend/src/modules/organization/units.ts), [`units.ts` (Admin API)](../admin/src/api/units.ts), [`Units.tsx`](../admin/src/pages/Units.tsx), [`unit-territory-tests.ts`](../scripts/unit-territory-tests.ts), [`Units.test.tsx`](../admin/src/tests/Units.test.tsx)):**
+  - Added `is_main` on `ertad.channels` with partial unique index `channels_unit_main_unique` (`WHERE is_main = true AND channel_kind = 'group'`) and `main_channel_id` on `ertad.unit_reviews` (with updated `ertad.freeze_unit_review()` permitting immutable one-time approval assignment only for `kind = 'create'` + `operational_type = 'group'`).
+  - Updated `ertad.unit_command` so independent approval of a new `group` unit atomically creates exactly one main group channel in the same transaction without granting memberships or creating chats for `region`, `locality`, `team`, or `unclassified`; concurrent retries return identical `unitId` / `mainChannelId`, and audit failure rolls back both unit and channel.
+  - Published `channel` realtime signal on T2 approval in `backend/src/modules/organization/units.ts` and surfaced `main_channel_id` (`Main chat` / `მთავარი ჩათი`) links and atomic chat creation notices in `Units.tsx`.
+  - Stages T3–T6 (member admission requests + primary workspace designation, scoped announcements, and mobile group switcher) remain pending.
+- **Verified evidence:**
+  - `npm run db:migrate` (`0089_territorial_group_main_channel.sql`), `npm run test:units` (`32` hierarchy scenarios PASS), `npm run test:channels` (`13` channel scenarios PASS), `npm run restore:drill` (`108 tables, 89 migrations`, `8.9s` PASS).
+  - `npm run check` PASS (`check:identity`, `tokens:check`, `typecheck`, `eslint --max-warnings 0`, backend foundation `4/4`, Jest `27/27` suites, Admin Vitest `59/59` files / `362/362` tests including `Units.test.tsx` `11/11`, `scripts/tests` `12/12`, production builds `10.47s`), `npm run check:workspace` (`927 eligible paths`), and `npm run smoke` (PASS against `:13000` & `:15173`).
+
 ## Mobile eID Document Claims Wiring (2026-11-26)
 
 - **Mobile Client & Enrollment Flow ([`mobile_api_client.dart`](../mobile/lib/core/network/mobile_api_client.dart), [`nfc_scan_screen.dart`](../mobile/lib/screens/enrollment/nfc_scan_screen.dart), [`profile_creation_screen.dart`](../mobile/lib/screens/enrollment/profile_creation_screen.dart), [`liveness_screen.dart`](../mobile/lib/screens/enrollment/liveness_screen.dart)):**

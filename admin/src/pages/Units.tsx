@@ -759,6 +759,14 @@ export default function Units() {
                                     {kindLabel("territory")}
                                   </Button>
                                 )}
+                                {row.main_channel_id && (
+                                  <Link
+                                    to="/channels"
+                                    className="inline-flex items-center px-2.5 py-1.5 text-sm font-medium text-[var(--primary)] hover:underline"
+                                  >
+                                    {label("Main chat", "მთავარი ჩათი")}
+                                  </Link>
+                                )}
                               </>
                             ) : (
                               <Button
@@ -847,6 +855,19 @@ export default function Units() {
                       <dd>{detail.decision_reason}</dd>
                     </>
                   )}
+                  {detail.main_channel_id && (
+                    <>
+                      <dt>{label("Main group chat", "ჯგუფის მთავარი ჩათი")}</dt>
+                      <dd>
+                        <Link
+                          to="/channels"
+                          className="text-sm font-medium text-[var(--primary)] hover:underline"
+                        >
+                          {label("Main chat", "მთავარი ჩათი")}
+                        </Link>
+                      </dd>
+                    </>
+                  )}
                 </dl>
               )}
               {(parent || change || detail?.canDecide) && (
@@ -887,13 +908,23 @@ export default function Units() {
                       </>
                     )}
                     {(parent || change?.kind === "territory") && (
-                      <UnitTerritoryFields
-                        key={`${org}:${parent?.id ?? change?.row.id}`}
-                        organizationId={org}
-                        allowedTypes={parent ? parent.child_types ?? ["unclassified"] : change!.row.classify_types ?? []}
-                        parentArea={parent ? parent.geographic_area_id ?? null : change!.row.parent_geographic_area_id ?? null}
-                        value={territory} onChange={setTerritory} ka={ka}
-                      />
+                      <>
+                        <UnitTerritoryFields
+                          key={`${org}:${parent?.id ?? change?.row.id}`}
+                          organizationId={org}
+                          allowedTypes={parent ? parent.child_types ?? ["unclassified"] : change!.row.classify_types ?? []}
+                          parentArea={parent ? parent.geographic_area_id ?? null : change!.row.parent_geographic_area_id ?? null}
+                          value={territory} onChange={setTerritory} ka={ka}
+                        />
+                        {parent && !change && territory.type === "group" && (
+                          <p role="status" className="text-xs text-[var(--muted)]">
+                            {label(
+                              "Approval atomically creates one main group chat under this group.",
+                              "დამტკიცებისას ამ ჯგუფის ქვეშ ავტომატურად იქმნება ერთი მთავარი ჯგუფის ჩათი.",
+                            )}
+                          </p>
+                        )}
+                      </>
                     )}
                     <Input
                       label={label(

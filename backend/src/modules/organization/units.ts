@@ -101,6 +101,12 @@ export async function unitCommand(
         topic: 'unit',
         organizationId: organization ?? undefined,
       });
+      if (operation === 'decide' && out?.mainChannelId) {
+        publishRealtimeSignal({
+          topic: 'channel',
+          organizationId: organization ?? undefined,
+        });
+      }
     }
     return out;
   } catch (error) {

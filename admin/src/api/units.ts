@@ -39,6 +39,7 @@ export interface UnitRow {
   operational_type?: OperationalType;
   geographic_area_id?: string | null;
   geography?: GeographicLabel | null;
+  main_channel_id?: string | null;
   canClassify?: boolean;
   child_types?: OperationalType[];
   classify_types?: Exclude<OperationalType, "unclassified">[];
@@ -49,6 +50,7 @@ export interface UnitReview {
   operational_type?: OperationalType;
   geographic_area_id?: string | null;
   geography?: GeographicLabel | null;
+  main_channel_id?: string | null;
   original_name: string | null;
   target_id: string | null;
   id: string;

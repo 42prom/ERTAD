@@ -105,14 +105,73 @@ export async function testUnitTerritories(owner: Client, access: DemoAccess, ses
     assert.equal(scoped.geography.nameKa, "საბურთალო");
     assert.ok(!(await command(4, "units")).items.some((u: any) => u.id === district));
   });
-  await check("local groups and teams inherit the exact locality without new permissions", async () => {
+  await check("local groups and teams inherit the exact locality without new permissions and provision main group chat atomically", async () => {
     await denied(command(2, "propose", fresh(district, "group", "GE-TB-VAKE")), 400);
-    const group = await admitUnit(district, "group", "GE-TB-SABURTALO");
-    const team = await admitUnit(group, "team", "GE-TB-SABURTALO");
-    assert.equal((await row(group)).parent_id, district);
-    assert.equal((await row(team)).parent_id, group);
-    await denied(command(2, "propose", fresh(team, "team", "GE-TB-SABURTALO")), 400);
+    const channelCountBefore = (await owner.query("SELECT count(*)::int n FROM ertad.channels")).rows[0].n;
+
+    // 1. Approving region/locality creates 0 channels (district already approved above -> still 0 new channels)
+    const teamProposal = fresh(await admitUnit(district, "group", "GE-TB-SABURTALO"), "team", "GE-TB-SABURTALO");
+    const teamRev = await command(2, "propose", teamProposal);
+    const teamDec = await command(3, "decide", decision(teamRev.id));
+    assert.equal(teamDec.mainChannelId, null);
+
+    // 2. Approving group atomically creates 1 is_main=true group channel, concurrent retries return identical ids, 0 memberships added
+    const grpProp = fresh(district, "group", "GE-TB-SABURTALO");
+    const grpRev = await command(2, "propose", grpProp);
+    const decPayload = decision(grpRev.id);
+    const [d1, d2] = await Promise.all([
+      command(3, "decide", decPayload),
+      command(3, "decide", decPayload),
+    ]);
+    assert.deepEqual(d1, d2);
+    assert.ok(d1.unitId);
+    assert.ok(d1.mainChannelId);
+    const chRows = (await owner.query("SELECT * FROM ertad.channels WHERE organization_id=$1 AND unit_id=$2", [org, d1.unitId])).rows;
+    assert.equal(chRows.length, 1);
+    assert.equal(chRows[0].id, d1.mainChannelId);
+    assert.equal(chRows[0].is_main, true);
+    assert.equal(chRows[0].channel_kind, "group");
+    assert.deepEqual(chRows[0].scope_path, (await owner.query("SELECT ertad.unit_path($1,$2) AS p", [org, d1.unitId])).rows[0].p);
+    assert.equal((await owner.query("SELECT count(*)::int n FROM ertad.channels")).rows[0].n, channelCountBefore + 2);
     assert.equal((await owner.query("SELECT count(*)::int n FROM memberships")).rows[0].n, membersBefore);
+
+    // 3. Team cannot have child teams and direct SQL cannot insert a second main channel or write channels from runtime role
+    const grpTeam = await admitUnit(d1.unitId, "team", "GE-TB-SABURTALO");
+    assert.equal((await row(grpTeam)).parent_id, d1.unitId);
+    await denied(command(2, "propose", fresh(grpTeam, "team", "GE-TB-SABURTALO")), 400);
+    await assert.rejects(
+      owner.query(
+        "INSERT INTO ertad.channels(organization_id,unit_id,scope_path,title,creator_id,channel_kind,is_main) VALUES($1,$2,$3,'Second main',$4,'group',true)",
+        [org, d1.unitId, chRows[0].scope_path, access.accounts[3].memberId],
+      ),
+      (err: unknown) => (err as { code?: string }).code === "23505",
+    );
+    const { query } = await import("../backend/src/db/client");
+    await assert.rejects(
+      query(
+        "INSERT INTO ertad.channels(organization_id,unit_id,scope_path,title,creator_id,channel_kind,is_main) VALUES($1,$2,$3,'Bypass main',$4,'group',true)",
+        [org, d1.unitId, chRows[0].scope_path, access.accounts[3].memberId],
+      ),
+      (err: unknown) => (err as { code?: string }).code === "42501",
+    );
+  });
+  await check("audit failure during group approval rolls back both unit and main channel", async () => {
+    const grpProp = fresh(district, "group", "GE-TB-SABURTALO");
+    const grpRev = await command(2, "propose", grpProp);
+    const unitsBefore = (await owner.query("SELECT count(*)::int n FROM ertad.units")).rows[0].n;
+    const channelsBefore = (await owner.query("SELECT count(*)::int n FROM ertad.channels")).rows[0].n;
+    const original = SecurityService.logAuditEventInTransaction;
+    SecurityService.logAuditEventInTransaction = async () => {
+      throw new Error("Synthetic T2 audit failure");
+    };
+    try {
+      await assert.rejects(command(3, "decide", decision(grpRev.id)), /Synthetic T2 audit failure/);
+    } finally {
+      SecurityService.logAuditEventInTransaction = original;
+    }
+    assert.equal((await owner.query("SELECT count(*)::int n FROM ertad.units")).rows[0].n, unitsBefore);
+    assert.equal((await owner.query("SELECT count(*)::int n FROM ertad.channels")).rows[0].n, channelsBefore);
+    assert.equal((await command(3, "detail", { id: grpRev.id })).status, "pending");
   });
   await check("territorial creation rolls back on audit failure and catalogue retirement", async () => {
     const original = SecurityService.logAuditEventInTransaction;
