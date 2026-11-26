@@ -385,6 +385,27 @@ const Map<String, String> _kaShellExtras = <String, String>{
   'mgr_event_checkin_ok': 'მონაწილის დასწრება დადასტურდა',
   'msg_attach_photo': 'ფოტოს მიმაგრება',
   'msg_view_attachment': 'ფოტოს ნახვა',
+  'territory_browse_title': 'ადგილობრივი ჯგუფის არჩევა',
+  'territory_select_region': 'რეგიონი / ქალაქი',
+  'territory_select_locality': 'მუნიციპალიტეტი / რაიონი (არასავალდებულო)',
+  'territory_all_areas': 'ყველა რაიონი ამ რეგიონში',
+  'territory_choose_area_hint':
+      'აირჩიე რეგიონი ან მუნიციპალიტეტი ღია ადგილობრივი ჯგუფების სანახავად.',
+  'territory_no_groups': 'ამ ტერიტორიაზე ღია ადგილობრივი ჯგუფი ჯერ არ არის.',
+  'territory_join_btn': 'გაწევრიანების მოთხოვნა',
+  'territory_reason_label': 'მიზეზი (მინიმუმ 10 სიმბოლო)',
+  'territory_reason_hint': 'მოკლედ მიუთითეთ ჯგუფში გაწევრიანების მიზეზი...',
+  'territory_submit_admission': 'მოთხოვნის გაგზავნა',
+  'territory_admission_sent': 'გაწევრიანების მოთხოვნა გაიგზავნა განსახილველად',
+  'territory_pending_badge': 'განხილვის მოლოდინში',
+  'territory_already_member': 'წევრი ხართ',
+  'territory_history_notice':
+      'დამტკიცება ხდება დამოუკიდებელი განმხილველის მიერ და იხსნება მხოლოდ მიმდინარე ჯგუფის სტანდარტული ჩათი.',
+  'territory_primary_badge': 'ძირითადი',
+  'territory_set_primary': 'ძირითადად მონიშვნა',
+  'territory_primary_updated': 'ძირითადი ადგილობრივი ჯგუფი განახლდა',
+  'territory_local_groups': 'ჩემი ადგილობრივი ჯგუფები',
+  'territory_find_group': 'სხვა ადგილობრივი ჯგუფის მოძებნა',
 };
 
 const Map<String, String> _enShellExtras = <String, String>{
@@ -771,6 +792,29 @@ const Map<String, String> _enShellExtras = <String, String>{
   'mgr_threshold_label': 'Threshold (%)',
   'mgr_publish_action': 'Create & publish',
   'mgr_create_action': 'Create',
+  'territory_browse_title': 'Find local group',
+  'territory_select_region': 'Region / city',
+  'territory_select_locality': 'Municipality / district (optional)',
+  'territory_all_areas': 'All districts in region',
+  'territory_choose_area_hint':
+      'Select a region or municipality to view published local groups.',
+  'territory_no_groups':
+      'No published groups accepting admission requests in this area yet.',
+  'territory_join_btn': 'Request admission',
+  'territory_reason_label': 'Reason for admission (min 10 chars)',
+  'territory_reason_hint':
+      'Briefly explain why you want to join this local group...',
+  'territory_submit_admission': 'Submit request',
+  'territory_admission_sent': 'Admission request submitted for review',
+  'territory_pending_badge': 'Pending review',
+  'territory_already_member': 'Member',
+  'territory_history_notice':
+      'Requires independent approval; opens standard group chat history without elevating privileges.',
+  'territory_primary_badge': 'Primary',
+  'territory_set_primary': 'Set as primary',
+  'territory_primary_updated': 'Primary local group updated',
+  'territory_local_groups': 'My local groups',
+  'territory_find_group': 'Browse & join local group',
 };
 
 /// Reads [LocalizationService] safely whether mounted under [Provider] or standalone.

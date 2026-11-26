@@ -2,6 +2,16 @@
 
 > Last updated: 2026-11-26 · Branch: `feat/ertad-development` · Not deployed to production
 
+## Territorial Groups T5: Mobile Group Workspace & Switcher (2026-11-26)
+
+- **Mobile API, State & UI ([`mobile_api_client.dart`](../mobile/lib/core/network/mobile_api_client.dart), [`shell_providers.dart`](../mobile/lib/core/state/shell_providers.dart), [`territory_admission_sheet.dart`](../mobile/lib/widgets/territory_admission_sheet.dart), [`org_context_sheet.dart`](../mobile/lib/core/shell/org_context_sheet.dart), [`adaptive_header.dart`](../mobile/lib/core/shell/adaptive_header.dart), [`shell_l10n.dart`](../mobile/lib/core/shell/shell_l10n.dart), [`phase_a_contracts_test.dart`](../mobile/test/phase_a_contracts_test.dart)):**
+  - Extended `MobileApiClient` with group-scoped `unitId` query support on `fetchDecisions`, `fetchWorkItems`, `fetchEvents`, `fetchChannels`, plus `/mobile/territory/catalogue`, `/mobile/territory/groups`, `/mobile/territory/my-groups`, `/mobile/territory/admissions`, and `/mobile/territory/primary-group`.
+  - Added `GroupContextSummary`, `activeGroupUnitId`, generation-guarded `selectGroup` / `refreshWorkspace` (immediately clearing lists and discarding stale out-of-order responses), `(orgId, groupId)`-keyed offline cache persistence, revoked-group clearance on bootstrap refresh, and complete purge on `signOut` in `ShellSessionNotifier` while preserving the 5-tab mobile navigation.
+  - Added `TerritoryAdmissionSheet` (shared Georgian catalogue Region -> Municipality/District drill-down, bounded published group previews, retention policy notice, and idempotent admission submission) and integrated the authorized local-group switcher and primary-group toggle into `OrgContextSheet`.
+  - Stage T6 (multi-region end-to-end acceptance suite across web/mobile fixtures) and physical mobile device testing remain pending (no Android/iOS device attached during verification).
+- **Verified evidence:**
+  - `flutter analyze --no-pub` (`No issues found!`, `9.4s`), `flutter test --no-pub` (`88/88` passed including generation-guarded switch/revocation/purge and `TerritoryAdmissionSheet` contract tests), `npm run mobile:apk:tunnel` (`mobile/build/app/outputs/flutter-apk/app-debug.apk` built cleanly in `55.9s`), `npm run test:mobile-api` (PASS), `npm run check:identity` (PASS), and `npm run check:workspace` (`934 eligible paths` PASS).
+
 ## Territorial Groups T4: Scoped Content & Descendant Announcements (Migration 91, 2026-11-26)
 
 - **DB, Backend & Admin UI ([`0091_territorial_scoped_content_and_announcements.sql`](../backend/db/foundation/0091_territorial_scoped_content_and_announcements.sql), [`channels.ts`](../backend/src/modules/communication/channels.ts), [`tasks.ts`](../backend/src/modules/work/tasks.ts), [`polls.ts`](../backend/src/modules/decisions/polls.ts), [`channels.ts` (Admin API)](../admin/src/api/channels.ts), [`Channels.tsx`](../admin/src/pages/Channels.tsx), [`Channels.test.tsx`](../admin/src/tests/Channels.test.tsx), [`test-territorial-content.ts`](../scripts/test-territorial-content.ts)):**

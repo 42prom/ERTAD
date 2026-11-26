@@ -270,6 +270,7 @@ class MobileApiClient {
   Future<List<Map<String, dynamic>>> fetchDecisions({
     required String organizationId,
     String view = 'open',
+    String? unitId,
   }) async {
     try {
       final res = await _dio.get<Map<String, dynamic>>(
@@ -278,6 +279,7 @@ class MobileApiClient {
           'organizationId': organizationId,
           'view': view,
           'page': 1,
+          if (unitId != null && unitId.isNotEmpty) 'unitId': unitId,
         },
       );
       final items = (res.data?['items'] as List? ?? const []);
@@ -290,6 +292,7 @@ class MobileApiClient {
   Future<List<Map<String, dynamic>>> fetchWorkItems({
     required String organizationId,
     String view = 'open',
+    String? unitId,
   }) async {
     try {
       final res = await _dio.get<Map<String, dynamic>>(
@@ -298,6 +301,7 @@ class MobileApiClient {
           'organizationId': organizationId,
           'view': view,
           'page': 1,
+          if (unitId != null && unitId.isNotEmpty) 'unitId': unitId,
         },
       );
       final items = (res.data?['items'] as List? ?? const []);
@@ -310,6 +314,7 @@ class MobileApiClient {
   Future<List<Map<String, dynamic>>> fetchEvents({
     required String organizationId,
     String status = 'open',
+    String? unitId,
   }) async {
     try {
       final res = await _dio.get<Map<String, dynamic>>(
@@ -318,6 +323,7 @@ class MobileApiClient {
           'organizationId': organizationId,
           'status': status,
           'page': 1,
+          if (unitId != null && unitId.isNotEmpty) 'unitId': unitId,
         },
       );
       final items = (res.data?['items'] as List? ?? const []);
@@ -331,6 +337,7 @@ class MobileApiClient {
     required String organizationId,
     String view = 'active',
     String kind = 'member_all',
+    String? unitId,
   }) async {
     try {
       final res = await _dio.get<Map<String, dynamic>>(
@@ -340,6 +347,7 @@ class MobileApiClient {
           'view': view,
           'kind': kind,
           'page': 1,
+          if (unitId != null && unitId.isNotEmpty) 'unitId': unitId,
         },
       );
       final items = (res.data?['items'] as List? ?? const []);
@@ -1457,6 +1465,93 @@ class MobileApiClient {
         data: clear
             ? <String, dynamic>{'clear': true}
             : <String, dynamic>{'phone': phone?.trim() ?? ''},
+      );
+      return Map<String, dynamic>.from(res.data ?? const {});
+    } catch (e) {
+      _rethrow(e);
+    }
+  }
+
+  /// Fetches shared Georgian geographic areas reference catalogue (`/mobile/territory/catalogue`).
+  Future<Map<String, dynamic>> fetchTerritoryCatalogue() async {
+    try {
+      final res = await _dio.get<Map<String, dynamic>>('/mobile/territory/catalogue');
+      return Map<String, dynamic>.from(res.data ?? const {});
+    } catch (e) {
+      _rethrow(e);
+    }
+  }
+
+  /// Fetches bounded published local groups for a selected area (`/mobile/territory/groups`).
+  Future<List<Map<String, dynamic>>> fetchPublishedTerritoryGroups({
+    required String organizationId,
+    String? areaId,
+  }) async {
+    try {
+      final res = await _dio.get<Map<String, dynamic>>(
+        '/mobile/territory/groups',
+        queryParameters: <String, dynamic>{
+          'organizationId': organizationId,
+          if (areaId != null && areaId.isNotEmpty) 'areaId': areaId,
+        },
+      );
+      final raw = (res.data?['items'] as List? ?? const []);
+      return raw.whereType<Map>().map(Map<String, dynamic>.from).toList();
+    } catch (e) {
+      _rethrow(e);
+    }
+  }
+
+  /// Fetches current member's active local groups & pending admission requests (`/mobile/territory/my-groups`).
+  Future<Map<String, dynamic>> fetchMyTerritoryGroups({
+    required String organizationId,
+  }) async {
+    try {
+      final res = await _dio.get<Map<String, dynamic>>(
+        '/mobile/territory/my-groups',
+        queryParameters: <String, dynamic>{'organizationId': organizationId},
+      );
+      return Map<String, dynamic>.from(res.data ?? const {});
+    } catch (e) {
+      _rethrow(e);
+    }
+  }
+
+  /// Submits a governed member admission request for a published local group (`/mobile/territory/admissions`).
+  Future<Map<String, dynamic>> requestGroupAdmission({
+    required String organizationId,
+    required String unitId,
+    required String reason,
+    String? idempotencyKey,
+  }) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/mobile/territory/admissions',
+        data: <String, dynamic>{
+          'organizationId': organizationId,
+          'unitId': unitId,
+          'key': idempotencyKey ?? newIdempotencyKey(),
+          'reason': reason.trim(),
+        },
+      );
+      return Map<String, dynamic>.from(res.data ?? const {});
+    } catch (e) {
+      _rethrow(e);
+    }
+  }
+
+  /// Designates or clears the member's primary local group preference (`/mobile/territory/primary-group`).
+  Future<Map<String, dynamic>> setPrimaryLocalGroup({
+    required String organizationId,
+    String? membershipId,
+  }) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/mobile/territory/primary-group',
+        data: <String, dynamic>{
+          'organizationId': organizationId,
+          'membershipId': membershipId,
+        },
       );
       return Map<String, dynamic>.from(res.data ?? const {});
     } catch (e) {

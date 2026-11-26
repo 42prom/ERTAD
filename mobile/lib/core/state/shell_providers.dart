@@ -34,9 +34,57 @@ class OrgContextSummary {
 }
 
 @immutable
+class GroupContextSummary {
+  final String organizationId;
+  final String membershipId;
+  final String unitId;
+  final String unitName;
+  final String? geographicAreaId;
+  final String? geographyNameKa;
+  final String? geographyNameEn;
+  final String positionName;
+  final String? mainChannelId;
+  final bool isPrimary;
+
+  const GroupContextSummary({
+    required this.organizationId,
+    required this.membershipId,
+    required this.unitId,
+    required this.unitName,
+    this.geographicAreaId,
+    this.geographyNameKa,
+    this.geographyNameEn,
+    required this.positionName,
+    this.mainChannelId,
+    this.isPrimary = false,
+  });
+
+  factory GroupContextSummary.fromJson(Map<String, dynamic> json) {
+    final geo = json['geography'] is Map
+        ? Map<String, dynamic>.from(json['geography'] as Map)
+        : null;
+    return GroupContextSummary(
+      organizationId: json['organizationId']?.toString() ?? '',
+      membershipId: json['membershipId']?.toString() ?? '',
+      unitId: json['unitId']?.toString() ?? '',
+      unitName: json['unitName']?.toString() ?? '',
+      geographicAreaId: json['geographicAreaId']?.toString(),
+      geographyNameKa: geo?['nameKa']?.toString(),
+      geographyNameEn: geo?['nameEn']?.toString(),
+      positionName: json['positionName']?.toString() ?? 'Member',
+      mainChannelId: json['mainChannelId']?.toString(),
+      isPrimary: json['isPrimary'] == true,
+    );
+  }
+}
+
+@immutable
 class ShellSessionState {
   final List<OrgContextSummary> organizations;
   final String activeOrgId;
+  final List<GroupContextSummary> groups;
+  final String? activeGroupUnitId;
+  final List<Map<String, dynamic>> pendingAdmissions;
   final PrivacyDisclosureLevel privacyLevel;
   final String? optInDisplayName;
   final DevPersona devPersona;
@@ -81,6 +129,9 @@ class ShellSessionState {
   const ShellSessionState({
     required this.organizations,
     required this.activeOrgId,
+    this.groups = const [],
+    this.activeGroupUnitId,
+    this.pendingAdmissions = const [],
     this.privacyLevel = PrivacyDisclosureLevel.privateHidden,
     this.optInDisplayName,
     this.devPersona = DevPersona.member,
@@ -131,9 +182,31 @@ class ShellSessionState {
   bool get isGroupManager =>
       hasManagerAuthority || devPersona == DevPersona.groupManager;
 
+  List<GroupContextSummary> get activeOrgGroups => groups
+      .where((g) => g.organizationId == activeOrgId)
+      .toList(growable: false);
+
+  GroupContextSummary? get activeGroup {
+    final orgGroups = activeOrgGroups;
+    if (orgGroups.isEmpty) return null;
+    if (activeGroupUnitId != null) {
+      for (final g in orgGroups) {
+        if (g.unitId == activeGroupUnitId) return g;
+      }
+    }
+    return orgGroups.firstWhere((g) => g.isPrimary, orElse: () => orgGroups.first);
+  }
+
+  String get activeContextLabel =>
+      activeGroup?.unitName ?? activeOrg.unitName;
+
   ShellSessionState copyWith({
     List<OrgContextSummary>? organizations,
     String? activeOrgId,
+    List<GroupContextSummary>? groups,
+    String? activeGroupUnitId,
+    bool clearActiveGroupUnitId = false,
+    List<Map<String, dynamic>>? pendingAdmissions,
     PrivacyDisclosureLevel? privacyLevel,
     String? optInDisplayName,
     bool clearOptInDisplayName = false,
@@ -180,6 +253,11 @@ class ShellSessionState {
     return ShellSessionState(
       organizations: organizations ?? this.organizations,
       activeOrgId: activeOrgId ?? this.activeOrgId,
+      groups: groups ?? this.groups,
+      activeGroupUnitId: clearActiveGroupUnitId
+          ? null
+          : (activeGroupUnitId ?? this.activeGroupUnitId),
+      pendingAdmissions: pendingAdmissions ?? this.pendingAdmissions,
       privacyLevel: privacyLevel ?? this.privacyLevel,
       optInDisplayName: clearOptInDisplayName
           ? null
@@ -273,9 +351,11 @@ final mobileApiClientProvider = Provider<MobileApiClient>(
 /// Manages shared workspace context, privacy disclosure and live server sync.
 class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
   static const String _activeOrgPrefKey = 'ertad_active_org_id';
+  static const String _activeGroupPrefPrefix = 'ertad_active_group_id_';
   final MobileApiClient _api;
   bool _refreshing = false;
   bool _pendingRefresh = false;
+  int _contextGeneration = 0;
 
   ShellSessionNotifier(this._api, {bool autoConnect = false})
     : super(
@@ -357,6 +437,7 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
       return;
     }
     _refreshing = true;
+    final int runGeneration = _contextGeneration;
     try {
       String? persistedOrgId;
       if (state.activeOrgId.startsWith('org-')) {
@@ -366,10 +447,16 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
         } catch (_) {}
       }
       final boot = await _api.fetchWorkspaceBootstrap();
+      if (runGeneration != _contextGeneration) return;
       final workOrgs = (boot['work'] as List? ?? const []);
       final decOrgs = (boot['decisions'] as List? ?? const []);
       final chOrgs = (boot['channels'] as List? ?? const []);
       final unitsOrgs = (boot['units'] as List? ?? const []);
+      final parsedGroups = (boot['groups'] as List? ?? const [])
+          .whereType<Map>()
+          .map((m) => GroupContextSummary.fromJson(Map<String, dynamic>.from(m)))
+          .where((g) => g.organizationId.isNotEmpty && g.unitId.isNotEmpty)
+          .toList(growable: false);
       final sourceOrgs = unitsOrgs.isNotEmpty
           ? unitsOrgs
           : workOrgs.isNotEmpty
@@ -399,6 +486,32 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
                 ? persistedOrgId
                 : parsedOrgs.first.id)
           : state.activeOrgId;
+
+      final orgGroups = parsedGroups
+          .where((g) => g.organizationId == orgId)
+          .toList(growable: false);
+      String? persistedGroupId;
+      if (state.activeGroupUnitId == null && orgGroups.isNotEmpty) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          persistedGroupId = prefs.getString('$_activeGroupPrefPrefix$orgId');
+        } catch (_) {}
+      }
+      final String? resolvedGroupUnitId;
+      if (orgGroups.isEmpty) {
+        resolvedGroupUnitId = null;
+      } else if (state.activeGroupUnitId != null &&
+          orgGroups.any((g) => g.unitId == state.activeGroupUnitId)) {
+        resolvedGroupUnitId = state.activeGroupUnitId;
+      } else if (persistedGroupId != null &&
+          orgGroups.any((g) => g.unitId == persistedGroupId)) {
+        resolvedGroupUnitId = persistedGroupId;
+      } else {
+        resolvedGroupUnitId = orgGroups
+            .firstWhere((g) => g.isPrimary, orElse: () => orgGroups.first)
+            .unitId;
+      }
+      if (runGeneration != _contextGeneration) return;
 
       final summary = Map<String, dynamic>.from(boot['summary'] as Map? ?? const {});
       final inbox = Map<String, dynamic>.from(boot['inbox'] as Map? ?? const {});
@@ -434,6 +547,7 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
       List<Map<String, dynamic>> events = state.liveEvents;
       List<Map<String, dynamic>> channels = state.liveChannels;
       List<Map<String, dynamic>> inboxItems = state.liveInboxItems;
+      List<Map<String, dynamic>> pendingAdmissions = state.pendingAdmissions;
       String pointsBalance = state.contributionBalance;
       List<Map<String, dynamic>> pointsEntries = state.contributionEntries;
       bool canCreateWork = false;
@@ -443,27 +557,53 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
 
       if (orgId.isNotEmpty && !orgId.startsWith('org-')) {
         final priv = await _api.fetchPrivacy(orgId);
+        if (runGeneration != _contextGeneration) return;
         privacyLevel = _wireToMode(priv['disclosureMode']?.toString());
         displayName = priv['displayName']?.toString();
 
         final results = await Future.wait([
-          _api.fetchDecisions(organizationId: orgId, view: 'open'),
-          _api.fetchWorkItems(organizationId: orgId, view: 'open'),
-          _api.fetchEvents(organizationId: orgId, status: 'open'),
+          _api.fetchDecisions(
+            organizationId: orgId,
+            view: 'open',
+            unitId: resolvedGroupUnitId,
+          ),
+          _api.fetchWorkItems(
+            organizationId: orgId,
+            view: 'open',
+            unitId: resolvedGroupUnitId,
+          ),
+          _api.fetchEvents(
+            organizationId: orgId,
+            status: 'open',
+            unitId: resolvedGroupUnitId,
+          ),
           _api.fetchChannels(
             organizationId: orgId,
             view: 'active',
             kind: 'member_all',
+            unitId: resolvedGroupUnitId,
           ),
           _api.fetchInbox(organizationId: orgId, view: 'all'),
           _api
-              .fetchDecisions(organizationId: orgId, view: 'closed')
+              .fetchDecisions(
+                organizationId: orgId,
+                view: 'closed',
+                unitId: resolvedGroupUnitId,
+              )
               .catchError((_) => <Map<String, dynamic>>[]),
           _api
-              .fetchWorkItems(organizationId: orgId, view: 'mine')
+              .fetchWorkItems(
+                organizationId: orgId,
+                view: 'mine',
+                unitId: resolvedGroupUnitId,
+              )
               .catchError((_) => <Map<String, dynamic>>[]),
           _api
-              .fetchWorkItems(organizationId: orgId, view: 'completed')
+              .fetchWorkItems(
+                organizationId: orgId,
+                view: 'completed',
+                unitId: resolvedGroupUnitId,
+              )
               .catchError((_) => <Map<String, dynamic>>[]),
           _api
               .fetchContributionPoints(organizationId: orgId)
@@ -477,15 +617,23 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
           _api
               .fetchDecisionAudiences(organizationId: orgId)
               .catchError((_) => <Map<String, dynamic>>[]),
+          _api
+              .fetchMyTerritoryGroups(organizationId: orgId)
+              .catchError((_) => const <String, dynamic>{}),
           if (effectiveManager) ...[
             _api
-                .fetchWorkItems(organizationId: orgId, view: 'needs_review')
+                .fetchWorkItems(
+                  organizationId: orgId,
+                  view: 'needs_review',
+                  unitId: resolvedGroupUnitId,
+                )
                 .catchError((_) => <Map<String, dynamic>>[]),
             _api
                 .fetchReviews(organizationId: orgId, view: 'pending')
                 .catchError((_) => <Map<String, dynamic>>[]),
           ],
         ]);
+        if (runGeneration != _contextGeneration) return;
         polls = (results[0] as List<Map<String, dynamic>>)
             .map(decisionJsonToPoll)
             .toList();
@@ -504,9 +652,15 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
             (results[10] as List<Map<String, dynamic>>).isNotEmpty;
         canCreateDecision =
             (results[11] as List<Map<String, dynamic>>).isNotEmpty;
-        if (effectiveManager && results.length >= 14) {
-          reviewWork = results[12] as List<Map<String, dynamic>>;
-          reviewsList = results[13] as List<Map<String, dynamic>>;
+        final territoryPayload = results[12] as Map<String, dynamic>;
+        pendingAdmissions =
+            (territoryPayload['pendingAdmissions'] as List? ?? const [])
+                .whereType<Map>()
+                .map(Map<String, dynamic>.from)
+                .toList(growable: false);
+        if (effectiveManager && results.length >= 15) {
+          reviewWork = results[13] as List<Map<String, dynamic>>;
+          reviewsList = results[14] as List<Map<String, dynamic>>;
         }
         pointsBalance = ptsPayload['balance']?.toString() ?? '0';
         pointsEntries = (ptsPayload['entries'] as List? ?? const [])
@@ -569,9 +723,14 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
                 .length
           : (summary['openWork'] as num?)?.toInt() ?? 0;
 
+      if (runGeneration != _contextGeneration) return;
       state = state.copyWith(
         organizations: parsedOrgs.isNotEmpty ? parsedOrgs : state.organizations,
         activeOrgId: orgId,
+        groups: parsedGroups,
+        activeGroupUnitId: resolvedGroupUnitId,
+        clearActiveGroupUnitId: resolvedGroupUnitId == null,
+        pendingAdmissions: pendingAdmissions,
         privacyLevel: privacyLevel,
         optInDisplayName: displayName,
         clearOptInDisplayName: displayName == null,
@@ -646,10 +805,15 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
       }
       await OfflineActionQueue().flushDetailed(_api);
       final qCount = await OfflineActionQueue().count();
+      if (runGeneration != _contextGeneration) return;
       state = state.copyWith(pendingOfflineActionsCount: qCount);
-      await _persistOfflineSnapshot(orgId);
+      await _persistOfflineSnapshot(orgId, resolvedGroupUnitId);
     } catch (_) {
-      await _restoreOfflineSnapshotIfEmpty(state.activeOrgId);
+      if (runGeneration != _contextGeneration) return;
+      await _restoreOfflineSnapshotIfEmpty(
+        state.activeOrgId,
+        state.activeGroupUnitId,
+      );
       final qCount = await OfflineActionQueue().count().catchError(
         (_) => state.pendingOfflineActionsCount,
       );
@@ -683,10 +847,13 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
     return res;
   }
 
-  Future<void> _persistOfflineSnapshot(String orgId) async {
+  Future<void> _persistOfflineSnapshot(String orgId, String? groupUnitId) async {
     if (orgId.isEmpty || orgId.startsWith('org-')) return;
     try {
       final prefs = await SharedPreferences.getInstance();
+      final groupKey = (groupUnitId != null && groupUnitId.isNotEmpty)
+          ? groupUnitId
+          : 'all';
       final payload = jsonEncode(<String, dynamic>{
         'work': state.liveWorkItems.take(25).toList(growable: false),
         'myWork': state.myWorkItems.take(25).toList(growable: false),
@@ -694,13 +861,16 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
         'channels': state.liveChannels.take(25).toList(growable: false),
         'balance': state.contributionBalance,
       });
-      await prefs.setString('ertad_offline_cache_$orgId', payload);
+      await prefs.setString('ertad_offline_cache_${orgId}_$groupKey', payload);
     } catch (_) {
       // Cache persistence is best-effort only.
     }
   }
 
-  Future<void> _restoreOfflineSnapshotIfEmpty(String orgId) async {
+  Future<void> _restoreOfflineSnapshotIfEmpty(
+    String orgId,
+    String? groupUnitId,
+  ) async {
     if (orgId.isEmpty) return;
     if (state.liveWorkItems.isNotEmpty ||
         state.liveEvents.isNotEmpty ||
@@ -709,7 +879,10 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
     }
     try {
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString('ertad_offline_cache_$orgId');
+      final groupKey = (groupUnitId != null && groupUnitId.isNotEmpty)
+          ? groupUnitId
+          : 'all';
+      final raw = prefs.getString('ertad_offline_cache_${orgId}_$groupKey');
       if (raw == null || raw.isEmpty) return;
       final decoded = jsonDecode(raw);
       if (decoded is! Map) return;
@@ -734,8 +907,12 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
   void selectOrganization(String orgId) {
     if (state.organizations.any((o) => o.id == orgId) &&
         state.activeOrgId != orgId) {
+      _contextGeneration++;
       state = state.copyWith(
         activeOrgId: orgId,
+        clearActiveGroupUnitId: true,
+        pendingAdmissions: const [],
+        unreadMessagesCount: 0,
         isLoading: true,
         urgentItems: const [],
         livePolls: const [],
@@ -759,6 +936,61 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
         refreshWorkspace();
       }
     }
+  }
+
+  void selectGroup(String unitId) {
+    if (state.activeOrgGroups.any((g) => g.unitId == unitId) &&
+        state.activeGroupUnitId != unitId) {
+      _contextGeneration++;
+      state = state.copyWith(
+        activeGroupUnitId: unitId,
+        unreadMessagesCount: 0,
+        isLoading: true,
+        livePolls: const [],
+        historyPolls: const [],
+        liveWorkItems: const [],
+        myWorkItems: const [],
+        historyWorkItems: const [],
+        reviewWorkItems: const [],
+        liveEvents: const [],
+        liveChannels: const [],
+      );
+      SharedPreferences.getInstance()
+          .then(
+            (prefs) => prefs.setString(
+              '$_activeGroupPrefPrefix${state.activeOrgId}',
+              unitId,
+            ),
+          )
+          .catchError((_) => false);
+      if (state.isLiveConnected) {
+        refreshWorkspace();
+      }
+    }
+  }
+
+  Future<void> setPrimaryGroup(String membershipId) async {
+    if (!state.isLiveConnected || state.activeOrgId.startsWith('org-')) return;
+    await _api.setPrimaryLocalGroup(
+      organizationId: state.activeOrgId,
+      membershipId: membershipId,
+    );
+    await refreshWorkspace();
+  }
+
+  Future<Map<String, dynamic>> requestGroupAdmission({
+    required String unitId,
+    required String reason,
+    String? idempotencyKey,
+  }) async {
+    final res = await _api.requestGroupAdmission(
+      organizationId: state.activeOrgId,
+      unitId: unitId,
+      reason: reason,
+      idempotencyKey: idempotencyKey,
+    );
+    await refreshWorkspace();
+    return res;
   }
 
   Future<void> setPrivacyLevel(
@@ -789,13 +1021,15 @@ class ShellSessionNotifier extends StateNotifier<ShellSessionState> {
   }
 
   Future<void> signOut() async {
+    _contextGeneration++;
     await _api.logout();
     try {
       await OfflineActionQueue().clear();
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_activeOrgPrefKey);
       for (final key in prefs.getKeys().toList()) {
-        if (key.startsWith('ertad_offline_cache_') ||
+        if (key.startsWith(_activeGroupPrefPrefix) ||
+            key.startsWith('ertad_offline_cache_') ||
             key.startsWith('ertad_vote_receipt_')) {
           await prefs.remove(key);
         }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:ertad_mobile/core/network/mobile_api_client.dart';
 import 'package:ertad_mobile/core/shell/org_context_sheet.dart';
@@ -12,6 +14,7 @@ import 'package:ertad_mobile/models/poll.dart';
 import 'package:ertad_mobile/screens/voting/decision_results_card.dart';
 import 'package:ertad_mobile/services/localization_service.dart';
 import 'package:ertad_mobile/services/storage_service.dart';
+import 'package:ertad_mobile/widgets/territory_admission_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -36,6 +39,31 @@ class _FakeMobileApiClient extends MobileApiClient {
   List<Map<String, dynamic>> workUnitsResponse = const [];
   List<Map<String, dynamic>> channelUnitsResponse = const [];
   List<Map<String, dynamic>> decisionAudiencesResponse = const [];
+  List<Map<String, dynamic>> groupsBootstrap = const [];
+  final List<String?> requestedChannelUnitIds = [];
+  Completer<List<Map<String, dynamic>>>? pendingChannelFetch;
+  List<Map<String, dynamic>> channelsResponse = const [];
+  Map<String, dynamic> catalogueResponse = const <String, dynamic>{
+    'items': [
+      {
+        'id': 'GE-TB',
+        'parentId': null,
+        'kind': 'region',
+        'nameKa': 'თბილისი',
+        'nameEn': 'Tbilisi',
+      },
+      {
+        'id': 'GE-TB-SABURTALO',
+        'parentId': 'GE-TB',
+        'kind': 'district',
+        'nameKa': 'საბურთალო',
+        'nameEn': 'Saburtalo',
+      },
+    ],
+  };
+  List<Map<String, dynamic>> publishedGroupsResponse = const [];
+  final List<Map<String, dynamic>> submittedAdmissions = [];
+  final List<String?> primaryGroupUpdates = [];
 
   _FakeMobileApiClient() : super(baseUrl: 'http://127.0.0.1:13000/api/v1');
 
@@ -55,6 +83,7 @@ class _FakeMobileApiClient extends MobileApiClient {
         },
       ],
       'reviews': reviewsResponse,
+      'groups': groupsBootstrap,
       'summary': const <String, dynamic>{
         'pendingReviews': 2,
         'upcomingEvents48h': 1,
@@ -72,12 +101,14 @@ class _FakeMobileApiClient extends MobileApiClient {
   Future<List<Map<String, dynamic>>> fetchDecisions({
     required String organizationId,
     String view = 'open',
+    String? unitId,
   }) async => const [];
 
   @override
   Future<List<Map<String, dynamic>>> fetchWorkItems({
     required String organizationId,
     String view = 'open',
+    String? unitId,
   }) async {
     if (view == 'needs_review') {
       fetchedNeedsReview = true;
@@ -92,6 +123,7 @@ class _FakeMobileApiClient extends MobileApiClient {
   Future<List<Map<String, dynamic>>> fetchEvents({
     required String organizationId,
     String status = 'open',
+    String? unitId,
   }) async => const [];
 
   @override
@@ -99,7 +131,56 @@ class _FakeMobileApiClient extends MobileApiClient {
     required String organizationId,
     String view = 'active',
     String kind = 'member_all',
-  }) async => const [];
+    String? unitId,
+  }) async {
+    requestedChannelUnitIds.add(unitId);
+    if (pendingChannelFetch != null) {
+      final c = pendingChannelFetch!;
+      pendingChannelFetch = null;
+      return c.future;
+    }
+    return channelsResponse;
+  }
+
+  @override
+  Future<Map<String, dynamic>> fetchTerritoryCatalogue() async =>
+      catalogueResponse;
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchPublishedTerritoryGroups({
+    required String organizationId,
+    String? areaId,
+  }) async => publishedGroupsResponse;
+
+  @override
+  Future<Map<String, dynamic>> fetchMyTerritoryGroups({
+    required String organizationId,
+  }) async => const <String, dynamic>{'pendingAdmissions': []};
+
+  @override
+  Future<Map<String, dynamic>> requestGroupAdmission({
+    required String organizationId,
+    required String unitId,
+    required String reason,
+    String? idempotencyKey,
+  }) async {
+    submittedAdmissions.add({
+      'organizationId': organizationId,
+      'unitId': unitId,
+      'reason': reason,
+      'key': idempotencyKey,
+    });
+    return const {'id': 'adm-1', 'status': 'pending'};
+  }
+
+  @override
+  Future<Map<String, dynamic>> setPrimaryLocalGroup({
+    required String organizationId,
+    String? membershipId,
+  }) async {
+    primaryGroupUpdates.add(membershipId);
+    return {'organizationId': organizationId, 'primaryMembershipId': membershipId};
+  }
 
   @override
   Future<Map<String, dynamic>> fetchInbox({
@@ -833,6 +914,150 @@ void main() {
         '/mobile/dev/step-up',
         '/mobile/work/create',
       ]);
+    },
+  );
+
+  test(
+    'ShellSessionNotifier handles group bootstrap, late-response rejection, revocation & cache purge',
+    () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final api = _FakeMobileApiClient()
+        ..groupsBootstrap = const [
+          {
+            'organizationId': '11111111-1111-4111-8111-111111111111',
+            'membershipId': 'mem-a',
+            'unitId': 'group-a',
+            'unitName': 'Saburtalo Group A',
+            'positionName': 'Member',
+            'isPrimary': false,
+          },
+          {
+            'organizationId': '11111111-1111-4111-8111-111111111111',
+            'membershipId': 'mem-b',
+            'unitId': 'group-b',
+            'unitName': 'Didube Group B',
+            'positionName': 'Member',
+            'isPrimary': true,
+          },
+        ]
+        ..channelsResponse = const [
+          {'id': 'ch-b', 'title': 'Didube Main', 'kind': 'group', 'unreadCount': 2},
+        ];
+
+      final notifier = ShellSessionNotifier(api);
+      await notifier.refreshWorkspace();
+
+      expect(notifier.state.activeGroup?.unitId, 'group-b');
+      expect(api.requestedChannelUnitIds.last, 'group-b');
+      expect(notifier.state.liveChannels.first['id'], 'ch-b');
+
+      // Switch to group-a while a stale fetch is pending
+      final stale = Completer<List<Map<String, dynamic>>>();
+      api.pendingChannelFetch = stale;
+      final staleRefresh = notifier.refreshWorkspace();
+      await Future<void>.delayed(Duration.zero);
+
+      api.channelsResponse = const [
+        {'id': 'ch-a', 'title': 'Saburtalo Main', 'kind': 'group', 'unreadCount': 0},
+      ];
+      notifier.selectGroup('group-a');
+      expect(notifier.state.liveChannels, isEmpty);
+      expect(notifier.state.activeGroupUnitId, 'group-a');
+
+      stale.complete(const [
+        {'id': 'ch-stale', 'title': 'Stale Group B', 'kind': 'group', 'unreadCount': 9},
+      ]);
+      await staleRefresh;
+      await Future<void>.delayed(Duration.zero);
+      await notifier.refreshWorkspace();
+
+      expect(notifier.state.activeGroup?.unitId, 'group-a');
+      expect(api.requestedChannelUnitIds.last, 'group-a');
+      expect(notifier.state.liveChannels.first['id'], 'ch-a');
+
+      // Revoking group-a removes it from bootstrap and falls back to remaining group-b
+      api.groupsBootstrap = const [
+        {
+          'organizationId': '11111111-1111-4111-8111-111111111111',
+          'membershipId': 'mem-b',
+          'unitId': 'group-b',
+          'unitName': 'Didube Group B',
+          'positionName': 'Member',
+          'isPrimary': true,
+        },
+      ];
+      await notifier.refreshWorkspace();
+      expect(notifier.state.activeGroupUnitId, 'group-b');
+
+      // signOut purges persisted group context & group-keyed offline cache
+      final prefsBefore = await SharedPreferences.getInstance();
+      await prefsBefore.setString('ertad_offline_cache_11111111-1111-4111-8111-111111111111_group-b', '{}');
+      await notifier.signOut();
+      final prefsAfter = await SharedPreferences.getInstance();
+      expect(
+        prefsAfter.getKeys().where((k) => k.startsWith('ertad_active_group_id_') || k.startsWith('ertad_offline_cache_')),
+        isEmpty,
+      );
+    },
+  );
+
+  testWidgets(
+    'TerritoryAdmissionSheet browses shared catalogue, previews published groups & submits admission',
+    (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final api = _FakeMobileApiClient()
+        ..publishedGroupsResponse = const [
+          {
+            'id': 'group-a',
+            'name': 'Saburtalo Group A',
+            'geographicAreaId': 'GE-TB-SABURTALO',
+            'geography': {'id': 'GE-TB-SABURTALO', 'nameKa': 'საბურთალო', 'nameEn': 'Saburtalo'},
+            'positionName': 'Group Member',
+            'alreadyMember': false,
+            'pendingRequestId': null,
+          },
+        ];
+      final loc = LocalizationService();
+      await loc.setLanguage(AppLanguage.english);
+      final notifier = ShellSessionNotifier(api);
+      await notifier.refreshWorkspace();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            mobileApiClientProvider.overrideWithValue(api),
+            shellSessionProvider.overrideWith((ref) => notifier),
+          ],
+          child: legacy_provider.ChangeNotifierProvider<LocalizationService>.value(
+            value: loc,
+            child: MaterialApp(
+              theme: ErtadTheme.lightTheme,
+              home: const Scaffold(body: TerritoryAdmissionSheet()),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Region / city'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tbilisi').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Saburtalo Group A'), findsOneWidget);
+      await tester.tap(find.text('Request admission'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byType(TextField),
+        'I want to join the Saburtalo community group.',
+      );
+      await tester.pump();
+      await tester.tap(find.text('Submit request'));
+      await tester.pumpAndSettle();
+
+      expect(api.submittedAdmissions.length, 1);
+      expect(api.submittedAdmissions.first['unitId'], 'group-a');
     },
   );
 }

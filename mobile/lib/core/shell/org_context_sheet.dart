@@ -8,6 +8,7 @@ import '../../screens/enrollment/intro_screen.dart';
 import '../../screens/enrollment/liveness_screen.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/region_selection_sheet.dart';
+import '../../widgets/territory_admission_sheet.dart';
 import '../feedback/ertad_feedback.dart';
 import '../state/shell_providers.dart';
 import '../theme/ertad_theme.dart';
@@ -73,6 +74,11 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
 
   Future<void> _pickRegion() async {
     HapticFeedback.selectionClick();
+    final session = ref.read(shellSessionProvider);
+    if (session.isLiveConnected && !session.activeOrgId.startsWith('org-')) {
+      await showTerritoryAdmissionSheet(context);
+      return;
+    }
     final selected = await showModalBottomSheet<Region>(
       context: context,
       useRootNavigator: true,
@@ -559,8 +565,8 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
                                     fallback: 'Region / Group',
                                   ),
                                   value: _localRegionCode != null
-                                      ? '${resolveGeorgianRegionLabel(_localRegionCode!)} · ${session.activeOrg.unitName}'
-                                      : session.activeOrg.unitName,
+                                      ? '${resolveGeorgianRegionLabel(_localRegionCode!)} · ${session.activeContextLabel}'
+                                      : session.activeContextLabel,
                                 ),
                               ),
                               const SizedBox(width: 4),
@@ -894,7 +900,193 @@ class _OrgContextSheetState extends ConsumerState<OrgContextSheet> {
                   ),
                 ],
 
-                // 3. Only show group switcher if member belongs to >1 organizations
+                // 3. Authorized local group workspace switcher & admission finder
+                if (session.isLiveConnected &&
+                    !session.activeOrgId.startsWith('org-')) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    shellTr(
+                      context,
+                      'territory_local_groups',
+                      fallback: 'My local groups',
+                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.labelMedium?.copyWith(color: p.muted),
+                  ),
+                  const SizedBox(height: 8),
+                  ...session.activeOrgGroups.map((grp) {
+                    final selected = grp.unitId == session.activeGroup?.unitId;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: ErtadSurfaceCard(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        backgroundColor: selected ? p.primarySoft : p.surface,
+                        borderColor: selected ? p.primary : p.hairline,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          notifier.selectGroup(grp.unitId);
+                          Navigator.of(context).pop();
+                        },
+                        child: Row(
+                          children: [
+                            Icon(
+                              selected
+                                  ? Icons.radio_button_checked_rounded
+                                  : Icons.radio_button_off_rounded,
+                              color: selected ? p.primary : p.muted,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    grp.unitName,
+                                    style: Theme.of(context).textTheme.titleSmall,
+                                  ),
+                                  Text(
+                                    grp.positionName,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(color: p.muted),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (grp.isPrimary)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: p.primary.withValues(alpha: 0.14),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  shellTr(
+                                    context,
+                                    'territory_primary_badge',
+                                    fallback: 'Primary',
+                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .labelSmall
+                                      ?.copyWith(
+                                        color: p.primary,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                ),
+                              )
+                            else
+                              IconButton(
+                                tooltip: shellTr(
+                                  context,
+                                  'territory_set_primary',
+                                  fallback: 'Set as primary',
+                                ),
+                                icon: Icon(
+                                  Icons.star_outline_rounded,
+                                  size: 20,
+                                  color: p.muted,
+                                ),
+                                onPressed: () async {
+                                  HapticFeedback.selectionClick();
+                                  try {
+                                    await notifier.setPrimaryGroup(
+                                      grp.membershipId,
+                                    );
+                                    if (!context.mounted) return;
+                                    ref
+                                        .read(ertadFeedbackProvider.notifier)
+                                        .showSuccess(
+                                          shellTr(
+                                            context,
+                                            'territory_primary_updated',
+                                            fallback: 'Primary local group updated',
+                                          ),
+                                        );
+                                  } catch (_) {
+                                    if (!context.mounted) return;
+                                    ref
+                                        .read(ertadFeedbackProvider.notifier)
+                                        .showWarning(
+                                          shellTr(
+                                            context,
+                                            'error_retry',
+                                            fallback:
+                                                'Could not update primary group',
+                                          ),
+                                        );
+                                  }
+                                },
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                  ...session.pendingAdmissions.map((req) {
+                    final uName = req['unitName']?.toString() ?? '';
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: ErtadSurfaceCard(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        borderColor: p.warning.withValues(alpha: 0.5),
+                        child: Row(
+                          children: [
+                            Icon(Icons.hourglass_top_rounded, color: p.warning, size: 18),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                uName,
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ),
+                            Text(
+                              shellTr(
+                                context,
+                                'territory_pending_badge',
+                                fallback: 'Pending review',
+                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelSmall
+                                  ?.copyWith(color: p.warning),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        HapticFeedback.selectionClick();
+                        showTerritoryAdmissionSheet(context);
+                      },
+                      icon: const Icon(Icons.add_location_alt_outlined, size: 18),
+                      label: Text(
+                        shellTr(
+                          context,
+                          'territory_find_group',
+                          fallback: 'Browse & join local group',
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+
+                // 4. Only show organization switcher if member belongs to >1 organizations
                 if (session.organizations.length > 1) ...[
                   const SizedBox(height: 14),
                   Text(

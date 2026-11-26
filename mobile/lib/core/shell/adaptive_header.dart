@@ -53,7 +53,7 @@ class AdaptiveHeader extends ConsumerWidget {
                         ),
                         child: Tooltip(
                           message:
-                              '${session.activeOrg.unitName} · ${session.activeOrg.name}',
+                              '${session.activeContextLabel} · ${session.activeOrg.name}',
                           child: InkWell(
                             borderRadius: BorderRadius.circular(14),
                             onTap: () {
