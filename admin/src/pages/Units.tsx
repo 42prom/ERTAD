@@ -5,11 +5,13 @@ import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import Select from "../components/ui/Select";
+import UnitTerritoryFields, { type TerritoryChoice } from "../components/UnitTerritoryFields";
 import { useConsolePreferences } from "../components/useConsolePreferences";
 import { useInboxTarget } from "../components/useInboxTarget";
 import { authApi } from "../api/client";
 import { demoApi } from "../api/demo";
 import {
+  territoryTypeLabel,
   unitApi,
   type UnitContext,
   type UnitRow,
@@ -49,8 +51,9 @@ export default function Units() {
     [detail, setDetail] = useState<UnitDetail | null>(null);
   const [change, setChange] = useState<{
     row: UnitRow;
-    kind: "rename" | "archive" | "restore";
+    kind: "rename" | "archive" | "restore" | "territory";
   } | null>(null);
+  const [territory, setTerritory] = useState<TerritoryChoice>({ type: "unclassified", area: "" });
   const [unitStatus, setUnitStatus] = useState<"active" | "archived">("active");
   const [viewMode, setViewMode] = useState<"table" | "tree">("table");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -68,6 +71,8 @@ export default function Units() {
     const status = (e as { response?: { status?: number } })?.response?.status;
     return status === 403
       ? label("Access denied or revoked.", "წვდომა არ გაქვთ ან გაუქმებულია.")
+      : status === 400
+        ? label("Check the form, unit type, territory and parent.", "გადაამოწმეთ ფორმა, ერთეულის ტიპი, ტერიტორია და მშობელი.")
       : status === 409
         ? label(
             "Request expired or conditions changed. Refresh and review again.",
@@ -184,6 +189,21 @@ export default function Units() {
     setReason("");
     setPassword("");
     setConfirmed(false);
+    setTerritory({ type: "unclassified", area: "" });
+  }
+  function startGroup(row: UnitRow) {
+    clear();
+    setParent(row);
+    const type = row.child_types?.[0] ?? "unclassified";
+    setTerritory({ type, area: type === "group" || type === "team" ? row.geographic_area_id ?? "" : "" });
+    setNotice("");
+  }
+  function classify(row: UnitRow) {
+    clear();
+    setChange({ row, kind: "territory" });
+    const type = row.classify_types?.[0] ?? "region";
+    setTerritory({ type, area: type === "group" || type === "team" ? row.parent_geographic_area_id ?? "" : "" });
+    setNotice("");
   }
   function refresh() {
     clear();
@@ -261,6 +281,9 @@ export default function Units() {
           version: change.row.version,
           kind: change.kind,
           ...(change.kind === "rename" ? { name: name.trim() } : {}),
+          ...(change.kind === "territory" && territory.type !== "unclassified" ? {
+            operationalType: territory.type, geographicAreaId: territory.area,
+          } : {}),
           reason: reason.trim(),
           expiresAt: new Date(Date.now() + 6 * 86400_000).toISOString(),
           key: crypto.randomUUID(),
@@ -274,6 +297,9 @@ export default function Units() {
       data: {
         organizationId: org,
         parentId: parent.id,
+        ...(territory.type !== "unclassified" ? {
+          operationalType: territory.type, geographicAreaId: territory.area,
+        } : {}),
         name: name.trim(),
         reason: reason.trim(),
         expiresAt: new Date(Date.now() + 6 * 86400_000).toISOString(),
@@ -301,6 +327,7 @@ export default function Units() {
       rename: label("Rename", "სახელის შეცვლა"),
       archive: label("Archive", "არქივირება"),
       restore: label("Restore", "აღდგენა"),
+      territory: label("Assign territory", "ტერიტორიის მინიჭება"),
     })[kind] ?? kind;
   const blockerLabel = (code: string) =>
     ({
@@ -553,6 +580,7 @@ export default function Units() {
                                     <span className="unit-tree-leaf-dot" aria-hidden="true" />
                                   )}
                                   <strong className="break-words">{node.name}</strong>
+                                  {node.geography && <span className="text-xs text-[var(--muted)]">{ka ? node.geography.nameKa : node.geography.nameEn}</span>}
                                   <span className="status-badge" data-status={node.status === "active" ? "approved" : undefined}>
                                     {statusLabel(node.status)}
                                   </span>
@@ -564,9 +592,7 @@ export default function Units() {
                                       variant="ghost"
                                       disabled={editing}
                                       onClick={() => {
-                                        clear();
-                                        setParent(node);
-                                        setNotice("");
+                                        startGroup(node);
                                       }}
                                     >
                                       {label("Create group here", "აქ ჯგუფის შექმნა")}
@@ -585,6 +611,11 @@ export default function Units() {
                                       }}
                                     >
                                       {kindLabel("rename")}
+                                    </Button>
+                                  )}
+                                  {node.canClassify && !!node.classify_types?.length && (
+                                    <Button size="sm" variant="ghost" disabled={editing} onClick={() => classify(node)}>
+                                      {kindLabel("territory")}
                                     </Button>
                                   )}
                                 </div>
@@ -632,6 +663,7 @@ export default function Units() {
                         <tr key={row.id}>
                           <td>
                             {row.name}
+                            {row.geography && <div className="text-xs text-[var(--muted)]">{ka ? row.geography.nameKa : row.geography.nameEn}</div>}
                             {!("canPropose" in row) && (
                               <p className="text-sm">{kindLabel(row.kind)}</p>
                             )}
@@ -659,9 +691,7 @@ export default function Units() {
                                     variant="ghost"
                                     disabled={editing}
                                     onClick={() => {
-                                      clear();
-                                      setParent(row);
-                                      setNotice("");
+                                      startGroup(row);
                                     }}
                                   >
                                     {label(
@@ -723,6 +753,11 @@ export default function Units() {
                                       </p>
                                     )}
                                   </>
+                                )}
+                                {row.canClassify && !!row.classify_types?.length && (
+                                  <Button variant="ghost" disabled={editing} onClick={() => classify(row)}>
+                                    {kindLabel("territory")}
+                                  </Button>
                                 )}
                               </>
                             ) : (
@@ -788,6 +823,12 @@ export default function Units() {
                   )}
                   <dt>{label("Parent", "ზედა ერთეული")}</dt>
                   <dd>{detail.parent_name}</dd>
+                  {detail.operational_type && detail.operational_type !== "unclassified" && <>
+                    <dt>{label("Unit type", "ერთეულის ტიპი")}</dt>
+                    <dd>{territoryTypeLabel(detail.operational_type, ka)}</dd>
+                    <dt>{label("Territory", "ტერიტორია")}</dt>
+                    <dd>{detail.geography ? (ka ? detail.geography.nameKa : detail.geography.nameEn) : detail.geographic_area_id}</dd>
+                  </>}
                   <dt>{label("Reason", "მიზეზი")}</dt>
                   <dd>{detail.reason}</dd>
                   <dt>{label("Status", "სტატუსი")}</dt>
@@ -826,7 +867,7 @@ export default function Units() {
                               const next = proposableUnits.find(
                                 (u) => u.id === e.target.value,
                               );
-                              if (next) setParent(next);
+                              if (next) startGroup(next);
                             }}
                             options={proposableUnits.map((u) => ({
                               value: u.id,
@@ -844,6 +885,15 @@ export default function Units() {
                           onChange={(e) => setName(e.target.value)}
                         />
                       </>
+                    )}
+                    {(parent || change?.kind === "territory") && (
+                      <UnitTerritoryFields
+                        key={`${org}:${parent?.id ?? change?.row.id}`}
+                        organizationId={org}
+                        allowedTypes={parent ? parent.child_types ?? ["unclassified"] : change!.row.classify_types ?? []}
+                        parentArea={parent ? parent.geographic_area_id ?? null : change!.row.parent_geographic_area_id ?? null}
+                        value={territory} onChange={setTerritory} ka={ka}
+                      />
                     )}
                     <Input
                       label={label(
@@ -906,6 +956,11 @@ export default function Units() {
                             </label>
                           </>
                         )}
+                        {change?.kind === "territory" && <label className="review-confirm">
+                          <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
+                          {label("I reviewed the unit type, territory and parent. Memberships and permissions will remain unchanged.",
+                            "გადავამოწმე ერთეულის ტიპი, ტერიტორია და მშობელი. წევრობა და უფლებები უცვლელი დარჩება.")}
+                        </label>}
                         {change?.kind === "restore" && (
                           <label className="review-confirm">
                             <input
@@ -927,6 +982,7 @@ export default function Units() {
                                 (change?.kind === "rename" &&
                                   name.trim() === change.row.name))) ||
                             reason.trim().length < 10 ||
+                            ((!!parent || change?.kind === "territory") && territory.type !== "unclassified" && !territory.area) ||
                             (!!change && change.kind !== "rename" && !confirmed)
                           }
                         >

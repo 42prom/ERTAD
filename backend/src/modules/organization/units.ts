@@ -12,8 +12,11 @@ const uuid = z.string().uuid(),
   reason = z.string().trim().min(10).max(1000);
 const org = z.object({ organizationId: uuid }),
   page = z.coerce.number().int().min(1).max(1000).default(1);
+const operationalType = z.enum(['unclassified', 'region', 'locality', 'group', 'team']);
+const geographicAreaId = z.string().regex(/^GE-[A-Z0-9-]+$/).max(80);
 const schemas = {
   contexts: z.object({}).strict(),
+  geography: org.strict(),
   units: org
     .extend({
       page,
@@ -32,6 +35,8 @@ const schemas = {
       name: z.string().trim().min(1).max(160),
       reason,
       expiresAt: z.string().datetime({ offset: true }),
+      operationalType: operationalType.optional(),
+      geographicAreaId: geographicAreaId.optional(),
     })
     .strict(),
   change: org
@@ -39,13 +44,18 @@ const schemas = {
       key: uuid,
       unitId: uuid,
       version: z.number().int().min(0),
-      kind: z.enum(['rename', 'archive', 'restore']),
+      kind: z.enum(['rename', 'archive', 'restore', 'territory']),
+      operationalType: operationalType.exclude(['unclassified']).optional(),
+      geographicAreaId: geographicAreaId.optional(),
       name: z.string().trim().min(1).max(160).optional(),
       reason,
       expiresAt: z.string().datetime({ offset: true }),
     })
     .strict()
-    .refine((v) => (v.kind === 'rename' ? v.name !== undefined : v.name === undefined)),
+    .refine((v) => (v.kind === 'rename' ? v.name !== undefined : v.name === undefined))
+    .refine((v) => v.kind === 'territory'
+      ? v.operationalType !== undefined && v.geographicAreaId !== undefined
+      : v.operationalType === undefined && v.geographicAreaId === undefined),
   decide: org
     .extend({ id: uuid, key: uuid, decision: z.enum(['approved', 'rejected']), reason })
     .strict(),
@@ -110,6 +120,7 @@ export function createUnitRouter(): Router {
   );
   for (const [method, path, operation] of [
     ['get', '/contexts', 'contexts'],
+    ['get', '/geography', 'geography'],
     ['get', '/', 'units'],
     ['get', '/reviews', 'list'],
     ['get', '/detail', 'detail'],

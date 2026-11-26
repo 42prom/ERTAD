@@ -7,17 +7,22 @@ import { demoApi } from "../api/demo";
 vi.mock("../components/useConsolePreferences", () => ({
   useConsolePreferences: () => ({ language: "en" }),
 }));
-vi.mock("../api/units", () => ({
-  unitApi: {
-    contexts: vi.fn(),
-    units: vi.fn(),
-    reviews: vi.fn(),
-    detail: vi.fn(),
-    propose: vi.fn(),
-    change: vi.fn(),
-    decide: vi.fn(),
-  },
-}));
+vi.mock("../api/units", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../api/units")>();
+  return {
+    ...actual,
+    unitApi: {
+      geography: vi.fn(),
+      contexts: vi.fn(),
+      units: vi.fn(),
+      reviews: vi.fn(),
+      detail: vi.fn(),
+      propose: vi.fn(),
+      change: vi.fn(),
+      decide: vi.fn(),
+    },
+  };
+});
 vi.mock("../api/demo", () => ({
   demoApi: { scenario: vi.fn(), stepUp: vi.fn() },
 }));

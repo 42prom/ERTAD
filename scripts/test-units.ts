@@ -461,6 +461,8 @@ try {
   if (!process.argv.includes("--browser")) {
     const { testUnitLifecycle } = await import("./unit-lifecycle-tests");
     checks += await testUnitLifecycle(owner, access, sessions);
+    const { testUnitTerritories } = await import("./unit-territory-tests");
+    checks += await testUnitTerritories(owner, access, sessions);
   }
   console.log(`PASS ${checks} hierarchy scenarios; disposable database only`);
 } finally {

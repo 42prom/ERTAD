@@ -1,6 +1,15 @@
 # Verified development status
 
-> Last updated: 2026-11-24 · Branch: `feat/ertad-development` · Not deployed to production
+> Last updated: 2026-11-26 · Branch: `feat/ertad-development` · Not deployed to production
+
+## Territorial Groups T1: Shared Catalogue, Typed Hierarchy & Reviewed Mapping (Migration 88, 2026-11-26)
+
+- **DB, Backend & Admin UI ([`0088_territorial_groups.sql`](../backend/db/foundation/0088_territorial_groups.sql), [`units.ts`](../backend/src/modules/organization/units.ts), [`units.ts` (Admin API)](../admin/src/api/units.ts), [`UnitTerritoryFields.tsx`](../admin/src/components/UnitTerritoryFields.tsx), [`Units.tsx`](../admin/src/pages/Units.tsx), [`unit-territory-tests.ts`](../scripts/unit-territory-tests.ts), [`Units.test.tsx`](../admin/src/tests/Units.test.tsx)):**
+  - Implemented shared `ertad.geographic_areas` catalogue (`85` entries: `12` regions including `GE-AB`, `63` municipalities, `10` Tbilisi districts, marked `additionalReferencesPending`), additive `units` / `unit_reviews` `operational_type` (`unclassified | region | locality | group | team`) and `geographic_area_id`, containment validation, and immutable reviewed territory assignment (`kind = 'territory'`) alongside [ADR-024](architecture/DECISIONS.md#adr-024---territorial-catalogue-organizational-groups-and-member-workspace) and [TERRITORIAL_GROUPS.md](architecture/TERRITORIAL_GROUPS.md).
+  - Stages T2–T6 (atomic group + main channel provisioning, member admission requests + primary workspace switching, scoped announcements, and mobile group switcher) remain pending.
+- **Verified evidence:**
+  - `npm run db:migrate` (`0088_territorial_groups.sql`), `npm run test:units` (`31` hierarchy scenarios PASS), `npm run restore:drill` (`108 tables, 88 migrations`, `10.0s` PASS).
+  - `npm run check` PASS (`check:identity`, `tokens:check`, `typecheck`, `eslint --max-warnings 0`, backend foundation `4/4`, Jest `27` suites, Admin Vitest `59/59` files / `361/361` tests including `Units.test.tsx` `10/10`, `scripts/tests`, production builds `12.04s`), `npm run check:workspace` (`926 eligible paths`), and `npm run smoke` (PASS against `:13000` & `:15173`).
 
 ## Unmasked Council Member Identity View & Encrypted Document Claims (Migration 87, 2026-11-24)
 

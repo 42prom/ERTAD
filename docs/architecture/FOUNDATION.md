@@ -63,6 +63,8 @@ ADR-015 keeps authorization/disclosure shared while preserving domain-specific s
 
 ## Data model constraints (planned, not migrated)
 
+The [territorial group workspace plan](TERRITORIAL_GROUPS.md) and [ADR-024](DECISIONS.md#adr-024---territorial-catalogue-organizational-groups-and-member-workspace) refine geography, unit parentage, member admission, group context and channel audiences. Geography remains reference data; existing units, memberships and domain authorization remain canonical. Its staged schema/API/UI extensions are planned, not activated by the architecture documentation.
+
 - UUID opaque internal IDs. Profile discovery IDs are random, nonsequential and distinct from primary keys. User default visibility PRIVATE. Effective disclosure is the most restrictive user, organization, field and context policy.
 - Tenant-owned records use `organization_id NOT NULL`. Composite `(organization_id,id)` foreign keys prevent cross-tenant links. Tenant/status/time indexes support bounded list queries. No public enumerable membership directory.
 - Unit has at most one authority parent in its organization; reject cycles transactionally. Professional affiliation never creates a second authority parent. Membership connects user, unit, versioned position and validity interval; index active membership lookup and test expiry/revocation.
