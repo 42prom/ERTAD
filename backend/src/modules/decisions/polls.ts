@@ -38,6 +38,7 @@ const schemas = {
       page: z.coerce.number().int().min(1).max(1000).default(1),
       view: z.enum(['draft', 'scheduled', 'open', 'closed', 'cancelled']).default('open'),
       search: z.string().max(80).default(''),
+      unitId: uuid.optional(),
     })
     .strict(),
   report: org

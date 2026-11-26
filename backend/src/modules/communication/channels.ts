@@ -56,6 +56,7 @@ const schemas = {
       page,
       view: z.enum(['active', 'archived', 'unread']).default('active'),
       kind: z.enum(['all', 'group', 'global', 'task', 'direct', 'member_all']).optional(),
+      unitId: uuid.optional(),
     })
     .strict(),
   thread: id.extend({ before: z.coerce.number().int().min(0).max(2147483647).default(0) }).strict(),

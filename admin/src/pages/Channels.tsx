@@ -62,6 +62,7 @@ export default function Channels() {
     [reportPage, setReportPage] = useState(1),
     [showReports, setShowReports] = useState(false);
   const [creating, setCreating] = useState(false),
+    [channelKind, setChannelKind] = useState<"group" | "global">("group"),
     [title, setTitle] = useState(""),
     [body, setBody] = useState(""),
     [reply, setReply] = useState<{ id: string; seq: number } | null>(null),
@@ -371,6 +372,7 @@ export default function Channels() {
       setConfirm(null);
       if (input.operation === "create") {
         setCreating(false);
+        setChannelKind("group");
         setTitle("");
         setShowReports(false);
         setReports([]);
@@ -609,7 +611,13 @@ export default function Channels() {
             className="space-y-4"
             onSubmit={(e) => {
               e.preventDefault();
-              void send(command("create", { unitId, title }));
+              void send(
+                command("create", {
+                  unitId,
+                  title,
+                  ...(channelKind === "global" ? { kind: "global" } : {}),
+                }),
+              );
             }}
           >
             <h2>{t("ახალი არხი", "New channel")}</h2>
@@ -619,6 +627,24 @@ export default function Channels() {
                 value={unitId}
                 onChange={(e) => setUnitId(e.target.value)}
                 options={units.map((u) => ({ value: u.id, label: u.name }))}
+              />
+              <Select
+                label={t("აუდიტორია", "Audience scope")}
+                value={channelKind}
+                onChange={(e) => setChannelKind(e.target.value as "group" | "global")}
+                options={[
+                  {
+                    value: "group",
+                    label: t("მხოლოდ ეს ერთეული (შიდა ჩათი)", "This group only (unit chat)"),
+                  },
+                  {
+                    value: "global",
+                    label: t(
+                      "ეს ერთეული და ქვეჯგუფები (განცხადებები — მხოლოდ კითხვა ქვეჯგუფებისთვის)",
+                      "This unit and descendants (announcements — read-only for descendants)",
+                    ),
+                  },
+                ]}
               />
               <div className="flex gap-2">
                 <Button
@@ -683,6 +709,16 @@ export default function Channels() {
                 <MessageSquare className="w-4 h-4 mr-2 shrink-0" />
                 <span className="min-w-0 break-words">
                   {row.title}
+                  {row.isMain && (
+                    <span className="ml-2 text-xs text-[var(--primary)]">
+                      {t("მთავარი ჩათი", "Main chat")}
+                    </span>
+                  )}
+                  {(row.kind === "global" || row.audienceScope === "unit_and_descendants") && (
+                    <span className="ml-2 text-xs text-[var(--muted)]">
+                      {t("განცხადება", "Announcement")}
+                    </span>
+                  )}
                   <small className="block">
                     {row.muted
                       ? t("დადუმებულია", "Muted")
@@ -740,6 +776,16 @@ export default function Channels() {
           )}
           <h2 ref={heading} tabIndex={-1}>
             {c.title}
+            {c.isMain && (
+              <span className="ml-2 text-xs font-normal text-[var(--primary)]">
+                {t("მთავარი ჩათი", "Main chat")}
+              </span>
+            )}
+            {(c.kind === "global" || c.audienceScope === "unit_and_descendants") && (
+              <span className="ml-2 text-xs font-normal text-[var(--muted)]">
+                {t("განცხადება ქვეჯგუფებისთვის", "Descendant announcement")}
+              </span>
+            )}
           </h2>
           {c.postingRestriction && (
             <div role="status" className="my-3 space-y-2">

@@ -424,3 +424,45 @@ it("consumes an exact moderation destination once and excludes foreign organizat
   expect(screen.getByTestId("url")).not.toHaveTextContent(id);
   expect(channelsApi.write).not.toHaveBeenCalled();
 });
+
+it("creates a descendant announcement channel and displays scope badges", async () => {
+  vi.mocked(channelsApi.units).mockResolvedValue({
+    items: [{ id: "region-1", name: "Tbilisi Region" }],
+    page: 1,
+  });
+  vi.mocked(channelsApi.list).mockResolvedValue({
+    items: [
+      { ...row, title: "Group Main", isMain: true, audienceScope: "unit_only" },
+      { ...row, id: "ann-1", title: "Region Notice", kind: "global", audienceScope: "unit_and_descendants", canPost: false },
+    ],
+    total: 2,
+    page: 1,
+  });
+  vi.mocked(channelsApi.write).mockResolvedValue({ id: "ann-2" });
+  vi.mocked(channelsApi.thread).mockResolvedValue({
+    ...thread,
+    channel: { ...row, id: "ann-2", title: "New Regional Notice", kind: "global", audienceScope: "unit_and_descendants", canPost: false },
+  });
+  mount();
+  expect(await screen.findByText("Main chat")).toBeInTheDocument();
+  expect(screen.getByText("Announcement")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "New channel", exact: true }));
+  fireEvent.change(screen.getByLabelText("Audience scope"), {
+    target: { value: "global" },
+  });
+  fireEvent.change(screen.getByLabelText("Channel name"), {
+    target: { value: "New Regional Notice" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Create", exact: true }));
+  await waitFor(() =>
+    expect(channelsApi.write).toHaveBeenCalledWith(
+      expect.objectContaining({
+        operation: "create",
+        unitId: "region-1",
+        title: "New Regional Notice",
+        kind: "global",
+      }),
+    ),
+  );
+  expect(await screen.findByText("Descendant announcement")).toBeInTheDocument();
+});

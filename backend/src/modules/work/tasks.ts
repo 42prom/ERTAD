@@ -52,6 +52,7 @@ const schemas = {
       page: z.coerce.number().int().min(1).max(1000).default(1),
       status: z.enum(['open', 'completed', 'cancelled']).default('open'),
       search: z.string().max(80).default(''),
+      unitId: uuid.optional(),
     })
     .strict(),
   event_detail: id.strict(),

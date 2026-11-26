@@ -42,6 +42,9 @@ export interface Channel {
   id: string;
   unitId: string;
   title: string;
+  kind?: "group" | "global" | "task" | "direct";
+  isMain?: boolean;
+  audienceScope?: "unit_only" | "unit_and_descendants" | "task" | "direct";
   archived: boolean;
   version: number;
   lastSeq: number;
@@ -141,10 +144,11 @@ export const channelsApi = {
     organizationId: string,
     view: string,
     page = 1,
+    unitId?: string,
   ): Promise<{ items: Channel[]; total: number; page: number }> =>
     (
       await client.get("/admin/channels/list", {
-        params: { organizationId, view, page },
+        params: { organizationId, view, page, ...(unitId ? { unitId } : {}) },
       })
     ).data,
   thread: async (
