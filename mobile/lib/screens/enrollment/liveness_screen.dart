@@ -37,6 +37,10 @@ class LivenessScreen extends StatefulWidget {
     this.m4PersonSubjectKey,
     this.m4CitizenshipCountry,
     this.m4SodCscaVerified = true,
+    this.m4DocumentNumber,
+    this.m4PersonalNumber,
+    this.m4LegalName,
+    this.m4DateOfBirth,
     this.reauthOnly = false,
   });
 
@@ -50,6 +54,10 @@ class LivenessScreen extends StatefulWidget {
   final String? m4PersonSubjectKey;
   final String? m4CitizenshipCountry;
   final bool m4SodCscaVerified;
+  final String? m4DocumentNumber;
+  final String? m4PersonalNumber;
+  final String? m4LegalName;
+  final String? m4DateOfBirth;
   final bool reauthOnly;
 
   @override
@@ -336,6 +344,10 @@ class _LivenessScreenState extends State<LivenessScreen>
       final templateDigest = sha256
           .convert(utf8.encode('ertad-tpl-v1:$selfieBase64:${widget.docPortraitBase64}'))
           .toString();
+      final fallbackName = '${widget.firstName ?? ''} ${widget.lastName ?? ''}'.trim();
+      final effectiveLegalName = (widget.m4LegalName?.trim().isNotEmpty ?? false)
+          ? widget.m4LegalName!.trim()
+          : (fallbackName.isNotEmpty ? fallbackName : null);
       await api.completeBiometricVerification(
         deviceId: deviceId,
         sodCscaVerified: widget.m4SodCscaVerified,
@@ -349,6 +361,10 @@ class _LivenessScreenState extends State<LivenessScreen>
             ? widget.docPortraitBase64
             : null,
         selfieBase64: selfieBase64.isNotEmpty ? selfieBase64 : null,
+        documentNumber: widget.m4DocumentNumber,
+        personalNumber: widget.m4PersonalNumber,
+        legalName: effectiveLegalName,
+        dateOfBirth: widget.m4DateOfBirth,
       );
       await container.read(shellSessionProvider.notifier).refreshWorkspace();
       if (!mounted) return;

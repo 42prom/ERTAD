@@ -24,6 +24,10 @@ class ProfileCreationScreen extends StatefulWidget {
   final String? m4PersonSubjectKey;
   final String m4CitizenshipCountry;
   final bool m4SodCscaVerified;
+  final String? m4DocumentNumber;
+  final String? m4PersonalNumber;
+  final String? m4LegalName;
+  final String? m4DateOfBirth;
 
   const ProfileCreationScreen({
     super.key,
@@ -39,6 +43,10 @@ class ProfileCreationScreen extends StatefulWidget {
     this.m4PersonSubjectKey,
     this.m4CitizenshipCountry = 'GE',
     this.m4SodCscaVerified = true,
+    this.m4DocumentNumber,
+    this.m4PersonalNumber,
+    this.m4LegalName,
+    this.m4DateOfBirth,
   });
 
   @override
@@ -164,6 +172,10 @@ class _ProfileCreationScreenState extends State<ProfileCreationScreen> {
             m4PersonSubjectKey: widget.m4PersonSubjectKey,
             m4CitizenshipCountry: widget.m4CitizenshipCountry,
             m4SodCscaVerified: widget.m4SodCscaVerified,
+            m4DocumentNumber: widget.m4DocumentNumber,
+            m4PersonalNumber: widget.m4PersonalNumber,
+            m4LegalName: widget.m4LegalName,
+            m4DateOfBirth: widget.m4DateOfBirth,
           ),
         ),
       );

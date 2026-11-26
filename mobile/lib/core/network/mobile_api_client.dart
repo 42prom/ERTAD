@@ -1111,6 +1111,10 @@ class MobileApiClient {
     String? biometricTemplate,
     String? docPortraitBase64,
     String? selfieBase64,
+    String? documentNumber,
+    String? personalNumber,
+    String? legalName,
+    String? dateOfBirth,
   }) async {
     try {
       final res = await _dio.post<Map<String, dynamic>>(
@@ -1126,6 +1130,14 @@ class MobileApiClient {
           'biometricTemplate': ?biometricTemplate,
           'docPortraitBase64': ?docPortraitBase64,
           'selfieBase64': ?selfieBase64,
+          if (documentNumber != null && documentNumber.trim().isNotEmpty)
+            'documentNumber': documentNumber.trim(),
+          if (personalNumber != null && personalNumber.trim().isNotEmpty)
+            'personalNumber': personalNumber.trim(),
+          if (legalName != null && legalName.trim().isNotEmpty)
+            'legalName': legalName.trim(),
+          if (dateOfBirth != null && dateOfBirth.trim().isNotEmpty)
+            'dateOfBirth': dateOfBirth.trim(),
         },
       );
       return Map<String, dynamic>.from(res.data ?? const {});

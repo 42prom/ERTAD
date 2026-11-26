@@ -347,6 +347,11 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
               m4PersonSubjectKey: subjectKey,
               m4CitizenshipCountry: country,
               m4SodCscaVerified: true,
+              m4DocumentNumber: effectiveDocNum,
+              m4PersonalNumber: effectivePn,
+              m4LegalName:
+                  '${chipMrz?.firstName ?? ''} ${chipMrz?.lastName ?? ''}'.trim(),
+              m4DateOfBirth: effectiveDob.toIso8601String().split('T')[0],
             ),
           ),
         );

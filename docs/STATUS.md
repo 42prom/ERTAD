@@ -2,6 +2,13 @@
 
 > Last updated: 2026-11-26 · Branch: `feat/ertad-development` · Not deployed to production
 
+## Mobile eID Document Claims Wiring (2026-11-26)
+
+- **Mobile Client & Enrollment Flow ([`mobile_api_client.dart`](../mobile/lib/core/network/mobile_api_client.dart), [`nfc_scan_screen.dart`](../mobile/lib/screens/enrollment/nfc_scan_screen.dart), [`profile_creation_screen.dart`](../mobile/lib/screens/enrollment/profile_creation_screen.dart), [`liveness_screen.dart`](../mobile/lib/screens/enrollment/liveness_screen.dart)):**
+  - Wired optional `documentNumber`, `personalNumber`, `legalName`, and `dateOfBirth` fields from NFC/MRZ chip scan (`NfcScanScreen`) through `ProfileCreationScreen` and `LivenessScreen` into `POST /api/v1/mobile/m4/biometric/complete` so Migration `0087` encrypted claim storage and unmasked Council directory inspection receive full identity attributes from real mobile enrollments.
+- **Verified evidence:**
+  - `flutter analyze --no-pub` (`No issues found!`), `flutter test --no-pub` (`86/86` passed), `npm run mobile:apk:tunnel` (`mobile/build/app/outputs/flutter-apk/app-debug.apk` built cleanly in `106.6s`; USB device not attached during run), `npm run check:identity`, and `npm run check:workspace` (`926 eligible paths`).
+
 ## Territorial Groups T1: Shared Catalogue, Typed Hierarchy & Reviewed Mapping (Migration 88, 2026-11-26)
 
 - **DB, Backend & Admin UI ([`0088_territorial_groups.sql`](../backend/db/foundation/0088_territorial_groups.sql), [`units.ts`](../backend/src/modules/organization/units.ts), [`units.ts` (Admin API)](../admin/src/api/units.ts), [`UnitTerritoryFields.tsx`](../admin/src/components/UnitTerritoryFields.tsx), [`Units.tsx`](../admin/src/pages/Units.tsx), [`unit-territory-tests.ts`](../scripts/unit-territory-tests.ts), [`Units.test.tsx`](../admin/src/tests/Units.test.tsx)):**
